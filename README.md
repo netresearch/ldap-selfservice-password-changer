@@ -2,7 +2,22 @@
 
 ## Developing
 
+Prerequisites:
+
+- Go 1.20+
+
+```bash
+# Run once
+go run .
+
+# Run and watch for changes
+go install github.com/mitranim/gow@latest
+gow run .
+```
+
 ### Updating the styles or HTML
+
+If you have to change any of the HTML, you'll have to regenerate the style sheet.
 
 Prerequisites:
 
