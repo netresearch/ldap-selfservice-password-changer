@@ -1,12 +1,24 @@
 package main
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"net/http"
+
+	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	"github.com/gofiber/template/html/v2"
+	"github.com/netresearch/ldap-selfservice-password-changer/web"
+	"github.com/netresearch/ldap-selfservice-password-changer/web/static"
+)
 
 func main() {
-	app := fiber.New()
+	views := html.NewFileSystem(http.FS(web.Templates), ".html")
+
+	app := fiber.New(fiber.Config{
+		Views: views,
+	})
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hiii")
+		return c.Render("index", fiber.Map{})
 	})
 
 	app.Listen(":3000")
