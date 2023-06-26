@@ -1,0 +1,5 @@
+/* This file is an entrypoint for the TailwindCSS compiler */
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

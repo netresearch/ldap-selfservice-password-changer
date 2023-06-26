@@ -1,0 +1,13 @@
+{
+  "name": "@netresearch/ldap-selfservice-password-changer",
+  "version": "1.0.0",
+  "author": "DevMiner <devminer@devminer.xyz>",
+  "license": "MIT",
+  "scripts": {
+    "css": "tailwindcss -i ./web/tailwind.css -o ./web/static/styles.css",
+    "css:dev": "tailwindcss -i ./web/tailwind.css -o ./web/static/styles.css -w"
+  },
+  "devDependencies": {
+    "tailwindcss": "^3.3.2"
+  }
+}

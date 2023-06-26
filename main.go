@@ -17,6 +17,10 @@ func main() {
 		Views: views,
 	})
 
+	app.Use("/static", filesystem.New(filesystem.Config{
+		Root: http.FS(static.Static),
+	}))
+
 	app.Get("/", func(c *fiber.Ctx) error {
 		return c.Render("index", fiber.Map{})
 	})
