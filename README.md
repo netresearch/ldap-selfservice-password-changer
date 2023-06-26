@@ -23,3 +23,9 @@ pnpm css:dev
 ## License
 
 LDAP Selfservice Password Changer is licensed under the MIT license, for more information please refer to the [included LICENSE file](LICENSE).
+
+## Contributing
+
+Feel free to contribute by creating a Pull Request!
+
+This project uses [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) for commit messages and the default `gofmt` and `prettier` formatting rules.
