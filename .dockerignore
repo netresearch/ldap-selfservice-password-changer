@@ -1,0 +1,7 @@
+.git
+node_modules
+docs
+
+internal/web/static/styles.css
+Dockerfile
+README.md
