@@ -6,12 +6,12 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/template/html/v2"
-	"github.com/netresearch/ldap-selfservice-password-changer/web"
-	"github.com/netresearch/ldap-selfservice-password-changer/web/static"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/static"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/templates"
 )
 
 func main() {
-	views := html.NewFileSystem(http.FS(web.Templates), ".html")
+	views := html.NewFileSystem(http.FS(templates.Templates), ".html")
 
 	app := fiber.New(fiber.Config{
 		Views: views,

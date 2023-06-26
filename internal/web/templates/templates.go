@@ -1,4 +1,4 @@
-package web
+package templates
 
 import "embed"
 
