@@ -61,7 +61,7 @@ func main() {
 
 		switch body.Method {
 		default:
-			return c.Status(http.StatusNotFound).JSON(JSONRPCResponse{
+			return c.Status(http.StatusBadRequest).JSON(JSONRPCResponse{
 				Success: false,
 				Data:    []string{"method not found"},
 			})
