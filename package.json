@@ -8,6 +8,9 @@
     "css:dev": "tailwindcss -i ./internal/web/tailwind.css -o ./internal/web/static/styles.css -w"
   },
   "devDependencies": {
+    "prettier": "^2.8.8",
+    "prettier-plugin-go-template": "^0.0.13",
+    "prettier-plugin-tailwindcss": "^0.3.0",
     "tailwindcss": "^3.3.2"
   }
 }

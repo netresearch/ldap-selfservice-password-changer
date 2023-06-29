@@ -3,8 +3,8 @@ const config = {
   content: ["internal/web/templates/*.html"],
   plugins: [],
   theme: {
-    extend: {},
-  },
+    extend: {}
+  }
 };
 
 export default config;

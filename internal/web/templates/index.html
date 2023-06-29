@@ -1,181 +1,231 @@
+<!-- prettier-ignore -->
 {{ define "EyeSlashIcon" }}
 <!-- heroicons eye-slash -->
-<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24"
-  class="h-4 w-4 inline-block content-hidden">
-  <path fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5"
-    d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.292 4.338 5.31 7.5 10.066 7.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 0 1-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="100%"
+  height="100%"
+  viewBox="0 0 24 24"
+  class="content-hidden inline-block h-4 w-4"
+>
+  <path
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="1.5"
+    d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12c1.292 4.338 5.31 7.5 10.066 7.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.45 10.45 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.523 10.523 0 0 1-4.293 5.774M6.228 6.228L3 3m3.228 3.228l3.65 3.65m7.894 7.894L21 21m-3.228-3.228l-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88"
+  />
 </svg>
 {{ end }}
 
+<!-- prettier-ignore -->
 {{ define "EyeIcon" }}
 <!-- heroicons eye -->
-<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24"
-  class="h-4 w-4 inline-block content-revealed">
+<svg
+  xmlns="http://www.w3.org/2000/svg"
+  width="100%"
+  height="100%"
+  viewBox="0 0 24 24"
+  class="content-revealed inline-block h-4 w-4"
+>
   <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
     <path
-      d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178c.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+      d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178c.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z"
+    />
     <path d="M15 12a3 3 0 1 1-6 0a3 3 0 0 1 6 0Z" />
   </g>
 </svg>
 {{ end }}
 
+<!-- prettier-ignore -->
 {{ define "input" }}
-<div id="{{ .Name }}"
-  class="space-y-[2px] [&[data-revealed='false']_.content-hidden]:block [&[data-revealed='false']_.content-revealed]:hidden [&[data-revealed='true']_[data-purpose='reveal']]:text-white [&[data-revealed='true']_.content-hidden]:hidden [&[data-revealed='true']_.content-revealed]:block"
-  data-revealed="false">
-  <div class="flex gap-2 border border-gray-500 rounded-md outline-none focus-within:border-white pl-3 pr-1 py-1"
-    data-purpose="inputContainer">
-    <input type="{{ .Type }}" name="{{ .Name }}" placeholder="{{ .Placeholder }}"
-      class="inline-block flex-1 bg-black outline-none">
+<div
+  id="{{ .Name }}"
+  class="space-y-[2px] [&[data-revealed='false']_.content-hidden]:block [&[data-revealed='false']_.content-revealed]:hidden [&[data-revealed='true']_.content-hidden]:hidden [&[data-revealed='true']_.content-revealed]:block [&[data-revealed='true']_[data-purpose='reveal']]:text-white"
+  data-revealed="false"
+>
+  <div
+    class="flex gap-2 rounded-md border border-gray-500 py-1 pl-3 pr-1 outline-none focus-within:border-white"
+    data-purpose="inputContainer"
+  >
+    <input
+      type="{{ .Type }}"
+      name="{{ .Name }}"
+      placeholder="{{ .Placeholder }}"
+      class="inline-block flex-1 bg-black outline-none"
+    />
 
     {{ if eq .Type "password" }}
-    <button type="button"
-      class="py-1 items-center text-gray-500 hover:text-white flex px-1 hover:bg-gray-800 rounded-md"
-      data-purpose="reveal">
-      {{ template "EyeSlashIcon" . }}
-      {{ template "EyeIcon" . }}
+    <button
+      type="button"
+      class="flex items-center rounded-md px-1 py-1 text-gray-500 hover:bg-gray-800 hover:text-white"
+      data-purpose="reveal"
+    >
+      <!-- prettier-ignore -->
+      {{ template "EyeSlashIcon" }}
+      <!-- prettier-ignore -->
+      {{ template "EyeIcon" }}
     </button>
     {{ end }}
   </div>
-  <div class="text-red-500 text-xs" data-purpose="errorContainer"></div>
+  <div class="text-xs text-red-500" data-purpose="errorContainer"></div>
 </div>
 {{ end }}
 
 <!DOCTYPE html>
 <html lang="en" class="h-full bg-black text-white">
+  <head>
+    <title></title>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-<head>
-  <title></title>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="stylesheet" href="/static/styles.css" />
+  </head>
 
-  <link rel="stylesheet" href="/static/styles.css" />
-</head>
+  <body class="flex min-h-full items-center justify-center p-4">
+    <form
+      class="space-y-4 rounded-md border border-gray-500 p-8 [&[data-loading='true']_button[type='submit']]:bg-gray-800"
+      id="form"
+      data-loading="false"
+    >
+      <!-- prettier-ignore -->
+      {{ template "input" InputOpts "username" "Username" "text" }}
+      <!-- prettier-ignore -->
+      {{ template "input" InputOpts "current" "Current Password" "password" }}
+      <!-- prettier-ignore -->
+      {{ template "input" InputOpts "new" "New Password" "password" }}
+      <!-- prettier-ignore -->
+      {{ template "input" InputOpts "new2" "New Password" "password" }}
 
-<body class="min-h-full flex justify-center items-center p-4">
-  <form
-    class="space-y-4 border border-gray-500 p-8 rounded-md [&[data-loading='true']_button[type='submit']]:bg-gray-800"
-    id="form" data-loading="false">
-    {{ template "input" InputOpts "username" "Username" "text" }}
-    {{ template "input" InputOpts "current" "Current Password" "password" }}
-    {{ template "input" InputOpts "new" "New Password" "password" }}
-    {{ template "input" InputOpts "new2" "New Password" "password" }}
+      <button
+        type="submit"
+        class="w-full rounded-md border border-gray-500 bg-white px-3 py-1 font-bold text-black outline-none hover:bg-black hover:text-white focus:border-white"
+      >
+        Change Password
+      </button>
 
-    <button type="submit"
-      class="w-full bg-white font-bold text-black hover:bg-black hover:text-white border border-gray-500 rounded-md px-3 py-1 outline-none focus:border-white">
-      Change Password
-    </button>
+      <p class="text-xs text-gray-500">
+        Powered by
+        <a
+          href="https://github.com/netresearch/ldap-selfservice-password-changer"
+          class="break-keep hover:text-white hover:underline hover:decoration-white"
+        >
+          netresearch/ldap-selfservice-password-changer
+        </a>
+      </p>
+    </form>
 
-    <p class="text-xs text-gray-500">
-      Powered by <a href="https://github.com/netresearch/ldap-selfservice-password-changer"
-        class="hover:text-white hover:decoration-white hover:underline break-keep">netresearch/ldap-selfservice-password-changer</a>
-    </p>
-  </form>
+    <script>
+      const form = document.getElementById("form");
+      if (!form) throw new Error("Could not find form element");
 
-  <script>
-    const form = document.getElementById("form");
-    if (!form) throw new Error("Could not find form element");
+      const submitButton = form.querySelector("button[type='submit']");
+      if (!submitButton) throw new Error("Could not find submit button element");
 
-    const submitButton = form.querySelector("button[type='submit']");
-    if (!submitButton) throw new Error("Could not find submit button element");
+      const mustNotBeEmpty = (v) => (v.trim().length === 0 ? "Can't be empty" : "");
+      const mustMatchNewPassword = (v) => {
+        const newPassword = form.querySelector(`#new input`)?.value;
 
-    const mustNotBeEmpty = v => v.trim().length === 0 ? "Can't be empty" : '';
-    const mustMatchNewPassword = v => {
-      const newPassword = form.querySelector(`#new input`)?.value;
-
-      return newPassword !== v ? 'Must match the first input' : ''
-    }
-
-    const fields = [["username", mustNotBeEmpty], ["current", mustNotBeEmpty], ["new", mustNotBeEmpty], ["new2", mustNotBeEmpty, mustMatchNewPassword]].map(([name, ...validators]) => {
-      const f = form.querySelector(`#${name}`);
-      if (!f) throw new Error(`Field "${name}" does not exist`);
-
-      const inputContainer = f.querySelector('div[data-purpose="inputContainer"]');
-      if (!inputContainer) throw new Error(`Input container for "${name}" does not exist`);
-
-      const input = inputContainer.querySelector('input');
-      if (!input) throw new Error(`Input for "${name}" does not exist`);
-
-      const revealButton = inputContainer.querySelector('button[data-purpose="reveal"]');
-      if (!revealButton && input.type === "password") throw new Error(`Reveal button for "${name}" does not exist`);
-
-      const errorContainer = f.querySelector('div[data-purpose="errorContainer"]');
-      if (!errorContainer) throw new Error(`Error for "${name}" does not exist`);
-
-      const getValue = () => input.value;
-      const setErrors = (errors) => {
-        errorContainer.innerHTML = '';
-
-        if (errors.length > 0) {
-          inputContainer.classList.add("border-red-500");
-        } else {
-          inputContainer.classList.remove("border-red-500");
-        }
-
-        for (const error of errors) {
-          const el = document.createElement('p');
-          el.innerText = error;
-
-          errorContainer.appendChild(el);
-        }
+        return newPassword !== v ? "Must match the first input" : "";
       };
 
-      const validate = () => {
-        const value = getValue();
+      const fields = [
+        ["username", mustNotBeEmpty],
+        ["current", mustNotBeEmpty],
+        ["new", mustNotBeEmpty],
+        ["new2", mustNotBeEmpty, mustMatchNewPassword]
+      ].map(([name, ...validators]) => {
+        const f = form.querySelector(`#${name}`);
+        if (!f) throw new Error(`Field "${name}" does not exist`);
 
-        const errors = validators.map(validate => validate(value)).reduce((acc, v) => {
-          if (v.length > 0) acc.push(v);
+        const inputContainer = f.querySelector('div[data-purpose="inputContainer"]');
+        if (!inputContainer) throw new Error(`Input container for "${name}" does not exist`);
 
-          return acc;
-        }, []);
+        const input = inputContainer.querySelector("input");
+        if (!input) throw new Error(`Input for "${name}" does not exist`);
 
-        console.log(`Validated "${name}": ${errors.length} error(s)`);
+        const revealButton = inputContainer.querySelector('button[data-purpose="reveal"]');
+        if (!revealButton && input.type === "password") throw new Error(`Reveal button for "${name}" does not exist`);
 
-        setErrors(errors);
+        const errorContainer = f.querySelector('div[data-purpose="errorContainer"]');
+        if (!errorContainer) throw new Error(`Error for "${name}" does not exist`);
 
-        return errors.length > 0;
-      };
+        const getValue = () => input.value;
+        const setErrors = (errors) => {
+          errorContainer.innerHTML = "";
 
-      if (revealButton) {
-        revealButton.onclick = (e) => {
-          e.preventDefault();
-          e.stopPropagation();
+          if (errors.length > 0) {
+            inputContainer.classList.add("border-red-500");
+          } else {
+            inputContainer.classList.remove("border-red-500");
+          }
 
-          const newType = input.type === 'password' ? 'text' : 'password';
-          const revealed = newType === 'text';
+          for (const error of errors) {
+            const el = document.createElement("p");
+            el.innerText = error;
 
-          console.log(`${revealed ? 'Showing' : 'Hiding'} content of "${name}"`);
-
-          input.type = newType;
-          f.dataset.revealed = revealed;
+            errorContainer.appendChild(el);
+          }
         };
-      }
 
-      return {input, errorContainer, getValue, validate};
-    });
+        const validate = () => {
+          const value = getValue();
 
-    form.onsubmit = (e) => {
-      e.preventDefault();
-      e.stopPropagation();
+          const errors = validators
+            .map((validate) => validate(value))
+            .reduce((acc, v) => {
+              if (v.length > 0) acc.push(v);
 
-      const [username, oldPassword, newPassword] = fields.map(f => f.getValue());
+              return acc;
+            }, []);
 
-      console.log(username, oldPassword, newPassword)
+          console.log(`Validated "${name}": ${errors.length} error(s)`);
 
-      const hasErrors = fields.map(({validate}) => validate()).some(e => e === true);
-      submitButton.disabled = hasErrors
-      if (hasErrors) return;
+          setErrors(errors);
 
-      console.log("Changing password...");
-    }
+          return errors.length > 0;
+        };
 
-    form.onchange = (e) => {
-      e.stopPropagation();
+        if (revealButton) {
+          revealButton.onclick = (e) => {
+            e.preventDefault();
+            e.stopPropagation();
 
-      const hasErrors = fields.map(({validate}) => validate()).some(e => e === true);
-      submitButton.disabled = hasErrors
-    }
-  </script>
-</body>
+            const newType = input.type === "password" ? "text" : "password";
+            const revealed = newType === "text";
 
+            console.log(`${revealed ? "Showing" : "Hiding"} content of "${name}"`);
+
+            input.type = newType;
+            f.dataset.revealed = revealed;
+          };
+        }
+
+        return { input, errorContainer, getValue, validate };
+      });
+
+      form.onsubmit = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const [username, oldPassword, newPassword] = fields.map((f) => f.getValue());
+
+        console.log(username, oldPassword, newPassword);
+
+        const hasErrors = fields.map(({ validate }) => validate()).some((e) => e === true);
+        submitButton.disabled = hasErrors;
+        if (hasErrors) return;
+
+        console.log("Changing password...");
+      };
+
+      form.onchange = (e) => {
+        e.stopPropagation();
+
+        const hasErrors = fields.map(({ validate }) => validate()).some((e) => e === true);
+        submitButton.disabled = hasErrors;
+      };
+    </script>
+  </body>
 </html>

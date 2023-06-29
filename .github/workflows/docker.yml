@@ -2,7 +2,7 @@ name: Build Docker images
 
 on:
   release:
-    types: [ published ]
+    types: [published]
   schedule:
     - cron: "0 0 * * 0"
   pull_request:
