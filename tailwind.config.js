@@ -1,7 +1,17 @@
+import plugin from "tailwindcss/plugin";
+
 /** @type {import('tailwindcss').Config} */
 const config = {
   content: ["internal/web/templates/*.html"],
-  plugins: [],
+  plugins: [
+    plugin(({ addVariant }) => {
+      addVariant("reveal-button", '&[data-revealed="true"] [data-purpose="reveal"]');
+      addVariant("reveal-eye", '&[data-revealed="true"] .on-content-revealed');
+      addVariant("reveal-eye-slash", '&[data-revealed="true"] .on-content-hidden');
+      addVariant("nonreveal-eye", '&[data-revealed="false"] .on-content-revealed');
+      addVariant("notreveal-eye-slash", '&[data-revealed="false"] .on-content-hidden');
+    })
+  ],
   theme: {
     extend: {}
   }
