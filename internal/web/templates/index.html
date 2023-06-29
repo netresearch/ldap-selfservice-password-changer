@@ -1,12 +1,39 @@
+{{ define "input" }}
+<div id="{{ .Name }}" class="space-y-[2px]">
+  <input type="{{ .Type }}" name="{{ .Name }}" placeholder="{{ .Placeholder }}"
+    class="w-full bg-black border border-gray-500 rounded-md px-3 py-1 outline-none focus:border-white">
+  <div class="text-red-500 text-xs hidden"></div>
+</div>
+{{ end }}
+
 <!DOCTYPE html>
-<html lang="en" class="min-h-full bg-black">
-  <head>
-    <title></title>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
+<html lang="en" class="h-full bg-black text-white">
 
-    <link rel="stylesheet" href="/static/styles.css" />
-  </head>
+<head>
+  <title></title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
 
-  <body></body>
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+
+<body class="min-h-full flex justify-center items-center p-4">
+  <form class="space-y-4 border border-gray-500 p-8 rounded-md" id="form">
+    {{ template "input" InputOpts "username" "Username" "text" }}
+    {{ template "input" InputOpts "current" "Current Password" "password" }}
+    {{ template "input" InputOpts "new" "New Password" "password" }}
+    {{ template "input" InputOpts "new2" "New Password" "password" }}
+
+    <button type="submit"
+      class="w-full bg-white font-bold text-black hover:bg-black hover:text-white border border-gray-500 rounded-md px-3 py-1 outline-none focus:border-white">
+      Change Password
+    </button>
+
+    <p class="text-xs text-gray-500">
+      Powered by <a href="https://github.com/netresearch/ldap-selfservice-password-changer"
+        class="hover:text-white hover:decoration-white hover:underline break-keep">netresearch/ldap-selfservice-password-changer</a>
+    </p>
+  </form>
+</body>
+
 </html>

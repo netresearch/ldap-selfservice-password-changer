@@ -30,6 +30,7 @@ func main() {
 	}
 
 	views := html.NewFileSystem(http.FS(templates.Templates), ".html")
+	views.AddFunc("InputOpts", templates.MakeInputOpts)
 
 	app := fiber.New(fiber.Config{
 		Views: views,
