@@ -10,6 +10,7 @@ const config = {
       addVariant("reveal-eye-slash", '&[data-revealed="true"] .on-content-hidden');
       addVariant("nonreveal-eye", '&[data-revealed="false"] .on-content-revealed');
       addVariant("notreveal-eye-slash", '&[data-revealed="false"] .on-content-hidden');
+      addVariant("input-focus", "&:has(input:focus)");
     })
   ],
   theme: {

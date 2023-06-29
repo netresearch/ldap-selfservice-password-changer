@@ -723,11 +723,6 @@ video {
   --tw-ring-color: rgb(255 255 255 / var(--tw-ring-opacity));
 }
 
-.focus-within\:border-white:focus-within {
-  --tw-border-opacity: 1;
-  border-color: rgb(255 255 255 / var(--tw-border-opacity));
-}
-
 .hover\:bg-black:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(0 0 0 / var(--tw-bg-opacity));
@@ -800,4 +795,9 @@ video {
 
 .nonreveal-eye\:hidden[data-revealed="false"] .on-content-revealed {
   display: none;
+}
+
+.input-focus\:border-white:has(input:focus) {
+  --tw-border-opacity: 1;
+  border-color: rgb(255 255 255 / var(--tw-border-opacity));
 }
