@@ -71,6 +71,111 @@
         class="hover:text-white hover:decoration-white hover:underline break-keep">netresearch/ldap-selfservice-password-changer</a>
     </p>
   </form>
+
+  <script>
+    const form = document.getElementById("form");
+    if (!form) throw new Error("Could not find form element");
+
+    const submitButton = form.querySelector("button[type='submit']");
+    if (!submitButton) throw new Error("Could not find submit button element");
+
+    const mustNotBeEmpty = v => v.trim().length === 0 ? "Can't be empty" : '';
+    const mustMatchNewPassword = v => {
+      const newPassword = form.querySelector(`#new input`)?.value;
+
+      return newPassword !== v ? 'Must match the first input' : ''
+    }
+
+    const fields = [["username", mustNotBeEmpty], ["current", mustNotBeEmpty], ["new", mustNotBeEmpty], ["new2", mustNotBeEmpty, mustMatchNewPassword]].map(([name, ...validators]) => {
+      const f = form.querySelector(`#${name}`);
+      if (!f) throw new Error(`Field "${name}" does not exist`);
+
+      const inputContainer = f.querySelector('div[data-purpose="inputContainer"]');
+      if (!inputContainer) throw new Error(`Input container for "${name}" does not exist`);
+
+      const input = inputContainer.querySelector('input');
+      if (!input) throw new Error(`Input for "${name}" does not exist`);
+
+      const revealButton = inputContainer.querySelector('button[data-purpose="reveal"]');
+      if (!revealButton && input.type === "password") throw new Error(`Reveal button for "${name}" does not exist`);
+
+      const errorContainer = f.querySelector('div[data-purpose="errorContainer"]');
+      if (!errorContainer) throw new Error(`Error for "${name}" does not exist`);
+
+      const getValue = () => input.value;
+      const setErrors = (errors) => {
+        errorContainer.innerHTML = '';
+
+        if (errors.length > 0) {
+          inputContainer.classList.add("border-red-500");
+        } else {
+          inputContainer.classList.remove("border-red-500");
+        }
+
+        for (const error of errors) {
+          const el = document.createElement('p');
+          el.innerText = error;
+
+          errorContainer.appendChild(el);
+        }
+      };
+
+      const validate = () => {
+        const value = getValue();
+
+        const errors = validators.map(validate => validate(value)).reduce((acc, v) => {
+          if (v.length > 0) acc.push(v);
+
+          return acc;
+        }, []);
+
+        console.log(`Validated "${name}": ${errors.length} error(s)`);
+
+        setErrors(errors);
+
+        return errors.length > 0;
+      };
+
+      if (revealButton) {
+        revealButton.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+
+          const newType = input.type === 'password' ? 'text' : 'password';
+          const revealed = newType === 'text';
+
+          console.log(`${revealed ? 'Showing' : 'Hiding'} content of "${name}"`);
+
+          input.type = newType;
+          f.dataset.revealed = revealed;
+        };
+      }
+
+      return {input, errorContainer, getValue, validate};
+    });
+
+    form.onsubmit = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+
+      const [username, oldPassword, newPassword] = fields.map(f => f.getValue());
+
+      console.log(username, oldPassword, newPassword)
+
+      const hasErrors = fields.map(({validate}) => validate()).some(e => e === true);
+      submitButton.disabled = hasErrors
+      if (hasErrors) return;
+
+      console.log("Changing password...");
+    }
+
+    form.onchange = (e) => {
+      e.stopPropagation();
+
+      const hasErrors = fields.map(({validate}) => validate()).some(e => e === true);
+      submitButton.disabled = hasErrors
+    }
+  </script>
 </body>
 
 </html>
