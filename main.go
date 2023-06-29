@@ -19,6 +19,8 @@ var (
 	fBaseDN            = flag.String("base-dn", "", "Base DN of your LDAP directory.")
 	fReadonlyUser      = flag.String("readonly-user", "", "User that can read all users in your LDAP directory.")
 	fReadonlyPassword  = flag.String("readonly-password", "", "Password for the readonly user")
+
+	methodChangePassword string = "change-password"
 )
 
 type JSONRPC struct {
@@ -31,10 +33,25 @@ type JSONRPCResponse struct {
 	Data    []string `json:"data"`
 }
 
+func wrapRPC(c *fiber.Ctx, params []string, fn core.RPCFunc) error {
+	data, err := fn(params)
+	if err != nil {
+		return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
+			Success: false,
+			Data:    []string{err.Error()},
+		})
+	}
+
+	return c.JSON(JSONRPCResponse{
+		Success: true,
+		Data:    data,
+	})
+}
+
 func main() {
 	flag.Parse()
 
-	_, err := core.New(*fLdapServer, *fIsActiveDirectory, *fBaseDN, *fReadonlyUser, *fReadonlyPassword)
+	coreApi, err := core.New(*fLdapServer, *fIsActiveDirectory, *fBaseDN, *fReadonlyUser, *fReadonlyPassword)
 	if err != nil {
 		log.Fatalf("An error occurred during initialization: %v", err)
 	}
@@ -60,6 +77,9 @@ func main() {
 		}
 
 		switch body.Method {
+		case methodChangePassword:
+			return wrapRPC(c, body.Params, coreApi.ChangePassword)
+
 		default:
 			return c.Status(http.StatusBadRequest).JSON(JSONRPCResponse{
 				Success: false,
