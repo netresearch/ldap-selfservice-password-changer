@@ -556,6 +556,11 @@ video {
   }
 }
 
+.my-1 {
+  margin-top: 0.25rem;
+  margin-bottom: 0.25rem;
+}
+
 .flex {
   display: flex;
 }
@@ -586,6 +591,16 @@ video {
 
 .flex-1 {
   flex: 1 1 0%;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.animate-spin {
+  animation: spin 1s linear infinite;
 }
 
 .items-center {
@@ -800,4 +815,12 @@ video {
 .input-focus\:border-white:has(input:focus) {
   --tw-border-opacity: 1;
   border-color: rgb(255 255 255 / var(--tw-border-opacity));
+}
+
+.\[\&\[data-loading\=\'true\'\]\>span\]\:hidden[data-loading='true']>span {
+  display: none;
+}
+
+.\[\&\[data-loading\=\'true\'\]\>svg\]\:inline-block[data-loading='true']>svg {
+  display: inline-block;
 }
