@@ -522,8 +522,46 @@ video {
   --tw-backdrop-sepia:  ;
 }
 
+.container {
+  width: 100%;
+}
+
+@media (min-width: 640px) {
+  .container {
+    max-width: 640px;
+  }
+}
+
+@media (min-width: 768px) {
+  .container {
+    max-width: 768px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .container {
+    max-width: 1024px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .container {
+    max-width: 1280px;
+  }
+}
+
+@media (min-width: 1536px) {
+  .container {
+    max-width: 1536px;
+  }
+}
+
 .block {
   display: block;
+}
+
+.inline-block {
+  display: inline-block;
 }
 
 .flex {
@@ -538,6 +576,10 @@ video {
   height: 100%;
 }
 
+.h-4 {
+  height: 1rem;
+}
+
 .min-h-full {
   min-height: 100%;
 }
@@ -546,12 +588,24 @@ video {
   width: 100%;
 }
 
+.w-4 {
+  width: 1rem;
+}
+
+.flex-1 {
+  flex: 1 1 0%;
+}
+
 .items-center {
   align-items: center;
 }
 
 .justify-center {
   justify-content: center;
+}
+
+.gap-2 {
+  gap: 0.5rem;
 }
 
 .space-y-4 > :not([hidden]) ~ :not([hidden]) {
@@ -631,6 +685,27 @@ video {
   padding-bottom: 0.5rem;
 }
 
+.px-1 {
+  padding-left: 0.25rem;
+  padding-right: 0.25rem;
+}
+
+.pl-3 {
+  padding-left: 0.75rem;
+}
+
+.pr-1 {
+  padding-right: 0.25rem;
+}
+
+.pr-2 {
+  padding-right: 0.5rem;
+}
+
+.align-middle {
+  vertical-align: middle;
+}
+
 .text-lg {
   font-size: 1.125rem;
   line-height: 1.75rem;
@@ -689,9 +764,19 @@ video {
   transition-duration: 100ms;
 }
 
+.focus-within\:border-white:focus-within {
+  --tw-border-opacity: 1;
+  border-color: rgb(255 255 255 / var(--tw-border-opacity));
+}
+
 .hover\:bg-black:hover {
   --tw-bg-opacity: 1;
   background-color: rgb(0 0 0 / var(--tw-bg-opacity));
+}
+
+.hover\:bg-gray-800:hover {
+  --tw-bg-opacity: 1;
+  background-color: rgb(31 41 55 / var(--tw-bg-opacity));
 }
 
 .hover\:text-white:hover {
@@ -710,4 +795,34 @@ video {
 .focus\:border-white:focus {
   --tw-border-opacity: 1;
   border-color: rgb(255 255 255 / var(--tw-border-opacity));
+}
+
+.\[\&\[data-loading\=\'true\'\]_button\[type\=\'submit\'\]\]\:bg-gray-800[data-loading='true'] button[type='submit'] {
+  --tw-bg-opacity: 1;
+  background-color: rgb(31 41 55 / var(--tw-bg-opacity));
+}
+
+.\[\&\[data-revealed\=\'false\'\]_\.content-hidden\]\:block[data-revealed='false'] .content-hidden {
+  display: block;
+}
+
+.\[\&\[data-revealed\=\'false\'\]_\.content-revealed\]\:hidden[data-revealed='false'] .content-revealed {
+  display: none;
+}
+
+.\[\&\[data-revealed\=\'true\'\]\]\:hidden[data-revealed='true'] {
+  display: none;
+}
+
+.\[\&\[data-revealed\=\'true\'\]_\.content-hidden\]\:hidden[data-revealed='true'] .content-hidden {
+  display: none;
+}
+
+.\[\&\[data-revealed\=\'true\'\]_\.content-revealed\]\:block[data-revealed='true'] .content-revealed {
+  display: block;
+}
+
+.\[\&\[data-revealed\=\'true\'\]_\[data-purpose\=\'reveal\'\]\]\:text-white[data-revealed='true'] [data-purpose='reveal'] {
+  --tw-text-opacity: 1;
+  color: rgb(255 255 255 / var(--tw-text-opacity));
 }
