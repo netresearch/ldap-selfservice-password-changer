@@ -235,6 +235,37 @@
         console.log("Changing password...");
         [submitButton, ...fields.map(({ input }) => input)].forEach((el) => (el.disabled = true));
         submitButton.dataset.loading = true;
+
+        try {
+          const res = await fetch("/api/rpc", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+              method: "change-password",
+              params: [username, oldPassword, newPassword]
+            })
+          });
+
+          const body = await res.text();
+
+          if (!res.ok) {
+            let err = body;
+
+            try {
+              const parsed = JSON.parse(body);
+
+              err = parsed.data[0];
+            } catch (e) {}
+
+            throw new Error(`An error occurred: ${err}`);
+          }
+
+          console.log("Changed successfully");
+        } catch (e) {
+          console.log(e);
+        }
       };
 
       form.onchange = (e) => {
