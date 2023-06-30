@@ -11,6 +11,7 @@ type Opts struct {
 
 	MinPasswordLength int
 	MinNumbers        int
+	MinSymbols        int
 }
 
 var (
@@ -22,6 +23,7 @@ var (
 
 	fMinPasswordLength = flag.Int("min-password-length", 8, "Minimum length of the password.")
 	fMinNumbers        = flag.Int("min-numbers", 1, "Minimum amount of numbers in the password.")
+	fMinSymbols        = flag.Int("min-symbols", 1, "Minimum amount of symbols in the password.")
 )
 
 func Parse() *Opts {
@@ -38,5 +40,6 @@ func Parse() *Opts {
 
 		MinPasswordLength: *fMinPasswordLength,
 		MinNumbers:        *fMinNumbers,
+		MinSymbols:        *fMinSymbols,
 	}
 }
