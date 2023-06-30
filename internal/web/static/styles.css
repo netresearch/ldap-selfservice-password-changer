@@ -818,12 +818,12 @@ video {
   display: none;
 }
 
-.nonreveal-eye\:block[data-revealed="false"] .on-content-revealed {
-  display: block;
-}
-
 .nonreveal-eye\:hidden[data-revealed="false"] .on-content-revealed {
   display: none;
+}
+
+.nonreveal-eye-slash\:block[data-revealed="false"] .on-content-hidden {
+  display: block;
 }
 
 .input-focus\:border-white:has(input:focus) {
