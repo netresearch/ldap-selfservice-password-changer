@@ -164,7 +164,8 @@
 
         return specialCharacters;
       })();
-      console.log(specialCharacters);
+
+      const pluralize = (singular, amount) => (amount === 1 ? singular : singular + "s");
 
       /** @type {HTMLFormElement | null} */
       const form = document.querySelector("#form");
@@ -176,14 +177,12 @@
 
       const mustNotBeEmpty = (v) => (v.length === 0 ? "The input must not be empty" : "");
       const mustBeLongerThan = (minLength) => (v) =>
-        v.length < minLength
-          ? `The input must be at least ${minLength} character${minLength === 1 ? "" : "s"} long`
-          : "";
+        v.length < minLength ? `The input must be at least ${minLength} ${pluralize("character", minLength)} long` : "";
       const mustInclude = (chars) => (v) =>
         chars.some((c) => v.includes(c)) ? "" : `The input must include at least one of ${chars.join(", ")}`;
       const mustIncludeNumbers = (amount) => (v) =>
         v.split("").filter((c) => !isNaN(+c)).length < amount
-          ? `The input must include at least ${amount} number${amount === 1 ? "" : "s"}`
+          ? `The input must include at least ${amount} ${pluralize("number", amount)}`
           : "";
 
       const mustMatchNewPassword = (v) => {
