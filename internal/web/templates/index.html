@@ -137,7 +137,8 @@
       // @ts-check
 
       const opts = {
-        minPasswordLength: +"{{ .opts.MinPasswordLength }}"
+        minPasswordLength: +"{{ .opts.MinPasswordLength }}",
+        minNumbers: +"{{ .opts.MinNumbers }}"
       };
 
       const specialCharacters = (() => {
@@ -180,6 +181,10 @@
           : "";
       const mustInclude = (chars) => (v) =>
         chars.some((c) => v.includes(c)) ? "" : `The input must include at least one of ${chars.join(", ")}`;
+      const mustIncludeNumbers = (amount) => (v) =>
+        v.split("").filter((c) => !isNaN(+c)).length < amount
+          ? `The input must include at least ${amount} number${amount === 1 ? "" : "s"}`
+          : "";
 
       const mustMatchNewPassword = (v) => {
         /** @type {HTMLInputElement | null} */
@@ -196,6 +201,8 @@
         return passwordInput.value === v ? "The input must not match the current password" : "";
       };
 
+      const toggleValidator = (validate, enabled) => (v) => enabled ? validate(v) : "";
+
       /**
        * @typedef {[string, ((v: string) => string)[]]} Field
        */
@@ -210,7 +217,8 @@
             mustNotBeEmpty,
             mustBeLongerThan(opts.minPasswordLength),
             mustInclude(specialCharacters),
-            mustNotMatchCurrentPassword
+            mustNotMatchCurrentPassword,
+            toggleValidator(mustIncludeNumbers(opts.minNumbers), opts.minNumbers > 0)
           ]
         ],
         ["new2", [mustNotBeEmpty, mustMatchNewPassword]]
