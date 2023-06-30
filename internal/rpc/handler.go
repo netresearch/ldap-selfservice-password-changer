@@ -1,7 +1,6 @@
 package rpc
 
 import (
-	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
@@ -56,28 +55,4 @@ func (h *Handler) Handle(c *fiber.Ctx) error {
 			Data:    []string{"method not found"},
 		})
 	}
-}
-
-func (c *Handler) changePassword(params []string) ([]string, error) {
-	if len(params) != 3 {
-		return nil, ErrInvalidArgumentCount
-	}
-
-	sAMAccountName := params[0]
-	oldPassword := params[1]
-	newPassword := params[2]
-
-	if oldPassword == newPassword {
-		return nil, fmt.Errorf("the old password can't be same as the new one")
-	}
-
-	if len(newPassword) < c.opts.MinLength {
-		return nil, fmt.Errorf("the new password must be at least %d characters long", c.opts.MinLength)
-	}
-
-	if err := c.ldap.ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword); err != nil {
-		return nil, err
-	}
-
-	return []string{"password changed successfully"}, nil
 }
