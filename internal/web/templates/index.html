@@ -139,7 +139,9 @@
       const opts = {
         minLength: +"{{ .opts.MinLength }}",
         minNumbers: +"{{ .opts.MinNumbers }}",
-        minSymbols: +"{{ .opts.MinSymbols }}"
+        minSymbols: +"{{ .opts.MinSymbols }}",
+        minUppercase: +"{{ .opts.MinUppercase }}",
+        minLowercase: +"{{ .opts.MinLowercase }}"
       };
 
       const specialCharacters = (() => {
@@ -188,6 +190,14 @@
         v.split("").filter((c) => specialCharacters.includes(c)).length < amount
           ? `The input must include at least ${amount} ${pluralize("symbol", amount)}: ${specialCharsString}}`
           : "";
+      const mustIncludeUppercase = (amount) => (v) =>
+        v.split("").filter((c) => c === c.toUpperCase() && c !== c.toLowerCase()).length < amount
+          ? `The input must include at least ${amount} ${pluralize("uppercase character", amount)}`
+          : "";
+      const mustIncludeLowercase = (amount) => (v) =>
+        v.split("").filter((c) => c === c.toLowerCase() && c !== c.toUpperCase()).length < amount
+          ? `The input must include at least ${amount} ${pluralize("lowercase character", amount)}`
+          : "";
 
       const mustMatchNewPassword = (v) => {
         /** @type {HTMLInputElement | null} */
@@ -221,7 +231,9 @@
             mustBeLongerThan(opts.minLength),
             mustNotMatchCurrentPassword,
             toggleValidator(mustIncludeNumbers(opts.minNumbers), opts.minNumbers > 0),
-            toggleValidator(mustIncludeSymbols(opts.minSymbols), opts.minSymbols > 0)
+            toggleValidator(mustIncludeSymbols(opts.minSymbols), opts.minSymbols > 0),
+            toggleValidator(mustIncludeUppercase(opts.minUppercase), opts.minUppercase > 0),
+            toggleValidator(mustIncludeLowercase(opts.minLowercase), opts.minLowercase > 0)
           ]
         ],
         ["new2", [mustNotBeEmpty, mustMatchNewPassword]]
