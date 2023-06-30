@@ -137,7 +137,7 @@
       // @ts-check
 
       const opts = {
-        minPasswordLength: +"{{ .opts.MinPasswordLength }}",
+        minLength: +"{{ .opts.MinLength }}",
         minNumbers: +"{{ .opts.MinNumbers }}",
         minSymbols: +"{{ .opts.MinSymbols }}"
       };
@@ -218,7 +218,7 @@
           "new",
           [
             mustNotBeEmpty,
-            mustBeLongerThan(opts.minPasswordLength),
+            mustBeLongerThan(opts.minLength),
             mustNotMatchCurrentPassword,
             toggleValidator(mustIncludeNumbers(opts.minNumbers), opts.minNumbers > 0),
             toggleValidator(mustIncludeSymbols(opts.minSymbols), opts.minSymbols > 0)
