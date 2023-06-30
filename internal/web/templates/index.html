@@ -63,7 +63,7 @@
   data-revealed="false"
 >
   <div
-    class="flex gap-2 rounded-md border border-gray-500 bg-white bg-opacity-0 py-1 pl-3 pr-1 outline-none input-focus:border-white [&:has(input[disabled])]:bg-opacity-10"
+    class="flex gap-2 rounded-md border border-gray-600 bg-white bg-opacity-0 py-1 pl-3 pr-1 outline-none input-focus:border-white [&:has(input[disabled])]:bg-opacity-10"
     data-purpose="inputContainer"
   >
     <input
@@ -101,7 +101,7 @@
   </head>
 
   <body class="flex min-h-full items-center justify-center p-4">
-    <form class="space-y-4 rounded-md border border-gray-500 p-8" id="form">
+    <form class="space-y-4 rounded-md border border-gray-600 p-8" id="form">
       <!-- prettier-ignore -->
       {{ template "input" InputOpts "username" "Username" "text" }}
       <!-- prettier-ignore -->
@@ -113,7 +113,7 @@
 
       <button
         type="submit"
-        class="flex w-full items-center justify-center rounded-md border border-white bg-white px-3 py-1 font-bold text-black outline-none hover:bg-opacity-0 hover:text-white disabled:border-gray-500 disabled:bg-opacity-10 disabled:text-gray-500 disabled:hover:bg-opacity-10 disabled:hover:text-gray-500 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
+        class="flex w-full items-center justify-center rounded-md border border-white bg-white px-3 py-1 font-bold text-black outline-none hover:bg-opacity-0 hover:text-white disabled:border-gray-600 disabled:bg-opacity-10 disabled:text-gray-500 disabled:hover:bg-opacity-10 disabled:hover:text-gray-500 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
         data-loading="false"
       >
         <span>Change Password</span>
