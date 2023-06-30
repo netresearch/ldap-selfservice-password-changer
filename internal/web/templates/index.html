@@ -136,6 +136,10 @@
     <script>
       // @ts-check
 
+      const opts = {
+        minPasswordLength: +"{{ .opts.MinPasswordLength }}"
+      };
+
       const specialCharacters = (() => {
         // Generate an array of special characters according to the ASCII table:
         // https://en.wikipedia.org/wiki/ASCII
@@ -200,7 +204,15 @@
       const fieldsWithValidators = [
         ["username", [mustNotBeEmpty]],
         ["current", [mustNotBeEmpty]],
-        ["new", [mustNotBeEmpty, mustBeLongerThan(8), mustInclude(specialCharacters), mustNotMatchCurrentPassword]],
+        [
+          "new",
+          [
+            mustNotBeEmpty,
+            mustBeLongerThan(opts.minPasswordLength),
+            mustInclude(specialCharacters),
+            mustNotMatchCurrentPassword
+          ]
+        ],
         ["new2", [mustNotBeEmpty, mustMatchNewPassword]]
       ];
 
