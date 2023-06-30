@@ -71,8 +71,8 @@ func (c *Handler) changePassword(params []string) ([]string, error) {
 		return nil, fmt.Errorf("the old password can't be same as the new one")
 	}
 
-	if len(newPassword) < c.opts.MinPasswordLength {
-		return nil, fmt.Errorf("the new password must be at least %d characters long", c.opts.MinPasswordLength)
+	if len(newPassword) < c.opts.MinLength {
+		return nil, fmt.Errorf("the new password must be at least %d characters long", c.opts.MinLength)
 	}
 
 	if err := c.ldap.ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword); err != nil {
