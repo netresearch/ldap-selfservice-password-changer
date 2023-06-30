@@ -134,23 +134,55 @@
     </form>
 
     <script>
+      const specialCharacters = (() => {
+        // Generate an array of special characters according to the ASCII table:
+        // https://en.wikipedia.org/wiki/ASCII
+        const specialCharacters = [];
+
+        for (let i = "!".charCodeAt(0); i <= "/".charCodeAt(0); i++) {
+          specialCharacters.push(String.fromCharCode(i));
+        }
+
+        for (let i = ":".charCodeAt(0); i <= "@".charCodeAt(0); i++) {
+          specialCharacters.push(String.fromCharCode(i));
+        }
+
+        for (let i = "[".charCodeAt(0); i <= "`".charCodeAt(0); i++) {
+          specialCharacters.push(String.fromCharCode(i));
+        }
+
+        for (let i = "{".charCodeAt(0); i <= "~".charCodeAt(0); i++) {
+          specialCharacters.push(String.fromCharCode(i));
+        }
+
+        return specialCharacters;
+      })();
+      console.log(specialCharacters);
+
       const form = document.getElementById("form");
       if (!form) throw new Error("Could not find form element");
 
       const submitButton = form.querySelector("button[type='submit']");
       if (!submitButton) throw new Error("Could not find submit button element");
 
-      const mustNotBeEmpty = (v) => (v.trim().length === 0 ? "Can't be empty" : "");
+      const mustNotBeEmpty = (v) => (v.length === 0 ? "The input mut not be empty" : "");
+      const mustBeLongerThan = (minLength) => (v) =>
+        v.length < minLength
+          ? `The input must be at least ${minLength} character${minLength === 1 ? "" : "s"} long`
+          : "";
+      const mustInclude = (chars) => (v) =>
+        chars.some((c) => v.includes(c)) ? "" : `The input must include at least one of ${chars.join(", ")}`;
+
       const mustMatchNewPassword = (v) => {
         const newPassword = form.querySelector(`#new input`)?.value;
 
-        return newPassword !== v ? "Must match the first input" : "";
+        return newPassword !== v ? "The input must match the new password" : "";
       };
 
       const fields = [
         ["username", mustNotBeEmpty],
         ["current", mustNotBeEmpty],
-        ["new", mustNotBeEmpty],
+        ["new", mustNotBeEmpty, mustBeLongerThan(8), mustInclude(specialCharacters)],
         ["new2", mustNotBeEmpty, mustMatchNewPassword]
       ].map(([name, ...validators]) => {
         const f = form.querySelector(`#${name}`);
