@@ -76,7 +76,7 @@
     {{ if eq .Type "password" }}
     <button
       type="button"
-      class="flex items-center rounded-sm px-1 py-1 text-gray-500 outline-none ring-white hover:bg-gray-800 hover:text-white focus:bg-gray-800 focus:text-white"
+      class="flex items-center rounded-sm px-1 py-1 text-gray-500 outline-none ring-white hover:text-white focus:ring-1"
       data-purpose="reveal"
     >
       <!-- prettier-ignore -->
@@ -165,7 +165,7 @@
       const submitButton = form.querySelector("button[type='submit']");
       if (!submitButton) throw new Error("Could not find submit button element");
 
-      const mustNotBeEmpty = (v) => (v.length === 0 ? "The input mut not be empty" : "");
+      const mustNotBeEmpty = (v) => (v.length === 0 ? "The input must not be empty" : "");
       const mustBeLongerThan = (minLength) => (v) =>
         v.length < minLength
           ? `The input must be at least ${minLength} character${minLength === 1 ? "" : "s"} long`
