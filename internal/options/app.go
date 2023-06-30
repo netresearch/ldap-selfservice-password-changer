@@ -30,10 +30,38 @@ var (
 	fMinLowercase = flag.Int("min-lowercase", 1, "Minimum amount of lowercase letters in the password.")
 )
 
+func panicWhenLtZero(name string, value *int) {
+	if *value < 0 {
+		panic("The option --" + name + " has to be greater than zero")
+	}
+}
+
+func panicWhenLteZero(name string, value *int) {
+	if *value <= 0 {
+		panic("The option --" + name + " has to be greater than zero")
+	}
+}
+
+func panicWhenEmpty(name string, value *string) {
+	if *value == "" {
+		panic("The option --" + name + " is required")
+	}
+}
+
 func Parse() *Opts {
 	if !flag.Parsed() {
 		flag.Parse()
 	}
+
+	panicWhenEmpty("ldap-server", fLdapServer)
+	panicWhenEmpty("base-dn", fBaseDN)
+	panicWhenEmpty("readonly-user", fReadonlyUser)
+	panicWhenEmpty("readonly-password", fReadonlyPassword)
+
+	panicWhenLteZero("min-length", fMinLength)
+	panicWhenLtZero("min-numbers", fMinNumbers)
+	panicWhenLtZero("min-symbols", fMinSymbols)
+	panicWhenLtZero("min-uppercase", fMinUppercase)
 
 	return &Opts{
 		LdapServer:        *fLdapServer,
