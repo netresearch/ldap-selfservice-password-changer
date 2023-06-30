@@ -134,6 +134,8 @@
     </form>
 
     <script>
+      // @ts-check
+
       const specialCharacters = (() => {
         // Generate an array of special characters according to the ASCII table:
         // https://en.wikipedia.org/wiki/ASCII
@@ -159,9 +161,11 @@
       })();
       console.log(specialCharacters);
 
-      const form = document.getElementById("form");
+      /** @type {HTMLFormElement | null} */
+      const form = document.querySelector("#form");
       if (!form) throw new Error("Could not find form element");
 
+      /** @type {HTMLButtonElement | null} */
       const submitButton = form.querySelector("button[type='submit']");
       if (!submitButton) throw new Error("Could not find submit button element");
 
@@ -174,29 +178,50 @@
         chars.some((c) => v.includes(c)) ? "" : `The input must include at least one of ${chars.join(", ")}`;
 
       const mustMatchNewPassword = (v) => {
-        const newPassword = form.querySelector(`#new input`)?.value;
+        /** @type {HTMLInputElement | null} */
+        const passwordInput = form.querySelector(`#new input`);
+        if (!passwordInput) throw new Error("Could not find password input element");
 
-        return newPassword !== v ? "The input must match the new password" : "";
+        return passwordInput.value !== v ? "The input must match the new password" : "";
+      };
+      const mustNotMatchCurrentPassword = (v) => {
+        /** @type {HTMLInputElement | null} */
+        const passwordInput = form.querySelector(`#current input`);
+        if (!passwordInput) throw new Error("Could not find password input element");
+
+        return passwordInput.value === v ? "The input must not match the current password" : "";
       };
 
-      const fields = [
-        ["username", mustNotBeEmpty],
-        ["current", mustNotBeEmpty],
-        ["new", mustNotBeEmpty, mustBeLongerThan(8), mustInclude(specialCharacters)],
-        ["new2", mustNotBeEmpty, mustMatchNewPassword]
-      ].map(([name, ...validators]) => {
+      /**
+       * @typedef {[string, ((v: string) => string)[]]} Field
+       */
+
+      /** @type {Field[]} */
+      const fieldsWithValidators = [
+        ["username", [mustNotBeEmpty]],
+        ["current", [mustNotBeEmpty]],
+        ["new", [mustNotBeEmpty, mustBeLongerThan(8), mustInclude(specialCharacters), mustNotMatchCurrentPassword]],
+        ["new2", [mustNotBeEmpty, mustMatchNewPassword]]
+      ];
+
+      const fields = fieldsWithValidators.map(([name, validators]) => {
+        /** @type {HTMLDivElement | null} */
         const f = form.querySelector(`#${name}`);
         if (!f) throw new Error(`Field "${name}" does not exist`);
 
+        /** @type {HTMLDivElement | null} */
         const inputContainer = f.querySelector('div[data-purpose="inputContainer"]');
         if (!inputContainer) throw new Error(`Input container for "${name}" does not exist`);
 
+        /** @type {HTMLInputElement | null} */
         const input = inputContainer.querySelector("input");
         if (!input) throw new Error(`Input for "${name}" does not exist`);
 
+        /** @type {HTMLButtonElement | null} */
         const revealButton = inputContainer.querySelector('button[data-purpose="reveal"]');
         if (!revealButton && input.type === "password") throw new Error(`Reveal button for "${name}" does not exist`);
 
+        /** @type {HTMLDivElement | null} */
         const errorContainer = f.querySelector('div[data-purpose="errorContainer"]');
         if (!errorContainer) throw new Error(`Error for "${name}" does not exist`);
 
@@ -223,7 +248,7 @@
 
           const errors = validators
             .map((validate) => validate(value))
-            .reduce((acc, v) => {
+            .reduce((/** @type {string[]} */ acc, v) => {
               if (v.length > 0) acc.push(v);
 
               return acc;
@@ -247,7 +272,7 @@
             console.log(`${revealed ? "Showing" : "Hiding"} content of "${name}"`);
 
             input.type = newType;
-            f.dataset.revealed = revealed;
+            f.dataset.revealed = revealed.toString();
           };
         }
 
@@ -266,7 +291,7 @@
 
         console.log("Changing password...");
         [submitButton, ...fields.map(({ input }) => input)].forEach((el) => (el.disabled = true));
-        submitButton.dataset.loading = true;
+        submitButton.dataset.loading = "true";
 
         try {
           const res = await fetch("/api/rpc", {
