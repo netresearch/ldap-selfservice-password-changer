@@ -10,6 +10,7 @@ type Opts struct {
 	ReadonlyPassword  string
 
 	MinPasswordLength int
+	MinNumbers        int
 }
 
 var (
@@ -20,6 +21,7 @@ var (
 	fReadonlyPassword  = flag.String("readonly-password", "", "Password for the readonly user.")
 
 	fMinPasswordLength = flag.Int("min-password-length", 8, "Minimum length of the password.")
+	fMinNumbers        = flag.Int("min-numbers", 1, "Minimum amount of numbers in the password.")
 )
 
 func Parse() *Opts {
@@ -35,5 +37,6 @@ func Parse() *Opts {
 		ReadonlyPassword:  *fReadonlyPassword,
 
 		MinPasswordLength: *fMinPasswordLength,
+		MinNumbers:        *fMinNumbers,
 	}
 }
