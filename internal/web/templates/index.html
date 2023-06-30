@@ -192,11 +192,11 @@
           : "";
       const mustIncludeUppercase = (amount) => (v) =>
         v.split("").filter((c) => c === c.toUpperCase() && c !== c.toLowerCase()).length < amount
-          ? `The input must include at least ${amount} ${pluralize("uppercase character", amount)}`
+          ? `The input must include at least ${amount} uppercase ${pluralize("character", amount)}`
           : "";
       const mustIncludeLowercase = (amount) => (v) =>
         v.split("").filter((c) => c === c.toLowerCase() && c !== c.toUpperCase()).length < amount
-          ? `The input must include at least ${amount} ${pluralize("lowercase character", amount)}`
+          ? `The input must include at least ${amount} lowercase ${pluralize("character", amount)}`
           : "";
 
       const mustMatchNewPassword = (v) => {
