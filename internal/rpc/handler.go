@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	ldap "github.com/netresearch/simple-ldap-go"
 )
 
@@ -12,15 +13,16 @@ type Func = func(params []string) ([]string, error)
 
 type Handler struct {
 	ldap *ldap.LDAP
+	opts *options.Opts
 }
 
-func New(ldapServer string, isActiveDirectory bool, baseDN, readonlyUser, readonlyPassword string) (*Handler, error) {
-	ldap, err := ldap.New(ldapServer, baseDN, readonlyUser, readonlyPassword, isActiveDirectory)
+func New(opts *options.Opts) (*Handler, error) {
+	ldap, err := ldap.New(opts.LdapServer, opts.BaseDN, opts.ReadonlyUser, opts.ReadonlyPassword, opts.IsActiveDirectory)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Handler{ldap}, nil
+	return &Handler{ldap, opts}, nil
 }
 
 func (h *Handler) Handle(c *fiber.Ctx) error {
@@ -67,6 +69,10 @@ func (c *Handler) changePassword(params []string) ([]string, error) {
 
 	if oldPassword == newPassword {
 		return nil, fmt.Errorf("the old password can't be same as the new one")
+	}
+
+	if len(newPassword) < c.opts.MinPasswordLength {
+		return nil, fmt.Errorf("the new password must be at least %d characters long", c.opts.MinPasswordLength)
 	}
 
 	if err := c.ldap.ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword); err != nil {
