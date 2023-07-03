@@ -70,7 +70,7 @@
       type="{{ .Type }}"
       name="{{ .Name }}"
       placeholder="{{ .Placeholder }}"
-      class="flex-1 bg-transparent outline-none"
+      class="flex-1 bg-transparent outline-none placeholder:select-none"
     />
 
     {{ if eq .Type "password" }}
@@ -86,7 +86,7 @@
     </button>
     {{ end }}
   </div>
-  <div class="text-xs text-red-500" data-purpose="errorContainer"></div>
+  <div class="text-xs text-red-400" data-purpose="errors"></div>
 </div>
 {{ end }}
 
@@ -114,16 +114,20 @@
       <!-- prettier-ignore -->
       {{ template "input" InputOpts "new2" "New Password" "password" }}
 
-      <button
-        type="submit"
-        class="flex w-full items-center justify-center rounded-md border border-white bg-white px-3 py-1 font-bold text-black outline-none hover:bg-opacity-0 hover:text-white disabled:border-gray-600 disabled:bg-opacity-10 disabled:text-gray-500 disabled:hover:bg-opacity-10 disabled:hover:text-gray-500 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
-        data-loading="false"
-      >
-        <span>Change Password</span>
+      <div class="space-y-[2px]" data-purpose="submit">
+        <button
+          type="submit"
+          class="flex w-full items-center justify-center rounded-md border border-white bg-white px-3 py-1 font-bold text-black outline-none hover:bg-opacity-0 hover:text-white disabled:border-gray-600 disabled:bg-opacity-10 disabled:text-gray-500 disabled:hover:bg-opacity-10 disabled:hover:text-gray-500 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
+          data-loading="false"
+        >
+          <span>Change Password</span>
 
-        <!-- prettier-ignore -->
-        {{ template "LoadingIcon" }}
-      </button>
+          <!-- prettier-ignore -->
+          {{ template "LoadingIcon" }}
+        </button>
+
+        <div class="text-xs text-red-400" data-purpose="errors"></div>
+      </div>
 
       <p class="text-xs text-gray-500">
         Powered by
@@ -136,6 +140,16 @@
       </p>
     </form>
 
-    <script src="/static/app.js" defer></script>
+    <script type="module" defer>
+      import { init } from "/static/app.js";
+
+      init({
+        minLength: +"{{ .opts.MinLength }}",
+        minNumbers: +"{{ .opts.MinNumbers }}",
+        minSymbols: +"{{ .opts.MinSymbols }}",
+        minUppercase: +"{{ .opts.MinUppercase }}",
+        minLowercase: +"{{ .opts.MinLowercase }}"
+      });
+    </script>
   </body>
 </html>

@@ -1,17 +1,17 @@
 {
   "compilerOptions": {
-    "target": "ES2020",
-    "lib": ["DOM", "ES2020"],
-    "module": "ES2020",
-    "moduleResolution": "NodeNext",
-    "baseUrl": "./",
-    "rootDir": "./",
+    "target": "ESNext",
+    "lib": ["DOM", "ESNext"],
+    "module": "ESNext",
+    "baseUrl": "./internal/web/static",
+    "rootDir": "./internal/web/static",
     "allowJs": true,
     "checkJs": true,
-    "maxNodeModuleJsDepth": 1,
-    "noEmit": true,
     "allowSyntheticDefaultImports": true,
-    "esModuleInterop": false,
+    "declaration": false,
+    "sourceMap": false,
+    "isolatedModules": true,
+    "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
     "noImplicitAny": true,
@@ -31,5 +31,7 @@
     "noImplicitOverride": true,
     "noPropertyAccessFromIndexSignature": true,
     "skipLibCheck": true
-  }
+  },
+  "include": ["internal/web/static"],
+  "exclude": ["internal/web/static/keep.js"]
 }

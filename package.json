@@ -4,6 +4,8 @@
   "author": "DevMiner <devminer@devminer.xyz>",
   "license": "MIT",
   "scripts": {
+    "js": "tsc",
+    "js:dev": "tsc -w",
     "css": "tailwindcss -i ./internal/web/tailwind.css -o ./internal/web/static/styles.css",
     "css:dev": "tailwindcss -i ./internal/web/tailwind.css -o ./internal/web/static/styles.css -w"
   },
