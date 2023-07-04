@@ -63,6 +63,12 @@ export const mustNotMatchCurrentPassword = (v: string) => {
 
   return passwordInput.value === v ? "The input must not match the current password" : "";
 };
+export const mustNotIncludeUsername = (v: string) => {
+  const passwordInput = form.querySelector<HTMLInputElement>(`#username input`);
+  if (!passwordInput) throw new Error("Could not find username input element");
+
+  return v.includes(passwordInput.value) ? "The input must not include the username" : "";
+};
 
 export const toggleValidator = (validate: (v: string) => string, enabled: boolean) => (v: string) =>
   enabled ? validate(v) : "";

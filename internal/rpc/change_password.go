@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/validators"
 )
@@ -57,6 +58,10 @@ func (c *Handler) changePassword(params []string) ([]string, error) {
 
 	if !validators.MinLowercaseLettersInString(newPassword, c.opts.MinLowercase) {
 		return nil, fmt.Errorf("the new password must contain at least %d lowercase %s", c.opts.MinLowercase, pluralize("letter", c.opts.MinLowercase))
+	}
+
+	if !c.opts.PasswordCanIncludeUsername && strings.Contains(sAMAccountName, newPassword) {
+		return nil, fmt.Errorf("the new password must not include the username")
 	}
 
 	if err := c.ldap.ChangePasswordForSAMAccountName(sAMAccountName, currentPassword, newPassword); err != nil {
