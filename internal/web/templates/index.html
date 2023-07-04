@@ -56,6 +56,21 @@
 {{ end }}
 
 <!-- prettier-ignore -->
+{{ define "CheckIcon" }}
+<!-- heroicons check -->
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24">
+  <path
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="1.5"
+    d="m4.5 12.75l6 6l9-13.5"
+  />
+</svg>
+{{ end }}
+
+<!-- prettier-ignore -->
 {{ define "input" }}
 <div
   id="{{ .Name }}"
@@ -98,7 +113,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
 
     <link rel="preload" href="/static/styles.css" as="style" />
-    <link rel="preload" href="/static/app.js" as="script" />
+    <link rel="modulepreload" href="/static/validators.js" crossorigin="anonymous" />
+    <link rel="modulepreload" href="/static/app.js" crossorigin="anonymous" />
 
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
@@ -139,6 +155,22 @@
         </a>
       </p>
     </form>
+
+    <div class="hidden max-w-lg space-y-4 rounded-md border border-gray-600 p-8" data-purpose="successContainer">
+      <div class="mx-auto h-12 w-12">{{ template "CheckIcon" }}</div>
+
+      <p class="text-center">Your password was changed successfully.</p>
+
+      <p class="text-center text-xs text-gray-500">
+        Powered by
+        <a
+          href="https://github.com/netresearch/ldap-selfservice-password-changer"
+          class="break-keep hover:text-white hover:underline hover:decoration-white"
+        >
+          netresearch/ldap-selfservice-password-changer
+        </a>
+      </p>
+    </div>
 
     <script type="module" defer>
       import { init } from "/static/app.js";
