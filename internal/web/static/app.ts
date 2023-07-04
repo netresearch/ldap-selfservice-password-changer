@@ -47,10 +47,10 @@ export const init = (opts: Opts) => {
         mustBeLongerThan(opts.minLength),
         mustNotMatchCurrentPassword,
         toggleValidator(mustNotIncludeUsername, !opts.passwordCanIncludeUsername),
-        toggleValidator(mustIncludeNumbers(opts.minNumbers), opts.minNumbers > 0),
-        toggleValidator(mustIncludeSymbols(opts.minSymbols), opts.minSymbols > 0),
-        toggleValidator(mustIncludeUppercase(opts.minUppercase), opts.minUppercase > 0),
-        toggleValidator(mustIncludeLowercase(opts.minLowercase), opts.minLowercase > 0)
+        mustIncludeNumbers(opts.minNumbers),
+        mustIncludeSymbols(opts.minSymbols),
+        mustIncludeUppercase(opts.minUppercase),
+        mustIncludeLowercase(opts.minLowercase)
       ]
     ],
     ["new2", [mustNotBeEmpty, mustMatchNewPassword]]
