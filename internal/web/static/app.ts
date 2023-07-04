@@ -19,6 +19,9 @@ type Opts = {
 };
 
 export const init = (opts: Opts) => {
+  const successContainer = document.querySelector<HTMLFormElement>("div[data-purpose='successContainer']");
+  if (!successContainer) throw new Error("Could not find success container element");
+
   const form = document.querySelector<HTMLFormElement>("#form");
   if (!form) throw new Error("Could not find form element");
 
@@ -165,17 +168,20 @@ export const init = (opts: Opts) => {
       }
 
       console.log("Changed successfully");
+
+      form.style.display = "none";
+      successContainer.style.display = "block";
     } catch (e) {
       console.error(e);
 
       submitErrorContainer.innerText = (e as Error).message;
-    }
 
-    // Re-enable inputs but keep the submit button disabled,
-    // since we know that this isn't going to work. After the validators
-    // successfully re-run, it will enable the submit button again.
-    toggleFields(true);
-    submitButton.disabled = true;
+      // Re-enable inputs but keep the submit button disabled,
+      // since we know that this isn't going to work. After the validators
+      // successfully re-run, it will enable the submit button again.
+      toggleFields(true);
+      submitButton.disabled = true;
+    }
   };
 
   form.onchange = (e) => {
