@@ -9,11 +9,12 @@ type Opts struct {
 	ReadonlyUser      string
 	ReadonlyPassword  string
 
-	MinLength    int
-	MinNumbers   int
-	MinSymbols   int
-	MinUppercase int
-	MinLowercase int
+	MinLength                  int
+	MinNumbers                 int
+	MinSymbols                 int
+	MinUppercase               int
+	MinLowercase               int
+	PasswordCanIncludeUsername bool
 }
 
 var (
@@ -23,11 +24,12 @@ var (
 	fReadonlyUser      = flag.String("readonly-user", "", "User that can read all users in your LDAP directory.")
 	fReadonlyPassword  = flag.String("readonly-password", "", "Password for the readonly user.")
 
-	fMinLength    = flag.Int("min-length", 8, "Minimum length of the password.")
-	fMinNumbers   = flag.Int("min-numbers", 1, "Minimum amount of numbers in the password.")
-	fMinSymbols   = flag.Int("min-symbols", 1, "Minimum amount of symbols in the password.")
-	fMinUppercase = flag.Int("min-uppercase", 1, "Minimum amount of uppercase letters in the password.")
-	fMinLowercase = flag.Int("min-lowercase", 1, "Minimum amount of lowercase letters in the password.")
+	fMinLength                  = flag.Int("min-length", 8, "Minimum length of the password.")
+	fMinNumbers                 = flag.Int("min-numbers", 1, "Minimum amount of numbers in the password.")
+	fMinSymbols                 = flag.Int("min-symbols", 1, "Minimum amount of symbols in the password.")
+	fMinUppercase               = flag.Int("min-uppercase", 1, "Minimum amount of uppercase letters in the password.")
+	fMinLowercase               = flag.Int("min-lowercase", 1, "Minimum amount of lowercase letters in the password.")
+	fPasswordCanIncludeUsername = flag.Bool("password-can-match-username", false, "Enables that the password can match the password")
 )
 
 func panicWhenLtZero(name string, value *int) {
@@ -70,10 +72,11 @@ func Parse() *Opts {
 		ReadonlyUser:      *fReadonlyUser,
 		ReadonlyPassword:  *fReadonlyPassword,
 
-		MinLength:    *fMinLength,
-		MinNumbers:   *fMinNumbers,
-		MinSymbols:   *fMinSymbols,
-		MinUppercase: *fMinUppercase,
-		MinLowercase: *fMinLowercase,
+		MinLength:                  *fMinLength,
+		MinNumbers:                 *fMinNumbers,
+		MinSymbols:                 *fMinSymbols,
+		MinUppercase:               *fMinUppercase,
+		MinLowercase:               *fMinLowercase,
+		PasswordCanIncludeUsername: *fPasswordCanIncludeUsername,
 	}
 }

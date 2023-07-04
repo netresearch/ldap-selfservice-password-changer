@@ -6,6 +6,7 @@ import {
   mustIncludeUppercase,
   mustMatchNewPassword,
   mustNotBeEmpty,
+  mustNotIncludeUsername,
   mustNotMatchCurrentPassword,
   toggleValidator
 } from "./validators.js";
@@ -16,6 +17,7 @@ type Opts = {
   minSymbols: number;
   minUppercase: number;
   minLowercase: number;
+  passwordCanIncludeUsername: boolean;
 };
 
 export const init = (opts: Opts) => {
@@ -44,6 +46,7 @@ export const init = (opts: Opts) => {
         mustNotBeEmpty,
         mustBeLongerThan(opts.minLength),
         mustNotMatchCurrentPassword,
+        toggleValidator(mustNotIncludeUsername, !opts.passwordCanIncludeUsername),
         toggleValidator(mustIncludeNumbers(opts.minNumbers), opts.minNumbers > 0),
         toggleValidator(mustIncludeSymbols(opts.minSymbols), opts.minSymbols > 0),
         toggleValidator(mustIncludeUppercase(opts.minUppercase), opts.minUppercase > 0),
