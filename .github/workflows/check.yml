@@ -65,7 +65,7 @@ jobs:
         run: pnpm install
 
       - name: Check types
-        run: pnpm tsc
+        run: pnpm js:build
 
   formatting:
     name: Check formatting

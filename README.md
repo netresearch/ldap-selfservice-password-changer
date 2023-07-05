@@ -12,24 +12,21 @@ Prerequisites:
 # Install dependencies
 pnpm i
 
-# Build CSS once
-# If you change any of the HTML, you'll have to regenerate the style sheet.
-pnpm css
-# Build JS once
-# If you change any of the TypeScript code, you'll have to recompile the JS files.
-pnpm js
-# Run once
-go run .
+# Edit the package.json's `go:start` task to include the arguments,
+# you want to give to the application.
+# Required are:
+#   --ldap-server
+#   --readonly-user
+#   --readonly-password
+#   --base-dn
 
-# Build CSS and watch for changes
-pnpm css:dev
+# Running normally
+pnpm start
 
-# Build JS and watch for changes
-pnpm js:dev
-
-# Run and watch for changes
-go install github.com/mitranim/gow@latest
-gow run .
+# Running in dev mode
+#   This will restart the application every time, you make
+#   a change.
+pnpm dev
 ```
 
 ## License
