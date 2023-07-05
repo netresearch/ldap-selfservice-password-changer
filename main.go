@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/template/html/v2"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
@@ -27,6 +28,10 @@ func main() {
 	app := fiber.New(fiber.Config{
 		Views: views,
 	})
+
+	app.Use(compress.New(compress.Config{
+		Level: compress.LevelBestCompression,
+	}))
 
 	app.Use("/static", filesystem.New(filesystem.Config{
 		Root: http.FS(static.Static),
