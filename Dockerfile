@@ -8,8 +8,7 @@ RUN pnpm i
 
 COPY . .
 
-RUN pnpm css
-RUN pnpm js
+RUN pnpm build:assets
 
 FROM golang:1.20-alpine AS backend-builder
 WORKDIR /build
