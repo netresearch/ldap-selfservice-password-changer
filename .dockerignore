@@ -3,5 +3,6 @@ node_modules
 docs
 
 internal/web/static/styles.css
+internal/web/static/*.js
 Dockerfile
 README.md
