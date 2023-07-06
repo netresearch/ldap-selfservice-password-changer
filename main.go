@@ -46,5 +46,7 @@ func main() {
 
 	app.Post("/api/rpc", rpcHandler.Handle)
 
-	app.Listen(":3000")
+	if err := app.Listen(":3000"); err != nil {
+		log.Printf("err: could not start web server: %s", err)
+	}
 }
