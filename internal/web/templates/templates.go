@@ -6,12 +6,13 @@ import "embed"
 var Templates embed.FS
 
 type InputOpts struct {
-	Name        string
-	Placeholder string
-	Type        string
+	Name         string
+	Placeholder  string
+	Type         string
+	Autocomplete string
 }
 
-func MakeInputOpts(name, placeholder, type_ string) InputOpts {
+func MakeInputOpts(name, placeholder, type_, autocomplete string) InputOpts {
 	if type_ != "password" && type_ != "text" {
 		panic("InputOpts type must be either `password` or `text`")
 	}
@@ -20,5 +21,6 @@ func MakeInputOpts(name, placeholder, type_ string) InputOpts {
 		name,
 		placeholder,
 		type_,
+		autocomplete,
 	}
 }
