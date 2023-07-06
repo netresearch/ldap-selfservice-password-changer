@@ -30,7 +30,7 @@ func main() {
 	})
 
 	app.Use(compress.New(compress.Config{
-		Level: compress.LevelBestCompression,
+		Level: compress.LevelBestSpeed,
 	}))
 
 	app.Use("/static", filesystem.New(filesystem.Config{
