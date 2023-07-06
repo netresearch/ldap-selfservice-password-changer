@@ -85,6 +85,7 @@
       type="{{ .Type }}"
       name="{{ .Name }}"
       placeholder="{{ .Placeholder }}"
+      autocomplete="{{ .Autocomplete }}"
       class="flex-1 bg-transparent outline-none placeholder:select-none"
     />
 
@@ -122,13 +123,13 @@
   <body class="flex min-h-full items-center justify-center p-4">
     <form class="max-w-lg space-y-4 rounded-md border border-gray-600 p-8" id="form">
       <!-- prettier-ignore -->
-      {{ template "input" InputOpts "username" "Username" "text" }}
+      {{ template "input" InputOpts "username" "Username" "text" "username" }}
       <!-- prettier-ignore -->
-      {{ template "input" InputOpts "current" "Current Password" "password" }}
+      {{ template "input" InputOpts "current" "Current Password" "password" "current-password" }}
       <!-- prettier-ignore -->
-      {{ template "input" InputOpts "new" "New Password" "password" }}
+      {{ template "input" InputOpts "new" "New Password" "password" "new-password" }}
       <!-- prettier-ignore -->
-      {{ template "input" InputOpts "new2" "New Password" "password" }}
+      {{ template "input" InputOpts "new2" "New Password" "password" "new-password" }}
 
       <div class="space-y-[2px]" data-purpose="submit">
         <button
