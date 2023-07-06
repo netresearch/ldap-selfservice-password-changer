@@ -6,7 +6,7 @@ We have a Docker image available [here](https://github.com/netresearch/ldap-self
 
 <!-- Multiline comment idea taken from https://stackoverflow.com/a/12797512 -->
 
-```
+```bash
 docker run \
   `# Run the password-changer container detached from the current terminal` \
   -d --name ldap-password-changer \
