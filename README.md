@@ -1,5 +1,27 @@
 # LDAP Selfservice Password Changer
 
+## Running in Docker
+
+We have a Docker image available [here](https://github.com/netresearch/ldap-selfservice-password-changer/pkgs/container/ldap-selfservice-password-changer).
+
+<!-- Multiline comment idea taken from https://stackoverflow.com/a/12797512 -->
+
+```
+docker run \
+  `# Run the password-changer container detached from the current terminal` \
+  -d --name ldap-password-changer \
+  `# You might want to mount your host SSL certificate directory,` \
+  `# if you have a self-signed certificate for your LDAPS connection` \
+  -v /etc/ssl/certs:/etc/ssl/certs:ro \
+  -p 3000:3000 \
+  ghcr.io/netresearch/ldap-selfservice-password-changer \
+  `# You can also configure these via environment variables,` \
+  `# please see the .env file for available options.` \
+  -ldap-server ldaps://dc1.example.com:636 -active-directory \
+  -readonly-password readonly -readonly-user readonly \
+  -base-dn DC=example,DC=com
+```
+
 ## Developing
 
 Prerequisites:
