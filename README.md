@@ -6,7 +6,7 @@ Prerequisites:
 
 - Go 1.20+
 - Node.js v16+
-- PNPM
+- PNPM 8+ (`npm i -g pnpm`)
 
 ```bash
 # Install dependencies
