@@ -7,7 +7,7 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/validators"
 )
 
-func pluralize(word string, amount int) string {
+func pluralize(word string, amount uint) string {
 	if amount == 1 {
 		return word
 	}
@@ -40,7 +40,7 @@ func (c *Handler) changePassword(params []string) ([]string, error) {
 		return nil, fmt.Errorf("the old password can't be same as the new one")
 	}
 
-	if len(newPassword) < c.opts.MinLength {
+	if len(newPassword) < int(c.opts.MinLength) {
 		return nil, fmt.Errorf("the new password must be at least %d characters long", c.opts.MinLength)
 	}
 
