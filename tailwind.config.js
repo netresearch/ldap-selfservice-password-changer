@@ -11,6 +11,7 @@ const config = {
       addVariant("nonreveal-eye", '&[data-revealed="false"] .on-content-revealed');
       addVariant("nonreveal-eye-slash", '&[data-revealed="false"] .on-content-hidden');
       addVariant("input-focus", "&:has(input:focus)");
+      addVariant("hocus", ["&:hover", "&:focus"]);
     })
   ],
   theme: {
