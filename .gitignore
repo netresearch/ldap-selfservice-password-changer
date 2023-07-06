@@ -1,5 +1,4 @@
 node_modules
 internal/web/static/*.js
-!internal/web/static/keep.js
 internal/web/static/styles.css
 .env.local
