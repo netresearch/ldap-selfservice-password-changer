@@ -1,7 +1,7 @@
 package validators
 
-func MinNumbersInString(value string, amount int) bool {
-	counter := 0
+func MinNumbersInString(value string, amount uint) bool {
+	var counter uint = 0
 	for _, c := range value {
 		if c >= '0' && c <= '9' {
 			counter++
@@ -11,8 +11,8 @@ func MinNumbersInString(value string, amount int) bool {
 	return counter >= amount
 }
 
-func MinSymbolsInString(value string, amount int) bool {
-	counter := 0
+func MinSymbolsInString(value string, amount uint) bool {
+	var counter uint = 0
 	for _, c := range value {
 		if (c >= '!' && c <= '/') || (c >= ':' && c <= '@') || (c >= '[' && c <= '`') || (c >= '{' && c <= '~') {
 			counter++
@@ -22,8 +22,8 @@ func MinSymbolsInString(value string, amount int) bool {
 	return counter >= amount
 }
 
-func MinUppercaseLettersInString(value string, amount int) bool {
-	counter := 0
+func MinUppercaseLettersInString(value string, amount uint) bool {
+	var counter uint = 0
 	for _, c := range value {
 		if c >= 'A' && c <= 'Z' {
 			counter++
@@ -33,8 +33,8 @@ func MinUppercaseLettersInString(value string, amount int) bool {
 	return counter >= amount
 }
 
-func MinLowercaseLettersInString(value string, amount int) bool {
-	counter := 0
+func MinLowercaseLettersInString(value string, amount uint) bool {
+	var counter uint = 0
 	for _, c := range value {
 		if c >= 'a' && c <= 'z' {
 			counter++

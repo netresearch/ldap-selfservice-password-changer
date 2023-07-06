@@ -12,13 +12,13 @@ Prerequisites:
 # Install dependencies
 pnpm i
 
-# Edit the package.json's `go:start` task to include the arguments,
-# you want to give to the application.
+touch .env.local
+# Edit the `.env.local` to include the arguments, you want to give to the application.
 # Required are:
-#   --ldap-server
-#   --readonly-user
-#   --readonly-password
-#   --base-dn
+# - LDAP_SERVER
+# - LDAP_BASE_DN
+# - LDAP_READONLY_USER
+# - LDAP_READONLY_PASSWORD
 
 # Running normally
 pnpm start

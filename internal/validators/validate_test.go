@@ -8,7 +8,7 @@ import (
 
 type TestCase struct {
 	Input    string
-	Arg      int
+	Arg      uint
 	Expected bool
 }
 
