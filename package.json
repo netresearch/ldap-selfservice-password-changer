@@ -14,7 +14,7 @@
     "css:dev": "pnpm css:build -w",
     "go:start": "go run .",
     "go:build": "go build",
-    "go:dev": "nodemon -e go,html,css,js -w ./*/** -x 'pnpm go:start'"
+    "go:dev": "nodemon --signal SIGTERM -e go,html,css,js -w './*/**' -x 'pnpm' go:start"
   },
   "devDependencies": {
     "concurrently": "^8.2.0",
