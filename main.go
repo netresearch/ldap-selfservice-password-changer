@@ -34,7 +34,8 @@ func main() {
 	}))
 
 	app.Use("/static", filesystem.New(filesystem.Config{
-		Root: http.FS(static.Static),
+		Root:   http.FS(static.Static),
+		MaxAge: 24 * 60 * 60,
 	}))
 
 	app.Get("/", func(c *fiber.Ctx) error {
