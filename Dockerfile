@@ -25,7 +25,6 @@ RUN CGO_ENABLED=0 go build -o /build/ldap-passwd
 
 FROM alpine:3.17 AS runner
 
-COPY ./docker-entrypoint.sh /entrypoint.sh
 COPY --from=backend-builder /build/ldap-passwd /usr/local/bin/ldap-passwd
 
-ENTRYPOINT [ "/entrypoint.sh" ]
+ENTRYPOINT [ "/usr/local/bin/ldap-passwd" ]
