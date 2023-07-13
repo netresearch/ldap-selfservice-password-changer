@@ -28,6 +28,8 @@ pnpm build
 
 We have a Docker image available [here](https://github.com/netresearch/ldap-selfservice-password-changer/pkgs/container/ldap-selfservice-password-changer).
 
+You can ignore the warning that the service could not load a `.env` file.
+
 <!-- Multiline comment idea taken from https://stackoverflow.com/a/12797512 -->
 
 ```bash
