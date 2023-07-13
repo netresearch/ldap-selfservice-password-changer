@@ -1,5 +1,7 @@
 # LDAP Selfservice Password Changer
 
+LDAP Selfservice Password Changer is a web frontend and JSON RPC API for the password changing part of a LDAP or ActiveDirectory server.
+
 ## Running
 
 ### Natively
