@@ -36,8 +36,6 @@ func envStringOrDefault(name, d string) string {
 		return v
 	}
 
-	log.Printf("dbg: setting flag \"%s\" to default value \"%s\"", name, d)
-
 	return d
 }
 
