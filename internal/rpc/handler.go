@@ -30,7 +30,7 @@ func (h *Handler) Handle(c *fiber.Ctx) error {
 		return err
 	}
 
-	wrapRPC := func(c *fiber.Ctx, fn Func) error {
+	wrapRPC := func(fn Func) error {
 		data, err := fn(body.Params)
 		if err != nil {
 			return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
@@ -47,7 +47,7 @@ func (h *Handler) Handle(c *fiber.Ctx) error {
 
 	switch body.Method {
 	case "change-password":
-		return wrapRPC(c, h.changePassword)
+		return wrapRPC(h.changePassword)
 
 	default:
 		return c.Status(http.StatusBadRequest).JSON(JSONRPCResponse{
