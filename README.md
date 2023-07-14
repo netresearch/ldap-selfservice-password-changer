@@ -8,11 +8,18 @@ LDAP Selfservice Password Changer is a web frontend and JSON RPC API for the pas
 
 If you want to run this service without a Docker container, you have to build it yourself.
 
+Prerequisites:
+
+- Go 1.20+
+- Node.js v16+
+- Corepack (`npm i -g corepack`)
+
 You can configure this via a `.env.local` file or via command options (for more information you can run `./ldap-selfservice-password-changer --help`).
 
 <!-- Multiline comment idea taken from https://stackoverflow.com/a/12797512 -->
 
 ```bash
+corepack enable
 pnpm i
 pnpm build
 
@@ -54,9 +61,11 @@ Prerequisites:
 
 - Go 1.20+
 - Node.js v16+
-- PNPM 8+ (`npm i -g pnpm`)
+- Corepack (`npm i -g corepack`)
 
 ```bash
+corepack enable
+
 # Install dependencies
 pnpm i
 
