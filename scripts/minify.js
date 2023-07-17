@@ -2,7 +2,7 @@
 const Uglify = require("uglify-js");
 const FS = require("node:fs");
 
-const base = "./internal/web/static/";
+const base = "./internal/web/static/js/";
 
 const nameCache = {};
 

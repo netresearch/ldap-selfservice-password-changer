@@ -114,49 +114,64 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="darkreader-lock" />
 
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png" />
+    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png" />
+    <link rel="icon" type="image/x-icon" href="/static/favicon.ico" />
+    <link rel="manifest" href="/static/site.webmanifest" />
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png" />
+    <link rel="mask-icon" href="/static/safari-pinned-tab.svg" color="#000000" />
+    <meta name="theme-color" content="#b8e9f4" />
+    <meta name="msapplication-TileColor" content="#b8e9f4" />
+
     <link rel="preload" href="/static/styles.css" as="style" />
-    <link rel="modulepreload" href="/static/validators.js" crossorigin="anonymous" />
-    <link rel="modulepreload" href="/static/app.js" crossorigin="anonymous" />
+    <link rel="modulepreload" href="/static/js/validators.js" crossorigin="anonymous" />
+    <link rel="modulepreload" href="/static/js/app.js" crossorigin="anonymous" />
 
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
 
   <body class="flex min-h-full items-center justify-center p-4">
-    <form class="max-w-lg space-y-4 rounded-md border border-gray-600 p-8" id="form">
-      <!-- prettier-ignore -->
-      {{ template "input" InputOpts "username" "Username" "text" "username" }}
-      <!-- prettier-ignore -->
-      {{ template "input" InputOpts "current" "Current Password" "password" "current-password" }}
-      <!-- prettier-ignore -->
-      {{ template "input" InputOpts "new" "New Password" "password" "new-password" }}
-      <!-- prettier-ignore -->
-      {{ template "input" InputOpts "new2" "New Password" "password" "new-password" }}
-
-      <div class="space-y-[2px]" data-purpose="submit">
-        <button
-          type="submit"
-          class="flex w-full items-center justify-center rounded-md border border-white bg-white px-3 py-1 font-bold text-black outline-none disabled:border-gray-600 disabled:bg-opacity-10 disabled:text-gray-500 hocus:bg-opacity-0 hocus:text-white disabled:hocus:bg-opacity-10 disabled:hocus:text-gray-500 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
-          data-loading="false"
-        >
-          <span>Change Password</span>
-
-          <!-- prettier-ignore -->
-          {{ template "LoadingIcon" }}
-        </button>
-
-        <div class="text-xs text-red-400" data-purpose="errors"></div>
+    <div class="max-w-lg space-y-4 rounded-md border border-gray-600 p-8">
+      <div class="flex justify-center">
+        <img src="/static/logo.webp" class="center aspect-square h-28 sm:h-48" alt="" />
       </div>
 
-      <p class="text-xs text-gray-500">
-        Powered by
-        <a
-          href="https://github.com/netresearch/ldap-selfservice-password-changer"
-          class="break-keep outline-none hocus:text-white hocus:underline hocus:decoration-white"
-        >
-          netresearch/ldap-selfservice-password-changer
-        </a>
-      </p>
-    </form>
+      <form class="space-y-4" id="form">
+        <!-- prettier-ignore -->
+        {{ template "input" InputOpts "username" "Username" "text" "username" }}
+        <!-- prettier-ignore -->
+        {{ template "input" InputOpts "current" "Current Password" "password" "current-password" }}
+        <!-- prettier-ignore -->
+        {{ template "input" InputOpts "new" "New Password" "password" "new-password" }}
+        <!-- prettier-ignore -->
+        {{ template "input" InputOpts "new2" "New Password" "password" "new-password" }}
+
+        <div class="space-y-[2px]" data-purpose="submit">
+          <button
+            type="submit"
+            class="flex w-full items-center justify-center rounded-md border border-white bg-white px-3 py-1 font-bold text-black outline-none disabled:border-gray-600 disabled:bg-opacity-10 disabled:text-gray-500 hocus:bg-opacity-0 hocus:text-white disabled:hocus:bg-opacity-10 disabled:hocus:text-gray-500 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
+            data-loading="false"
+          >
+            <span>Change Password</span>
+
+            <!-- prettier-ignore -->
+            {{ template "LoadingIcon" }}
+          </button>
+
+          <div class="text-xs text-red-400" data-purpose="errors"></div>
+        </div>
+
+        <p class="text-center text-xs text-gray-500">
+          Powered by
+          <a
+            href="https://github.com/netresearch/ldap-selfservice-password-changer"
+            class="break-keep outline-none hocus:text-white hocus:underline hocus:decoration-white"
+          >
+            netresearch/ldap-selfservice-password-changer
+          </a>
+        </p>
+      </form>
+    </div>
 
     <div class="hidden max-w-lg space-y-4 rounded-md border border-gray-600 p-8" data-purpose="successContainer">
       <div class="mx-auto h-12 w-12">{{ template "CheckIcon" }}</div>
@@ -175,7 +190,7 @@
     </div>
 
     <script type="module" defer>
-      import { init } from "/static/app.js";
+      import { init } from "/static/js/app.js";
 
       init({
         minLength: +"{{ .opts.MinLength }}",
