@@ -4,7 +4,7 @@ node_modules
 docs
 
 internal/web/static/styles.css
-internal/web/static/*.js
+internal/web/static/js/*.js
 Dockerfile
 README.md
 LICENSE

@@ -115,8 +115,8 @@
     <meta name="darkreader-lock" />
 
     <link rel="preload" href="/static/styles.css" as="style" />
-    <link rel="modulepreload" href="/static/validators.js" crossorigin="anonymous" />
-    <link rel="modulepreload" href="/static/app.js" crossorigin="anonymous" />
+    <link rel="modulepreload" href="/static/js/validators.js" crossorigin="anonymous" />
+    <link rel="modulepreload" href="/static/js/app.js" crossorigin="anonymous" />
 
     <link rel="stylesheet" href="/static/styles.css" />
   </head>
@@ -175,7 +175,7 @@
     </div>
 
     <script type="module" defer>
-      import { init } from "/static/app.js";
+      import { init } from "/static/js/app.js";
 
       init({
         minLength: +"{{ .opts.MinLength }}",

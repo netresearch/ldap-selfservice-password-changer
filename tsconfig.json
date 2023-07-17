@@ -33,5 +33,4 @@
     "skipLibCheck": true
   },
   "include": ["internal/web/static"],
-  "exclude": ["internal/web/static/keep.js"]
 }
