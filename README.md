@@ -1,9 +1,9 @@
 <div align=center>
   <h1>LDAP Selfservice Password Changer</h1>
 
-  LDAP Selfservice Password Changer is a web frontend and JSON RPC API for allowing your users to change their own passwords in your LDAP or ActiveDirectory server.
+  <span>LDAP Selfservice Password Changer is a web frontend and JSON RPC API for allowing your users to change their own passwords in your LDAP or ActiveDirectory server.</span>
 
-  <img src="./docs/logo.webp" height="256">
+  <img src="./internal/web/static/logo.webp" height="256">
 </div>
 
 ## Running
