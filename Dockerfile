@@ -23,7 +23,7 @@ COPY --from=frontend-builder /build/internal/web/static/styles.css /build/intern
 COPY --from=frontend-builder /build/internal/web/static/js/*.js /build/internal/web/static/js
 RUN CGO_ENABLED=0 go build -o /build/ldap-passwd
 
-FROM alpine:3.17 AS runner
+FROM alpine:3 AS runner
 
 COPY --from=backend-builder /build/ldap-passwd /usr/local/bin/ldap-passwd
 
