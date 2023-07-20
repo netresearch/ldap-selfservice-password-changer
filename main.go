@@ -26,7 +26,9 @@ func main() {
 	views.AddFunc("InputOpts", templates.MakeInputOpts)
 
 	app := fiber.New(fiber.Config{
-		Views: views,
+		AppName:   "netresearch/ldap-selfservice-password-changer",
+		BodyLimit: 4 * 1024,
+		Views:     views,
 	})
 
 	app.Use(compress.New(compress.Config{
