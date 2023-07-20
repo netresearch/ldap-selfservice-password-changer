@@ -7,7 +7,6 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
-	"github.com/gofiber/template/html/v2"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpc"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/static"
@@ -22,13 +21,14 @@ func main() {
 		log.Fatalf("An error occurred during initialization: %v", err)
 	}
 
-	views := html.NewFileSystem(http.FS(templates.Templates), ".html")
-	views.AddFunc("InputOpts", templates.MakeInputOpts)
+	index, err := templates.RenderIndex(opts)
+	if err != nil {
+		log.Fatalf("An error occurred during rendering the page: %v", err)
+	}
 
 	app := fiber.New(fiber.Config{
 		AppName:   "netresearch/ldap-selfservice-password-changer",
 		BodyLimit: 4 * 1024,
-		Views:     views,
 	})
 
 	app.Use(compress.New(compress.Config{
@@ -41,9 +41,8 @@ func main() {
 	}))
 
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.Render("index", fiber.Map{
-			"opts": opts,
-		})
+		c.Set("Content-Type", fiber.MIMETextHTMLCharsetUTF8)
+		return c.Send(index)
 	})
 
 	app.Post("/api/rpc", rpcHandler.Handle)
