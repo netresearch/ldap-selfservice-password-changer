@@ -1,4 +1,4 @@
-FROM --platform=amd64 node:18 AS frontend-builder
+FROM --platform=amd64 node:20 AS frontend-builder
 WORKDIR /build
 RUN npm i -g pnpm
 
