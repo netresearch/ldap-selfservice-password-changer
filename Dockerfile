@@ -10,7 +10,7 @@ COPY . .
 
 RUN pnpm build:assets
 
-FROM golang:1.20-alpine AS backend-builder
+FROM golang:1.21-alpine AS backend-builder
 WORKDIR /build
 RUN apk add git
 
