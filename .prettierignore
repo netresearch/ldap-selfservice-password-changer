@@ -1,3 +1,4 @@
 internal/web/static/styles.css
 internal/web/static/js/*.js
 pnpm-lock.yaml
+renovate.json
