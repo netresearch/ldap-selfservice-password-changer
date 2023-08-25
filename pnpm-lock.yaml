@@ -24,14 +24,14 @@ devDependencies:
     specifier: ^10.1.0
     version: 10.1.0(postcss@8.4.25)
   prettier:
-    specifier: ^3.0.0
-    version: 3.0.0
+    specifier: ^3.0.2
+    version: 3.0.2
   prettier-plugin-go-template:
     specifier: ^0.0.15
-    version: 0.0.15(prettier@3.0.0)
+    version: 0.0.15(prettier@3.0.2)
   prettier-plugin-tailwindcss:
-    specifier: ^0.5.0
-    version: 0.5.0(prettier@3.0.0)
+    specifier: ^0.5.3
+    version: 0.5.3(prettier@3.0.2)
   tailwindcss:
     specifier: ^3.3.2
     version: 3.3.2
@@ -1244,18 +1244,18 @@ packages:
       source-map-js: 1.0.2
     dev: true
 
-  /prettier-plugin-go-template@0.0.15(prettier@3.0.0):
+  /prettier-plugin-go-template@0.0.15(prettier@3.0.2):
     resolution: {integrity: sha512-WqU92E1NokWYNZ9mLE6ijoRg6LtIGdLMePt2C7UBDjXeDH9okcRI3zRqtnWR4s5AloiqyvZ66jNBAa9tmRY5EQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       prettier: ^3.0.0
     dependencies:
-      prettier: 3.0.0
+      prettier: 3.0.2
       ulid: 2.3.0
     dev: true
 
-  /prettier-plugin-tailwindcss@0.5.0(prettier@3.0.0):
-    resolution: {integrity: sha512-EpP/Hg/D/LzjKJ+gYiSnsqk+PkrHSFQAuRHx/sj3O4r2kH0iJAOrKeKmI1X4Fm96M1BY+tO0KiV+/Y03MYbArg==}
+  /prettier-plugin-tailwindcss@0.5.3(prettier@3.0.2):
+    resolution: {integrity: sha512-M5K80V21yM+CTm/FEFYRv9/9LyInYbCSXpIoPAKMm8zy89IOwdiA2e4JVbcO7tvRtAQWz32zdj7/WKcsmFyAVg==}
     engines: {node: '>=14.21.3'}
     peerDependencies:
       '@ianvs/prettier-plugin-sort-imports': '*'
@@ -1263,7 +1263,7 @@ packages:
       '@shopify/prettier-plugin-liquid': '*'
       '@shufo/prettier-plugin-blade': '*'
       '@trivago/prettier-plugin-sort-imports': '*'
-      prettier: ^2.2 || ^3.0
+      prettier: ^3.0
       prettier-plugin-astro: '*'
       prettier-plugin-css-order: '*'
       prettier-plugin-import-sort: '*'
@@ -1306,11 +1306,11 @@ packages:
       prettier-plugin-twig-melody:
         optional: true
     dependencies:
-      prettier: 3.0.0
+      prettier: 3.0.2
     dev: true
 
-  /prettier@3.0.0:
-    resolution: {integrity: sha512-zBf5eHpwHOGPC47h0zrPyNn+eAEIdEzfywMoYn2XPi0P44Zp0tSq64rq0xAREh4auw2cJZHo9QUob+NqCQky4g==}
+  /prettier@3.0.2:
+    resolution: {integrity: sha512-o2YR9qtniXvwEZlOKbveKfDQVyqxbEIWn48Z8m3ZJjBjcCmUy3xZGIv+7AkaeuaTr6yPXJjwv07ZWlsWbEy1rQ==}
     engines: {node: '>=14'}
     hasBin: true
     dev: true
