@@ -42,6 +42,8 @@ github.com/netresearch/simple-ldap-go v0.0.0-20230629101702-3ac58dd8f194 h1:XX+r
 github.com/netresearch/simple-ldap-go v0.0.0-20230629101702-3ac58dd8f194/go.mod h1:xZ9EwZqz53Rc/F6S0mDIZ+oGGuhrgCgJnt0ZWmVTKiI=
 github.com/netresearch/simple-ldap-go v0.0.0-20230815093415-276aae57f9a7 h1:ZBoJ5a42U3NWTScIqzcJ/sXXTT/KoEsmIl5qgZ+WU2o=
 github.com/netresearch/simple-ldap-go v0.0.0-20230815093415-276aae57f9a7/go.mod h1:mJUUG8bPqOFrqjEUp+GhoRGC3oEFTxVYlUNS5oA3afw=
+github.com/netresearch/simple-ldap-go v0.0.0-20230915232254-3b11228f3129 h1:t0EBBMKJoZrBUbtuQ60PrP+c/kjY3Pf/PMyzQ6pHNr4=
+github.com/netresearch/simple-ldap-go v0.0.0-20230915232254-3b11228f3129/go.mod h1:T/Nbe0raXbCgzMWzsOfMX2sZC1FMGk2g3XpPG4OT6NY=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
@@ -101,6 +103,8 @@ golang.org/x/text v0.11.0 h1:LAntKIrcmeSKERyiOh0XMV39LXS8IE9UL2yP7+f5ij4=
 golang.org/x/text v0.11.0/go.mod h1:TvPlkZtksWOMsz7fbANvkp4WM8x/WCo/om8BMLbz+aE=
 golang.org/x/text v0.12.0 h1:k+n5B8goJNdU7hSvEtMUz3d1Q6D/XW4COJSJR6fN0mc=
 golang.org/x/text v0.12.0/go.mod h1:TvPlkZtksWOMsz7fbANvkp4WM8x/WCo/om8BMLbz+aE=
+golang.org/x/text v0.13.0 h1:ablQoSUd0tRdKxZewP80B+BaqeKJuVhuRxj/dkrun3k=
+golang.org/x/text v0.13.0/go.mod h1:TvPlkZtksWOMsz7fbANvkp4WM8x/WCo/om8BMLbz+aE=
 golang.org/x/tools v0.0.0-20180917221912-90fa682c2a6e/go.mod h1:n7NCudcB/nEzxVGmLbDWY5pfWTLqBcC2KZ6jyYvM4mQ=
 golang.org/x/tools v0.0.0-20191119224855-298f0cb1881e/go.mod h1:b+2E5dAYhXwXZwtnZ6UAqBI28+e2cm9otk0dWdXHAEo=
 golang.org/x/tools v0.1.12/go.mod h1:hNGJHUnrk76NpqgfD5Aqm5Crs+Hm0VOH/i9J2+nxYbc=
