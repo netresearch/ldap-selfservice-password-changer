@@ -16,7 +16,7 @@ type Handler struct {
 }
 
 func New(opts *options.Opts) (*Handler, error) {
-	ldap, err := ldap.New(opts.LdapServer, opts.BaseDN, opts.ReadonlyUser, opts.ReadonlyPassword, opts.IsActiveDirectory)
+	ldap, err := ldap.New(opts.LDAP, opts.ReadonlyUser, opts.ReadonlyPassword)
 	if err != nil {
 		return nil, err
 	}
