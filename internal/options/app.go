@@ -8,14 +8,13 @@ import (
 	"strconv"
 
 	"github.com/joho/godotenv"
+	ldap "github.com/netresearch/simple-ldap-go"
 )
 
 type Opts struct {
-	LdapServer        string
-	IsActiveDirectory bool
-	BaseDN            string
-	ReadonlyUser      string
-	ReadonlyPassword  string
+	LDAP             ldap.Config
+	ReadonlyUser     string
+	ReadonlyPassword string
 
 	MinLength                  uint
 	MinNumbers                 uint
@@ -91,11 +90,13 @@ func Parse() *Opts {
 	panicWhenEmpty("readonly-password", fReadonlyPassword)
 
 	return &Opts{
-		LdapServer:        *fLdapServer,
-		IsActiveDirectory: *fIsActiveDirectory,
-		BaseDN:            *fBaseDN,
-		ReadonlyUser:      *fReadonlyUser,
-		ReadonlyPassword:  *fReadonlyPassword,
+		LDAP: ldap.Config{
+			Server:            *fLdapServer,
+			BaseDN:            *fBaseDN,
+			IsActiveDirectory: *fIsActiveDirectory,
+		},
+		ReadonlyUser:     *fReadonlyUser,
+		ReadonlyPassword: *fReadonlyPassword,
 
 		MinLength:                  *fMinLength,
 		MinNumbers:                 *fMinNumbers,
