@@ -8,7 +8,7 @@ import (
 	ldap "github.com/netresearch/simple-ldap-go"
 )
 
-type Func = func(params []string) ([]string, error)
+type Func = func(params []string) (interface{}, error)
 
 type Handler struct {
 	ldap *ldap.LDAP
@@ -48,6 +48,9 @@ func (h *Handler) Handle(c *fiber.Ctx) error {
 	switch body.Method {
 	case "change-password":
 		return wrapRPC(h.changePassword)
+
+	case "check":
+		return wrapRPC(h.check)
 
 	default:
 		return c.Status(http.StatusBadRequest).JSON(JSONRPCResponse{

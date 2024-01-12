@@ -187,10 +187,53 @@ export const init = (opts: Opts) => {
     }
   };
 
-  form.onchange = (e) => {
+  form.onchange = async (e) => {
     e.stopPropagation();
 
-    const hasErrors = fields.map(({ validate }) => validate()).some((e) => e === true);
-    submitButton.disabled = hasErrors;
+    const [username, oldPassword, newPassword, newPasswordConfirmation] = fields.map((f) => f.getValue());
+
+    // const hasErrors = fields.map(({ validate }) => validate()).some((e) => e === true);
+    try {
+      const res = await fetch("/api/rpc", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          method: "check",
+          params: [username, oldPassword, newPassword, newPasswordConfirmation]
+        })
+      });
+
+      const body = await res.text();
+      let parsed: { data: any } | null = null;
+
+      try {
+        parsed = JSON.parse(body);
+      } catch (e) {}
+      if (!parsed) {
+        throw new Error("An error occurred");
+      }
+
+      if (!res.ok) {
+        let err = parsed.data[0];
+
+        throw new Error(`An error occurred: ${err}`);
+      }
+
+      console.log(parsed);
+    } catch (e) {
+      console.error(e);
+
+      submitErrorContainer.innerText = (e as Error).message;
+
+      // Re-enable inputs but keep the submit button disabled,
+      // since we know that this isn't going to work. After the validators
+      // successfully re-run, it will enable the submit button again.
+      toggleFields(true);
+      submitButton.disabled = true;
+    }
+
+    submitButton.disabled = true;
   };
 };

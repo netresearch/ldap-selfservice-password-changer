@@ -10,6 +10,6 @@ type JSONRPC struct {
 }
 
 type JSONRPCResponse struct {
-	Success bool     `json:"success"`
-	Data    []string `json:"data"`
+	Success bool `json:"success"`
+	Data    any  `json:"data"`
 }

@@ -15,7 +15,7 @@ func pluralize(word string, amount uint) string {
 	return word + "s"
 }
 
-func (c *Handler) changePassword(params []string) ([]string, error) {
+func (c *Handler) changePassword(params []string) (any, error) {
 	if len(params) != 3 {
 		return nil, ErrInvalidArgumentCount
 	}
