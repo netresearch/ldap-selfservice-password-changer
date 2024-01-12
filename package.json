@@ -6,9 +6,9 @@
   "packageManager": "pnpm@8.14.1",
   "scripts": {
     "start": "pnpm build:assets && pnpm go:start",
-    "dev": "pnpm build:assets && concurrently 'pnpm js:dev' 'pnpm css:dev' 'pnpm go:dev'",
+    "dev": "pnpm build:assets && concurrently \"pnpm js:dev\" \"pnpm css:dev\" \"pnpm go:dev\"",
     "build": "pnpm build:assets && pnpm go:build",
-    "build:assets": "concurrently 'pnpm js:build' 'pnpm css:build'",
+    "build:assets": "concurrently \"pnpm js:build\" \"pnpm css:build\"",
     "js:build": "tsc && pnpm js:minify",
     "js:dev": "tsc -w --preserveWatchOutput",
     "js:minify": "node scripts/minify.js",
@@ -16,7 +16,7 @@
     "css:dev": "pnpm css:build -w",
     "go:start": "go run .",
     "go:build": "go build",
-    "go:dev": "nodemon --signal SIGTERM -e go,html,css,js -w './*/**' -x 'pnpm' go:start"
+    "go:dev": "nodemon --signal SIGTERM -e go,html,css,js -w './*/**' -x pnpm go:start"
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",
