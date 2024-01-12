@@ -160,23 +160,13 @@
 
           <div class="text-xs text-red-400" data-purpose="errors"></div>
         </div>
-
-        <p class="text-center text-xs text-gray-500">
-          Powered by
-          <a
-            href="https://github.com/netresearch/ldap-selfservice-password-changer"
-            class="break-keep outline-none hocus:text-white hocus:underline hocus:decoration-white"
-          >
-            netresearch/ldap-selfservice-password-changer
-          </a>
-        </p>
       </form>
-    </div>
 
-    <div class="hidden max-w-lg space-y-4 rounded-md border border-gray-600 p-8" data-purpose="successContainer">
-      <div class="mx-auto h-12 w-12">{{ template "CheckIcon" }}</div>
+      <div class="hidden space-y-4" data-purpose="successContainer">
+        <div class="mx-auto h-12 w-12">{{ template "CheckIcon" }}</div>
 
-      <p class="text-center">Your password was changed successfully.</p>
+        <p class="text-center">Your password was changed successfully.</p>
+      </div>
 
       <p class="text-center text-xs text-gray-500">
         Powered by
