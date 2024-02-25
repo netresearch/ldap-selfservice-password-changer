@@ -25,13 +25,13 @@ devDependencies:
     version: 11.0.0(postcss@8.4.35)
   prettier:
     specifier: ^3.0.2
-    version: 3.0.2
+    version: 3.2.5
   prettier-plugin-go-template:
     specifier: ^0.0.15
-    version: 0.0.15(prettier@3.0.2)
+    version: 0.0.15(prettier@3.2.5)
   prettier-plugin-tailwindcss:
     specifier: ^0.5.3
-    version: 0.5.11(prettier@3.0.2)
+    version: 0.5.11(prettier@3.2.5)
   tailwindcss:
     specifier: ^3.3.2
     version: 3.3.2
@@ -1273,17 +1273,17 @@ packages:
       source-map-js: 1.0.2
     dev: true
 
-  /prettier-plugin-go-template@0.0.15(prettier@3.0.2):
+  /prettier-plugin-go-template@0.0.15(prettier@3.2.5):
     resolution: {integrity: sha512-WqU92E1NokWYNZ9mLE6ijoRg6LtIGdLMePt2C7UBDjXeDH9okcRI3zRqtnWR4s5AloiqyvZ66jNBAa9tmRY5EQ==}
     engines: {node: '>=14.0.0'}
     peerDependencies:
       prettier: ^3.0.0
     dependencies:
-      prettier: 3.0.2
+      prettier: 3.2.5
       ulid: 2.3.0
     dev: true
 
-  /prettier-plugin-tailwindcss@0.5.11(prettier@3.0.2):
+  /prettier-plugin-tailwindcss@0.5.11(prettier@3.2.5):
     resolution: {integrity: sha512-AvI/DNyMctyyxGOjyePgi/gqj5hJYClZ1avtQvLlqMT3uDZkRbi4HhGUpok3DRzv9z7Lti85Kdj3s3/1CeNI0w==}
     engines: {node: '>=14.21.3'}
     peerDependencies:
@@ -1332,11 +1332,11 @@ packages:
       prettier-plugin-twig-melody:
         optional: true
     dependencies:
-      prettier: 3.0.2
+      prettier: 3.2.5
     dev: true
 
-  /prettier@3.0.2:
-    resolution: {integrity: sha512-o2YR9qtniXvwEZlOKbveKfDQVyqxbEIWn48Z8m3ZJjBjcCmUy3xZGIv+7AkaeuaTr6yPXJjwv07ZWlsWbEy1rQ==}
+  /prettier@3.2.5:
+    resolution: {integrity: sha512-3/GWa9aOC0YeD7LUfvOG2NiDyhOWRvt1k+rcKhOuYnMY24iiCphgneUfJDyFXd6rZCAnuLBv6UeAULtrhT/F4A==}
     engines: {node: '>=14'}
     hasBin: true
     dev: true
