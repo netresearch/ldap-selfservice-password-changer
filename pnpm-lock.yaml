@@ -40,7 +40,7 @@ importers:
         version: 3.4.2
       typescript:
         specifier: ^5.1.6
-        version: 5.3.3
+        version: 5.4.5
       uglify-js:
         specifier: ^3.17.4
         version: 3.17.4
@@ -1009,8 +1009,8 @@ packages:
   tslib@2.6.2:
     resolution: {integrity: sha512-AEYxH93jGFPn/a2iVAwW87VuUIkR1FVUKB77NwMF7nBTDkDrrT/Hpt/IrCJ0QXhW27jTBDcf5ZY7w6RiqTMw2Q==}
 
-  typescript@5.3.3:
-    resolution: {integrity: sha512-pXWcraxM0uxAS+tN0AG/BF2TyqmHO014Z070UsJ+pFvYuRSq8KH8DmWpnbXe0pEPDHXZV3FcAbJkijJ5oNEnWw==}
+  typescript@5.4.5:
+    resolution: {integrity: sha512-vcI4UpRgg81oIRUFwR0WSIHKt11nJ7SAVlYNIu+QpqeyXP+gpQJy/Z4+F0aGxSE4MqwjyXvW/TzgkLAx2AGHwQ==}
     engines: {node: '>=14.17'}
     hasBin: true
 
@@ -1996,7 +1996,7 @@ snapshots:
 
   tslib@2.6.2: {}
 
-  typescript@5.3.3: {}
+  typescript@5.4.5: {}
 
   uglify-js@3.17.4: {}
 
