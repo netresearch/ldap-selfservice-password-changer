@@ -45,6 +45,7 @@ github.com/gofiber/template/html/v2 v2.0.5 h1:BKLJ6Qr940NjntbGmpO3zVa4nFNGDCi/If
 github.com/gofiber/template/html/v2 v2.0.5/go.mod h1:RCF14eLeQDCSUPp0IGc2wbSSDv6yt+V54XB/+Unz+LM=
 github.com/gofiber/template/html/v2 v2.1.0/go.mod h1:txXsRQN/G7Fr2cqGfr6zhVHgreCfpsBS+9+DJyrddJc=
 github.com/gofiber/template/html/v2 v2.1.1/go.mod h1:2G0GHHOUx70C1LDncoBpe4T6maQbNa4x1CVNFW0wju0=
+github.com/gofiber/template/html/v2 v2.1.2/go.mod h1:E98Z/FzvpaSib06aWEgYk6GXNf3ctoyaJH8yW5ay5ak=
 github.com/gofiber/utils v1.1.0 h1:vdEBpn7AzIUJRhe+CiTOJdUcTg4Q9RK+pEa0KPbLdrM=
 github.com/gofiber/utils v1.1.0/go.mod h1:poZpsnhBykfnY1Mc0KeEa6mSHrS3dV0+oBWyeQmb2e0=
 github.com/google/uuid v1.3.0 h1:t6JiXgmwXMjEs8VusXIJk2BXHsn+wx8BZdTaoZ5fu7I=
