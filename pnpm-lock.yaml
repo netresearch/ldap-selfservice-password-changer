@@ -43,7 +43,7 @@ importers:
         version: 5.5.4
       uglify-js:
         specifier: ^3.17.4
-        version: 3.19.0
+        version: 3.19.1
 
 packages:
 
@@ -1011,8 +1011,8 @@ packages:
     engines: {node: '>=14.17'}
     hasBin: true
 
-  uglify-js@3.19.0:
-    resolution: {integrity: sha512-wNKHUY2hYYkf6oSFfhwwiHo4WCHzHmzcXsqXYTN9ja3iApYIFbb2U6ics9hBcYLHcYGQoAlwnZlTrf3oF+BL/Q==}
+  uglify-js@3.19.1:
+    resolution: {integrity: sha512-y/2wiW+ceTYR2TSSptAhfnEtpLaQ4Ups5zrjB2d3kuVxHj16j/QJwPl5PvuGy9uARb39J0+iKxcRPvtpsx4A4A==}
     engines: {node: '>=0.8.0'}
     hasBin: true
 
@@ -1989,7 +1989,7 @@ snapshots:
 
   typescript@5.5.4: {}
 
-  uglify-js@3.19.0: {}
+  uglify-js@3.19.1: {}
 
   ulid@2.3.0: {}
 
