@@ -109,6 +109,8 @@ github.com/netresearch/simple-ldap-go v0.0.0-20240720122327-a5323ef87ca3 h1:0U8V
 github.com/netresearch/simple-ldap-go v0.0.0-20240720122327-a5323ef87ca3/go.mod h1:F9QMSB4kbQw/Vjg+wq4HPatosW1hjtf6aC8nzlPQxYc=
 github.com/netresearch/simple-ldap-go v0.0.0-20240807130235-089547ad2350 h1:HFbc5WP+XmC9QDafD8xwd2cFOEKaTEJLWzIeekGyQQ0=
 github.com/netresearch/simple-ldap-go v0.0.0-20240807130235-089547ad2350/go.mod h1:wLYBQdBeNuRIWxD7hVugwlnfAY+tBjXnrvn8B0K68Yw=
+github.com/netresearch/simple-ldap-go v0.0.0-20240815084059-4a28ba8a351e h1:Rxkoxw94k7p9dmrv3OciPswFqgUSAidMFrAxf+szLwc=
+github.com/netresearch/simple-ldap-go v0.0.0-20240815084059-4a28ba8a351e/go.mod h1:wLYBQdBeNuRIWxD7hVugwlnfAY+tBjXnrvn8B0K68Yw=
 github.com/pmezard/go-difflib v1.0.0 h1:4DBwDE0NGyQoBHbLQYPwSUPoCMWR5BEzIk/f1lZbAQM=
 github.com/pmezard/go-difflib v1.0.0/go.mod h1:iKH77koFhYxTK1pcRnkKkqfTogsbg7gZNVY4sRDYZ/4=
 github.com/rivo/uniseg v0.2.0/go.mod h1:J6wj4VEh+S6ZtnVlnTBMWIodfgj8LQOQFoIToxlJtxc=
