@@ -6,7 +6,7 @@ require (
 	github.com/gofiber/fiber/v2 v2.52.5
 	github.com/gofiber/template/html/v2 v2.1.2
 	github.com/joho/godotenv v1.5.1
-	github.com/netresearch/simple-ldap-go v0.0.0-20240807130235-089547ad2350
+	github.com/netresearch/simple-ldap-go v0.0.0-20240815084059-4a28ba8a351e
 )
 
 require (
