@@ -20,7 +20,7 @@
   },
   "devDependencies": {
     "autoprefixer": "^10.4.14",
-    "concurrently": "^8.2.0",
+    "concurrently": "^9.0.0",
     "cssnano": "^7.0.0",
     "nodemon": "^3.0.0",
     "postcss": "^8.4.25",
