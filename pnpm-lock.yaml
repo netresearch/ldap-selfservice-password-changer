@@ -19,7 +19,7 @@ importers:
         version: 7.0.6(postcss@8.4.45)
       nodemon:
         specifier: ^3.0.0
-        version: 3.1.5
+        version: 3.1.6
       postcss:
         specifier: ^8.4.25
         version: 8.4.45
@@ -485,8 +485,8 @@ packages:
   node-releases@2.0.18:
     resolution: {integrity: sha512-d9VeXT4SJ7ZeOqGX6R5EM022wpL+eWPooLI+5UpWn2jCT1aosUQEhQP214x33Wkwx3JQMvIm+tIoVOdodFS40g==}
 
-  nodemon@3.1.5:
-    resolution: {integrity: sha512-V5UtfYc7hjFD4SI3EzD5TR8ChAHEZ+Ns7Z5fBk8fAbTVAj+q3G+w7sHJrHxXBkVn6ApLVTljau8wfHwqmGUjMw==}
+  nodemon@3.1.6:
+    resolution: {integrity: sha512-C8ymJbXpTTinxjWuMfMxw0rZhTn/r7ypSGldQyqPEgDEaVwAthqC0aodsMwontnAInN9TuPwRLeBoyhmfv+iSA==}
     engines: {node: '>=10'}
     hasBin: true
 
@@ -1499,7 +1499,7 @@ snapshots:
 
   node-releases@2.0.18: {}
 
-  nodemon@3.1.5:
+  nodemon@3.1.6:
     dependencies:
       chokidar: 3.6.0
       debug: 4.3.7(supports-color@5.5.0)
