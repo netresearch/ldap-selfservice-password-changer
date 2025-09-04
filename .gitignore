@@ -2,3 +2,4 @@ node_modules
 internal/web/static/js/*.js
 internal/web/static/styles.css
 .env.local
+.pnpm-store/
