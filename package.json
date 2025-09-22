@@ -3,7 +3,7 @@
   "version": "1.0.0",
   "author": "DevMiner <devminer@devminer.xyz>",
   "license": "MIT",
-  "packageManager": "pnpm@10.17.0",
+  "packageManager": "pnpm@10.17.1",
   "scripts": {
     "start": "pnpm build:assets && pnpm go:start",
     "dev": "pnpm build:assets && concurrently \"pnpm js:dev\" \"pnpm css:dev\" \"pnpm go:dev\"",
