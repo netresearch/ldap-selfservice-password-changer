@@ -29,11 +29,13 @@ For a complete overview, see the [Documentation Index](docs/README.md).
 ## Quick Start
 
 ### For Developers
+
 1. Clone the repository
 2. Follow the [Development Guide](docs/development-guide.md) for detailed setup
 3. Run `pnpm dev` for hot-reload development mode
 
 ### For Production
+
 Use our [Docker image](https://github.com/netresearch/ldap-selfservice-password-changer/pkgs/container/ldap-selfservice-password-changer) or build from source.
 
 ## Running

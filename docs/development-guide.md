@@ -39,6 +39,7 @@ pnpm install
 ```
 
 **What this does**:
+
 - Installs TypeScript compiler
 - Installs Tailwind CSS and PostCSS tools
 - Installs development tools (nodemon, concurrently, prettier)
@@ -74,6 +75,7 @@ PASSWORD_CAN_INCLUDE_USERNAME="false"
 ```
 
 **Configuration Notes**:
+
 - `.env.local` is gitignored (never commit credentials)
 - `.env` contains defaults (committed, no sensitive data)
 - Command-line flags override environment variables
@@ -92,11 +94,13 @@ pnpm build
 ### Development Mode (Hot Reload)
 
 **Command**:
+
 ```bash
 pnpm dev
 ```
 
 **What happens**:
+
 1. Builds initial assets (TypeScript + CSS)
 2. Starts three concurrent watchers:
    - **TypeScript watcher**: `tsc -w` (rebuilds on .ts changes)
@@ -104,6 +108,7 @@ pnpm dev
    - **Go watcher**: `nodemon` (restarts server on any file change)
 
 **Output Example**:
+
 ```
 [js]  15:32:41 - Starting compilation in watch mode...
 [css] Rebuilding...
@@ -113,12 +118,12 @@ pnpm dev
 
 **File Change Behavior**:
 
-| Change Type | Action | Time to Reflect |
-|-------------|--------|----------------|
-| `*.ts` file | TypeScript recompile → Go restart | ~2-3 seconds |
-| `tailwind.css` | PostCSS rebuild → Go restart | ~1-2 seconds |
-| `*.go` file | Go restart only | ~1 second |
-| `*.html` template | Go restart only | ~1 second |
+| Change Type       | Action                            | Time to Reflect |
+| ----------------- | --------------------------------- | --------------- |
+| `*.ts` file       | TypeScript recompile → Go restart | ~2-3 seconds    |
+| `tailwind.css`    | PostCSS rebuild → Go restart      | ~1-2 seconds    |
+| `*.go` file       | Go restart only                   | ~1 second       |
+| `*.html` template | Go restart only                   | ~1 second       |
 
 **Access**: http://localhost:3000
 
@@ -127,11 +132,13 @@ pnpm dev
 ### Production Build
 
 **Command**:
+
 ```bash
 pnpm build
 ```
 
 **Steps**:
+
 1. Compile TypeScript to JavaScript
 2. Minify JavaScript with UglifyJS
 3. Build CSS with PostCSS + Tailwind + CSSnano
@@ -140,6 +147,7 @@ pnpm build
 **Output**: `./ldap-selfservice-password-changer` executable
 
 **Running**:
+
 ```bash
 ./ldap-selfservice-password-changer \
   -ldap-server ldaps://dc1.example.com:636 \
@@ -198,6 +206,7 @@ go test ./...
 **Current Coverage**: `internal/validators` package only
 
 **Example Output**:
+
 ```
 ok      github.com/netresearch/ldap-selfservice-password-changer/internal/validators    0.002s
 ```
@@ -219,6 +228,7 @@ pnpm prettier --check .
 ```
 
 **Files Formatted**:
+
 - TypeScript (`.ts`)
 - JavaScript (`.js`)
 - CSS (`.css`)
@@ -299,19 +309,19 @@ ldap-selfservice-password-changer/
 
 ### Environment Variables
 
-| Variable | Required | Default | Description |
-|----------|----------|---------|-------------|
-| `LDAP_SERVER` | ✅ Yes | - | LDAP server URI (`ldap://` or `ldaps://`) |
-| `LDAP_IS_AD` | No | `false` | ActiveDirectory mode flag |
-| `LDAP_BASE_DN` | ✅ Yes | - | Base DN for LDAP searches |
-| `LDAP_READONLY_USER` | ✅ Yes | - | Readonly LDAP user |
-| `LDAP_READONLY_PASSWORD` | ✅ Yes | - | Readonly user password |
-| `MIN_LENGTH` | No | `8` | Minimum password length |
-| `MIN_NUMBERS` | No | `1` | Minimum numeric characters |
-| `MIN_SYMBOLS` | No | `1` | Minimum symbol characters |
-| `MIN_UPPERCASE` | No | `1` | Minimum uppercase letters |
-| `MIN_LOWERCASE` | No | `1` | Minimum lowercase letters |
-| `PASSWORD_CAN_INCLUDE_USERNAME` | No | `false` | Allow username in password |
+| Variable                        | Required | Default | Description                               |
+| ------------------------------- | -------- | ------- | ----------------------------------------- |
+| `LDAP_SERVER`                   | ✅ Yes   | -       | LDAP server URI (`ldap://` or `ldaps://`) |
+| `LDAP_IS_AD`                    | No       | `false` | ActiveDirectory mode flag                 |
+| `LDAP_BASE_DN`                  | ✅ Yes   | -       | Base DN for LDAP searches                 |
+| `LDAP_READONLY_USER`            | ✅ Yes   | -       | Readonly LDAP user                        |
+| `LDAP_READONLY_PASSWORD`        | ✅ Yes   | -       | Readonly user password                    |
+| `MIN_LENGTH`                    | No       | `8`     | Minimum password length                   |
+| `MIN_NUMBERS`                   | No       | `1`     | Minimum numeric characters                |
+| `MIN_SYMBOLS`                   | No       | `1`     | Minimum symbol characters                 |
+| `MIN_UPPERCASE`                 | No       | `1`     | Minimum uppercase letters                 |
+| `MIN_LOWERCASE`                 | No       | `1`     | Minimum lowercase letters                 |
+| `PASSWORD_CAN_INCLUDE_USERNAME` | No       | `false` | Allow username in password                |
 
 ### Command-Line Flags
 
@@ -353,6 +363,7 @@ All environment variables have corresponding flags:
 ```
 
 **Example**:
+
 ```bash
 ./ldap-selfservice-password-changer \
   --ldap-server ldaps://dc1.example.com:636 \
@@ -413,6 +424,7 @@ export const mustIncludeDigits = (amount: number) => (v: string) =>
 #### 4. Apply Validator
 
 **Backend** - `internal/rpc/change_password.go`:
+
 ```go
 if !validators.MinDigitsInString(newPassword, c.opts.MinDigits) {
     return nil, fmt.Errorf("the new password must contain at least %d %s",
@@ -421,12 +433,16 @@ if !validators.MinDigitsInString(newPassword, c.opts.MinDigits) {
 ```
 
 **Frontend** - `internal/web/static/js/app.ts`:
+
 ```typescript
-["new", [
+[
+  "new",
+  [
     mustNotBeEmpty,
-    mustIncludeDigits(opts.minDigits),
+    mustIncludeDigits(opts.minDigits)
     // ... other validators
-]]
+  ]
+];
 ```
 
 ### Adding Configuration Option
@@ -472,7 +488,7 @@ return &Opts{
 
   init({
     // ... existing options
-    minDigits: +"{{ .opts.MinDigits }}",
+    minDigits: +"{{ .opts.MinDigits }}"
   });
 </script>
 ```
@@ -497,6 +513,7 @@ docker build -t ldap-password-changer .
 ```
 
 **Build Process**:
+
 1. Frontend build (Node.js 22)
 2. Backend build (Go 1.25-alpine)
 3. Tests run (build fails if tests fail)
@@ -517,6 +534,7 @@ docker run \
 ```
 
 **Environment Variable Alternative**:
+
 ```bash
 docker run \
   -d --name ldap-password-changer \
@@ -546,6 +564,7 @@ docker run \
 **Error**: `could not connect to LDAP server`
 
 **Solutions**:
+
 1. Verify LDAP server URL (ldaps:// for SSL)
 2. Check network connectivity: `telnet dc1.example.com 636`
 3. Verify certificates if using LDAPS
@@ -556,6 +575,7 @@ docker run \
 **Error**: `pnpm: command not found`
 
 **Solution**: Enable Corepack
+
 ```bash
 corepack enable
 ```
@@ -563,6 +583,7 @@ corepack enable
 **Error**: `go: module not found`
 
 **Solution**: Download Go dependencies
+
 ```bash
 go mod download
 ```
@@ -572,6 +593,7 @@ go mod download
 **Issue**: Changes not reflected after file modification
 
 **Solutions**:
+
 1. Check nodemon is watching correct files (package.json:19)
 2. Verify file permissions (ensure files are writable)
 3. Restart development server: Ctrl+C, then `pnpm dev`
@@ -581,6 +603,7 @@ go mod download
 **Error**: `TS2322: Type 'X' is not assignable to type 'Y'`
 
 **Solution**: TypeScript strict mode enabled (tsconfig.json)
+
 - Fix type errors (no `any` types allowed)
 - Add proper type annotations
 - Use type guards for nullable values
@@ -607,4 +630,5 @@ go mod download
 - [Component Reference](component-reference.md) - Package documentation
 
 ---
-*Generated by /sc:index on 2025-10-04*
+
+_Generated by /sc:index on 2025-10-04_
