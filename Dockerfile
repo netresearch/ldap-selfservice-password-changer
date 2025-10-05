@@ -1,4 +1,4 @@
-FROM --platform=amd64 node:22@sha256:2bb201f33898d2c0ce638505b426f4dd038cc00e5b2b4cbba17b069f0fff1496 AS frontend-builder
+FROM --platform=amd64 node:24@sha256:4e87fa2c1aa4a31edfa4092cc50428e86bf129e5bb528e2b3bbc8661e2038339 AS frontend-builder
 WORKDIR /build
 RUN npm i -g pnpm
 
