@@ -1,5 +1,21 @@
 /* This file is an entrypoint for the TailwindCSS compiler */
 
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+/* Custom variants for password reveal functionality */
+@custom-variant reveal-button (&[data-revealed="true"] [data-purpose="reveal"]);
+@custom-variant reveal-eye (&[data-revealed="true"] .on-content-revealed);
+@custom-variant reveal-eye-slash (&[data-revealed="true"] .on-content-hidden);
+@custom-variant nonreveal-eye (&[data-revealed="false"] .on-content-revealed);
+@custom-variant nonreveal-eye-slash (&[data-revealed="false"] .on-content-hidden);
+
+/* Custom variant for input focus within container */
+@custom-variant input-focus (&:has(input:focus));
+
+/* Custom variant for hover and focus states */
+@custom-variant hocus {
+  &:hover,
+  &:focus {
+    @slot;
+  }
+}
