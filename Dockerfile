@@ -35,6 +35,9 @@ RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /build/ldap-passwd
 
 FROM scratch AS runner
 
+# Run as non-root user for defense-in-depth (nobody:nogroup = 65534:65534)
+USER 65534:65534
+
 # Copy CA certificates for LDAPS connections
 COPY --from=backend-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 

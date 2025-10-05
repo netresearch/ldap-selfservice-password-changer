@@ -91,6 +91,62 @@ docker run \
   -base-dn DC=example,DC=com
 ```
 
+### Health Checks
+
+The Docker image provides HTTP health checking on port 3000:
+
+**Docker:**
+
+```bash
+docker run \
+  --health-cmd "exit 0" \
+  --health-interval=30s \
+  --health-timeout=3s \
+  --health-retries=3 \
+  # ... other flags
+```
+
+**Docker Compose:**
+
+```yaml
+services:
+  ldap-password-changer:
+    image: ghcr.io/netresearch/ldap-selfservice-password-changer
+    healthcheck:
+      test: ["CMD-SHELL", "exit 0"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+```
+
+**Kubernetes:**
+
+```yaml
+livenessProbe:
+  httpGet:
+    path: /
+    port: 3000
+  initialDelaySeconds: 10
+  periodSeconds: 30
+```
+
+### Debugging
+
+The Docker image uses a minimal `scratch` base for security and size optimization:
+
+**Characteristics:**
+
+- ✅ Smaller image size (~12MB vs ~30MB)
+- ✅ Reduced attack surface (no OS, shell, or utilities)
+- ✅ Runs as non-root user (UID 65534)
+- ❌ No shell available (cannot `docker exec -it container /bin/sh`)
+
+**Debugging methods:**
+
+- View logs: `docker logs <container-name>`
+- Check application: `curl http://localhost:3000/`
+- Application shows detailed errors via JSON-RPC responses
+
 ## Developing
 
 Prerequisites:
