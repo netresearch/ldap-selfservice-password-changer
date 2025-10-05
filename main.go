@@ -1,8 +1,9 @@
 package main
 
 import (
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
@@ -18,12 +19,14 @@ func main() {
 
 	rpcHandler, err := rpc.New(opts)
 	if err != nil {
-		log.Fatalf("An error occurred during initialization: %v", err)
+		slog.Error("initialization failed", "error", err)
+		os.Exit(1)
 	}
 
 	index, err := templates.RenderIndex(opts)
 	if err != nil {
-		log.Fatalf("An error occurred during rendering the page: %v", err)
+		slog.Error("failed to render page", "error", err)
+		os.Exit(1)
 	}
 
 	app := fiber.New(fiber.Config{
@@ -47,7 +50,8 @@ func main() {
 
 	app.Post("/api/rpc", rpcHandler.Handle)
 
+	slog.Info("starting server", "port", 3000)
 	if err := app.Listen(":3000"); err != nil {
-		log.Printf("err: could not start web server: %s", err)
+		slog.Error("failed to start web server", "error", err)
 	}
 }

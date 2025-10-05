@@ -1,45 +1,36 @@
 package validators
 
-func MinNumbersInString(value string, amount uint) bool {
-	var counter uint = 0
+// countRunesWhere counts runes in the string that satisfy the predicate.
+func countRunesWhere(value string, predicate func(rune) bool) uint {
+	var counter uint
 	for _, c := range value {
-		if c >= '0' && c <= '9' {
+		if predicate(c) {
 			counter++
 		}
 	}
+	return counter
+}
 
-	return counter >= amount
+func MinNumbersInString(value string, amount uint) bool {
+	return countRunesWhere(value, func(c rune) bool {
+		return c >= '0' && c <= '9'
+	}) >= amount
 }
 
 func MinSymbolsInString(value string, amount uint) bool {
-	var counter uint = 0
-	for _, c := range value {
-		if (c >= '!' && c <= '/') || (c >= ':' && c <= '@') || (c >= '[' && c <= '`') || (c >= '{' && c <= '~') {
-			counter++
-		}
-	}
-
-	return counter >= amount
+	return countRunesWhere(value, func(c rune) bool {
+		return (c >= '!' && c <= '/') || (c >= ':' && c <= '@') || (c >= '[' && c <= '`') || (c >= '{' && c <= '~')
+	}) >= amount
 }
 
 func MinUppercaseLettersInString(value string, amount uint) bool {
-	var counter uint = 0
-	for _, c := range value {
-		if c >= 'A' && c <= 'Z' {
-			counter++
-		}
-	}
-
-	return counter >= amount
+	return countRunesWhere(value, func(c rune) bool {
+		return c >= 'A' && c <= 'Z'
+	}) >= amount
 }
 
 func MinLowercaseLettersInString(value string, amount uint) bool {
-	var counter uint = 0
-	for _, c := range value {
-		if c >= 'a' && c <= 'z' {
-			counter++
-		}
-	}
-
-	return counter >= amount
+	return countRunesWhere(value, func(c rune) bool {
+		return c >= 'a' && c <= 'z'
+	}) >= amount
 }

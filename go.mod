@@ -1,6 +1,6 @@
 module github.com/netresearch/ldap-selfservice-password-changer
 
-go 1.24.0
+go 1.25
 
 toolchain go1.25.1
 
