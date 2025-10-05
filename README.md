@@ -6,6 +6,36 @@
   <img src="./internal/web/static/logo.webp" height="256">
 </div>
 
+## Features
+
+- **Self-Service Password Changes**: Users can change their own LDAP/AD passwords without admin intervention
+- **Configurable Password Policies**: Minimum length, numbers, symbols, uppercase, lowercase requirements
+- **Real-Time Validation**: Client-side validation with immediate feedback
+- **Secure**: LDAPS support, no password storage, minimal attack surface
+- **Single Binary**: All assets embedded, easy deployment
+- **Modern Stack**: Go backend, TypeScript frontend, Tailwind CSS
+
+## Documentation
+
+Comprehensive documentation is available in the [`docs/`](docs/) directory:
+
+- **[API Reference](docs/api-reference.md)** - JSON-RPC API specification and validation rules
+- **[Development Guide](docs/development-guide.md)** - Setup, workflows, and troubleshooting
+- **[Testing Guide](docs/testing-guide.md)** - Testing strategies and recommendations
+- **[Architecture](docs/architecture.md)** - System architecture overview
+
+For a complete overview, see the [Documentation Index](docs/README.md).
+
+## Quick Start
+
+### For Developers
+1. Clone the repository
+2. Follow the [Development Guide](docs/development-guide.md) for detailed setup
+3. Run `pnpm dev` for hot-reload development mode
+
+### For Production
+Use our [Docker image](https://github.com/netresearch/ldap-selfservice-password-changer/pkgs/container/ldap-selfservice-password-changer) or build from source.
+
 ## Running
 
 ### Natively
@@ -14,7 +44,7 @@ If you want to run this service without a Docker container, you have to build it
 
 Prerequisites:
 
-- Go 1.20+
+- Go 1.24+
 - Node.js v16+
 - Corepack (`npm i -g corepack`)
 
@@ -63,7 +93,7 @@ docker run \
 
 Prerequisites:
 
-- Go 1.20+
+- Go 1.24+
 - Node.js v16+
 - Corepack (`npm i -g corepack`)
 
