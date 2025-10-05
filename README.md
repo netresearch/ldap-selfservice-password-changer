@@ -46,8 +46,8 @@ If you want to run this service without a Docker container, you have to build it
 
 Prerequisites:
 
-- Go 1.24+
-- Node.js v16+
+- Go 1.25+
+- Node.js 24+
 - Corepack (`npm i -g corepack`)
 
 You can configure this via a `.env.local` file or via command options (for more information you can run `./ldap-selfservice-password-changer --help`).
@@ -95,8 +95,8 @@ docker run \
 
 Prerequisites:
 
-- Go 1.24+
-- Node.js v16+
+- Go 1.25+
+- Node.js 24+
 - Corepack (`npm i -g corepack`)
 
 ```bash

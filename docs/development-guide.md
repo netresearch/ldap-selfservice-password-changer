@@ -4,9 +4,9 @@
 
 ### Required Tools
 
-- **Go**: 1.24.0+ (tested with 1.25.1)
-- **Node.js**: v16+ (tested with v22)
-- **pnpm**: 10.17.1+ (installed via Corepack)
+- **Go**: 1.25.0+ (tested with 1.25.1)
+- **Node.js**: 24+ (tested with 24)
+- **pnpm**: 10.18.0+ (installed via Corepack)
 - **Git**: For version control
 
 ### System Requirements
@@ -30,7 +30,7 @@ cd ldap-selfservice-password-changer
 corepack enable
 ```
 
-This ensures pnpm version matches package.json specification (10.17.1).
+This ensures pnpm version matches package.json specification (10.18.0).
 
 ### 3. Install Dependencies
 
