@@ -3,7 +3,7 @@ package options
 import (
 	"flag"
 	"fmt"
-	"log"
+	"log/slog"
 	"os"
 	"strconv"
 
@@ -26,7 +26,8 @@ type Opts struct {
 
 func panicWhenEmpty(name string, value *string) {
 	if *value == "" {
-		log.Fatalf("err: The option --%s is required", name)
+		slog.Error("required option missing", "option", name)
+		os.Exit(1)
 	}
 }
 
@@ -43,7 +44,8 @@ func envIntOrDefault(name string, d uint64) uint {
 
 	v, err := strconv.ParseUint(raw, 10, 8)
 	if err != nil {
-		log.Fatalf("err: could not parse environment variable \"%s\" (containing \"%s\") as uint: %v", name, raw, err)
+		slog.Error("failed to parse environment variable as uint", "variable", name, "value", raw, "error", err)
+		os.Exit(1)
 	}
 
 	return uint(v)
@@ -54,7 +56,8 @@ func envBoolOrDefault(name string, d bool) bool {
 
 	v2, err := strconv.ParseBool(raw)
 	if err != nil {
-		log.Fatalf("err: could not parse environment variable \"%s\" (containing \"%s\") as bool: %v", name, raw, err)
+		slog.Error("failed to parse environment variable as bool", "variable", name, "value", raw, "error", err)
+		os.Exit(1)
 	}
 
 	return v2
@@ -62,7 +65,7 @@ func envBoolOrDefault(name string, d bool) bool {
 
 func Parse() *Opts {
 	if err := godotenv.Load(".env.local", ".env"); err != nil {
-		log.Printf("warn: could not load .env file: %s", err)
+		slog.Warn("could not load .env file", "error", err)
 	}
 
 	var (
