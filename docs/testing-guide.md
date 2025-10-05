@@ -9,17 +9,20 @@
 **Coverage**: Password validator functions only
 
 **Test Summary**:
+
 - MinNumbersInString validation
 - MinSymbolsInString validation
 - MinUppercaseLettersInString validation
 - MinLowercaseLettersInString validation
 
 **Running Tests**:
+
 ```bash
 go test ./...
 ```
 
 **Example Output**:
+
 ```
 ok      github.com/netresearch/ldap-selfservice-password-changer/internal/validators    0.002s
 ```
@@ -27,17 +30,20 @@ ok      github.com/netresearch/ldap-selfservice-password-changer/internal/valida
 ### Coverage Gaps
 
 **Missing Unit Tests**:
+
 - RPC handler logic (internal/rpc/change_password.go)
 - Configuration parsing (internal/options/app.go)
 - Template rendering (internal/web/templates/templates.go)
 - Frontend validators (internal/web/static/js/validators.ts)
 
 **Missing Integration Tests**:
+
 - RPC endpoint testing
 - LDAP connection testing (with mocks)
 - Full password change workflow
 
 **Missing E2E Tests**:
+
 - Browser-based form submission
 - Validation error display
 - Success state transitions
@@ -56,6 +62,7 @@ ok      github.com/netresearch/ldap-selfservice-password-changer/internal/valida
 **Location**: Create `internal/rpc/change_password_test.go`
 
 **Test Cases**:
+
 ```go
 func TestChangePassword_Success(t *testing.T) {
     // Mock LDAP client
@@ -104,6 +111,7 @@ func TestChangePassword_LDAPError(t *testing.T) {
 ```
 
 **Implementation Pattern**:
+
 ```go
 package rpc
 
@@ -159,6 +167,7 @@ func TestChangePassword_Success(t *testing.T) {
 **Location**: Create `internal/options/app_test.go`
 
 **Test Cases**:
+
 - Default value application
 - Environment variable parsing
 - Flag override behavior
@@ -171,6 +180,7 @@ func TestChangePassword_Success(t *testing.T) {
 **Location**: Create `internal/web/templates/templates_test.go`
 
 **Test Cases**:
+
 - Successful template rendering
 - Options injection
 - HTML escaping
@@ -183,69 +193,72 @@ func TestChangePassword_Success(t *testing.T) {
 **Tool Recommendation**: Vitest (fast, TypeScript-native)
 
 **Setup**:
+
 ```bash
 pnpm add -D vitest @vitest/ui
 ```
 
 **Configuration**: Create `vitest.config.ts`
+
 ```typescript
-import { defineConfig } from 'vitest/config'
+import { defineConfig } from "vitest/config";
 
 export default defineConfig({
   test: {
-    environment: 'jsdom',
-    include: ['internal/web/static/js/**/*.test.ts'],
-  },
-})
+    environment: "jsdom",
+    include: ["internal/web/static/js/**/*.test.ts"]
+  }
+});
 ```
 
 **Location**: Create `internal/web/static/js/validators.test.ts`
 
 **Test Cases**:
+
 ```typescript
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect } from "vitest";
 import {
   mustNotBeEmpty,
   mustBeLongerThan,
   mustIncludeNumbers,
   mustIncludeSymbols,
   mustIncludeUppercase,
-  mustIncludeLowercase,
-} from './validators'
+  mustIncludeLowercase
+} from "./validators";
 
-describe('mustNotBeEmpty', () => {
-  it('returns error for empty string', () => {
-    expect(mustNotBeEmpty('')).toBeTruthy()
-  })
+describe("mustNotBeEmpty", () => {
+  it("returns error for empty string", () => {
+    expect(mustNotBeEmpty("")).toBeTruthy();
+  });
 
-  it('returns no error for non-empty string', () => {
-    expect(mustNotBeEmpty('test')).toBe('')
-  })
-})
+  it("returns no error for non-empty string", () => {
+    expect(mustNotBeEmpty("test")).toBe("");
+  });
+});
 
-describe('mustBeLongerThan', () => {
-  it('returns error when too short', () => {
-    const validator = mustBeLongerThan(8)
-    expect(validator('short')).toBeTruthy()
-  })
+describe("mustBeLongerThan", () => {
+  it("returns error when too short", () => {
+    const validator = mustBeLongerThan(8);
+    expect(validator("short")).toBeTruthy();
+  });
 
-  it('returns no error when long enough', () => {
-    const validator = mustBeLongerThan(8)
-    expect(validator('longenough')).toBe('')
-  })
-})
+  it("returns no error when long enough", () => {
+    const validator = mustBeLongerThan(8);
+    expect(validator("longenough")).toBe("");
+  });
+});
 
-describe('mustIncludeNumbers', () => {
-  it('returns error when insufficient numbers', () => {
-    const validator = mustIncludeNumbers(2)
-    expect(validator('abc1')).toBeTruthy()
-  })
+describe("mustIncludeNumbers", () => {
+  it("returns error when insufficient numbers", () => {
+    const validator = mustIncludeNumbers(2);
+    expect(validator("abc1")).toBeTruthy();
+  });
 
-  it('returns no error with enough numbers', () => {
-    const validator = mustIncludeNumbers(2)
-    expect(validator('abc123')).toBe('')
-  })
-})
+  it("returns no error with enough numbers", () => {
+    const validator = mustIncludeNumbers(2);
+    expect(validator("abc123")).toBe("");
+  });
+});
 
 // Similar tests for symbols, uppercase, lowercase
 ```
@@ -261,6 +274,7 @@ describe('mustIncludeNumbers', () => {
 **Location**: Create `internal/rpc/handler_integration_test.go`
 
 **Example**:
+
 ```go
 package rpc
 
@@ -331,6 +345,7 @@ func TestRPCEndpoint_InvalidJSON(t *testing.T) {
 **Tool**: Interface-based mocking
 
 **Pattern**:
+
 ```go
 // Define interface
 type LDAPClient interface {
@@ -350,6 +365,7 @@ func (m *mockLDAP) ChangePasswordForSAMAccountName(username, oldPass, newPass st
 ```
 
 **Test Scenarios**:
+
 - LDAP connection timeout
 - Invalid credentials (current password wrong)
 - User not found
@@ -365,142 +381,145 @@ func (m *mockLDAP) ChangePasswordForSAMAccountName(username, oldPass, newPass st
 **Tool Recommendation**: Playwright (TypeScript-native, modern)
 
 **Setup**:
+
 ```bash
 pnpm add -D @playwright/test
 pnpm exec playwright install
 ```
 
 **Configuration**: Create `playwright.config.ts`
+
 ```typescript
-import { defineConfig } from '@playwright/test'
+import { defineConfig } from "@playwright/test";
 
 export default defineConfig({
-  testDir: './tests/e2e',
+  testDir: "./tests/e2e",
   webServer: {
-    command: 'pnpm dev',
+    command: "pnpm dev",
     port: 3000,
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: !process.env.CI
   },
   use: {
-    baseURL: 'http://localhost:3000',
-  },
-})
+    baseURL: "http://localhost:3000"
+  }
+});
 ```
 
 **Location**: Create `tests/e2e/password-change.spec.ts`
 
 **Test Cases**:
-```typescript
-import { test, expect } from '@playwright/test'
 
-test('successful password change flow', async ({ page }) => {
-  await page.goto('/')
+```typescript
+import { test, expect } from "@playwright/test";
+
+test("successful password change flow", async ({ page }) => {
+  await page.goto("/");
 
   // Fill form
-  await page.fill('#username input', 'testuser')
-  await page.fill('#current input', 'OldPass123!')
-  await page.fill('#new input', 'NewPass456!')
-  await page.fill('#new2 input', 'NewPass456!')
+  await page.fill("#username input", "testuser");
+  await page.fill("#current input", "OldPass123!");
+  await page.fill("#new input", "NewPass456!");
+  await page.fill("#new2 input", "NewPass456!");
 
   // Submit
-  await page.click('button[type="submit"]')
+  await page.click('button[type="submit"]');
 
   // Assert success
-  await expect(page.locator('[data-purpose="successContainer"]')).toBeVisible()
-  await expect(page.locator('#form')).not.toBeVisible()
-})
+  await expect(page.locator('[data-purpose="successContainer"]')).toBeVisible();
+  await expect(page.locator("#form")).not.toBeVisible();
+});
 
-test('validation errors display correctly', async ({ page }) => {
-  await page.goto('/')
+test("validation errors display correctly", async ({ page }) => {
+  await page.goto("/");
 
   // Fill with invalid password (too short)
-  await page.fill('#username input', 'testuser')
-  await page.fill('#current input', 'OldPass123!')
-  await page.fill('#new input', 'short')
-  await page.fill('#new2 input', 'short')
+  await page.fill("#username input", "testuser");
+  await page.fill("#current input", "OldPass123!");
+  await page.fill("#new input", "short");
+  await page.fill("#new2 input", "short");
 
   // Trigger validation (blur field)
-  await page.click('#username input')
+  await page.click("#username input");
 
   // Assert error displayed
-  await expect(page.locator('#new [data-purpose="errors"]')).toContainText('at least 8')
+  await expect(page.locator('#new [data-purpose="errors"]')).toContainText("at least 8");
 
   // Assert submit button disabled
-  await expect(page.locator('button[type="submit"]')).toBeDisabled()
-})
+  await expect(page.locator('button[type="submit"]')).toBeDisabled();
+});
 
-test('password reveal toggle works', async ({ page }) => {
-  await page.goto('/')
+test("password reveal toggle works", async ({ page }) => {
+  await page.goto("/");
 
-  const passwordInput = page.locator('#current input')
-  const revealButton = page.locator('#current button[data-purpose="reveal"]')
+  const passwordInput = page.locator("#current input");
+  const revealButton = page.locator('#current button[data-purpose="reveal"]');
 
   // Initially password type
-  await expect(passwordInput).toHaveAttribute('type', 'password')
+  await expect(passwordInput).toHaveAttribute("type", "password");
 
   // Click reveal
-  await revealButton.click()
+  await revealButton.click();
 
   // Now text type
-  await expect(passwordInput).toHaveAttribute('type', 'text')
+  await expect(passwordInput).toHaveAttribute("type", "text");
 
   // Click again to hide
-  await revealButton.click()
+  await revealButton.click();
 
   // Back to password
-  await expect(passwordInput).toHaveAttribute('type', 'password')
-})
+  await expect(passwordInput).toHaveAttribute("type", "password");
+});
 
-test('loading state during submission', async ({ page }) => {
-  await page.goto('/')
+test("loading state during submission", async ({ page }) => {
+  await page.goto("/");
 
   // Fill form
-  await page.fill('#username input', 'testuser')
-  await page.fill('#current input', 'OldPass123!')
-  await page.fill('#new input', 'NewPass456!')
-  await page.fill('#new2 input', 'NewPass456!')
+  await page.fill("#username input", "testuser");
+  await page.fill("#current input", "OldPass123!");
+  await page.fill("#new input", "NewPass456!");
+  await page.fill("#new2 input", "NewPass456!");
 
   // Submit
-  const submitButton = page.locator('button[type="submit"]')
-  await submitButton.click()
+  const submitButton = page.locator('button[type="submit"]');
+  await submitButton.click();
 
   // Assert loading state
-  await expect(submitButton).toHaveAttribute('data-loading', 'true')
-  await expect(submitButton).toBeDisabled()
+  await expect(submitButton).toHaveAttribute("data-loading", "true");
+  await expect(submitButton).toBeDisabled();
 
   // Assert loading icon visible
-  await expect(submitButton.locator('svg')).toBeVisible()
-})
+  await expect(submitButton.locator("svg")).toBeVisible();
+});
 
-test('error from backend displays correctly', async ({ page }) => {
-  await page.goto('/')
+test("error from backend displays correctly", async ({ page }) => {
+  await page.goto("/");
 
   // Mock API to return error
-  await page.route('/api/rpc', route => {
+  await page.route("/api/rpc", (route) => {
     route.fulfill({
       status: 500,
-      contentType: 'application/json',
+      contentType: "application/json",
       body: JSON.stringify({
         success: false,
-        data: ['the old password can\'t be same as the new one']
+        data: ["the old password can't be same as the new one"]
       })
-    })
-  })
+    });
+  });
 
   // Fill and submit
-  await page.fill('#username input', 'testuser')
-  await page.fill('#current input', 'SamePass123!')
-  await page.fill('#new input', 'SamePass123!')
-  await page.fill('#new2 input', 'SamePass123!')
-  await page.click('button[type="submit"]')
+  await page.fill("#username input", "testuser");
+  await page.fill("#current input", "SamePass123!");
+  await page.fill("#new input", "SamePass123!");
+  await page.fill("#new2 input", "SamePass123!");
+  await page.click('button[type="submit"]');
 
   // Assert error message
-  await expect(page.locator('[data-purpose="submit"] [data-purpose="errors"]'))
-    .toContainText('same as the new one')
-})
+  await expect(page.locator('[data-purpose="submit"] [data-purpose="errors"]')).toContainText("same as the new one");
+});
 ```
 
 **Running E2E Tests**:
+
 ```bash
 # Run all tests
 pnpm exec playwright test
@@ -551,6 +570,7 @@ ldap-selfservice-password-changer/
 ### Continuous Integration
 
 **Dockerfile Already Includes Tests**: Line 25
+
 ```dockerfile
 RUN go test ./...
 ```
@@ -560,6 +580,7 @@ RUN go test ./...
 **GitHub Actions Recommendation**:
 
 Create `.github/workflows/test.yml`:
+
 ```yaml
 name: Test
 
@@ -574,7 +595,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: '1.25'
+          go-version: "1.25"
 
       - uses: pnpm/action-setup@v4
         with:
@@ -601,6 +622,7 @@ jobs:
 **Tool**: Husky (already in dependencies)
 
 **Setup**: Create `.husky/pre-commit`
+
 ```bash
 #!/bin/sh
 . "$(dirname "$0")/_/husky.sh"
@@ -615,6 +637,7 @@ gofmt -l .
 ```
 
 **Installation**:
+
 ```bash
 pnpm add -D husky
 pnpm exec husky install
@@ -625,17 +648,20 @@ pnpm exec husky install
 ### Go Coverage
 
 **Generate coverage report**:
+
 ```bash
 go test -coverprofile=coverage.out ./...
 go tool cover -html=coverage.out -o coverage.html
 ```
 
 **View in browser**:
+
 ```bash
 open coverage.html
 ```
 
 **Coverage goals**:
+
 - Validators: 100% (pure functions)
 - RPC handlers: 80%+ (business logic)
 - Configuration: 70%+ (parsing logic)
@@ -643,22 +669,24 @@ open coverage.html
 ### TypeScript Coverage
 
 **With Vitest**:
+
 ```bash
 pnpm exec vitest --coverage
 ```
 
 **Configuration**: Update `vitest.config.ts`
+
 ```typescript
 export default defineConfig({
   test: {
     coverage: {
-      provider: 'v8',
-      reporter: ['text', 'html'],
-      include: ['internal/web/static/js/**/*.ts'],
-      exclude: ['**/*.test.ts'],
-    },
-  },
-})
+      provider: "v8",
+      reporter: ["text", "html"],
+      include: ["internal/web/static/js/**/*.ts"],
+      exclude: ["**/*.test.ts"]
+    }
+  }
+});
 ```
 
 ## Testing Best Practices
@@ -666,6 +694,7 @@ export default defineConfig({
 ### Unit Tests
 
 ✅ **Do**:
+
 - Test one function per test file
 - Use descriptive test names (TestFunctionName_Scenario_ExpectedBehavior)
 - Test happy path and error cases
@@ -673,6 +702,7 @@ export default defineConfig({
 - Mock external dependencies (LDAP, HTTP)
 
 ❌ **Don't**:
+
 - Test implementation details
 - Couple tests to each other
 - Use real LDAP connections in unit tests
@@ -681,6 +711,7 @@ export default defineConfig({
 ### Integration Tests
 
 ✅ **Do**:
+
 - Test complete request/response cycles
 - Use real HTTP server (httptest)
 - Mock external services (LDAP)
@@ -688,6 +719,7 @@ export default defineConfig({
 - Verify HTTP status codes
 
 ❌ **Don't**:
+
 - Mix unit and integration tests
 - Rely on external services
 - Skip negative test cases
@@ -695,6 +727,7 @@ export default defineConfig({
 ### E2E Tests
 
 ✅ **Do**:
+
 - Test critical user workflows
 - Use real browser automation
 - Test UI interactions (clicks, form fills)
@@ -702,6 +735,7 @@ export default defineConfig({
 - Mock backend errors for error paths
 
 ❌ **Don't**:
+
 - Test every possible validation (that's unit test territory)
 - Rely on production LDAP for tests
 - Create brittle selectors (use data-purpose attributes)
@@ -714,4 +748,5 @@ export default defineConfig({
 - [Component Reference](component-reference.md) - Component interfaces for mocking
 
 ---
-*Generated by /sc:index on 2025-10-04*
+
+_Generated by /sc:index on 2025-10-04_

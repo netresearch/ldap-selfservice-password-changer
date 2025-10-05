@@ -5,7 +5,9 @@ Official documentation for LDAP Selfservice Password Changer.
 ## Available Documentation
 
 ### [API Reference](api-reference.md)
+
 Complete JSON-RPC API specification including:
+
 - Request/response formats
 - Available methods
 - Validation rules
@@ -13,7 +15,9 @@ Complete JSON-RPC API specification including:
 - Security considerations
 
 ### [Development Guide](development-guide.md)
+
 Setup instructions and development workflows:
+
 - Prerequisites and initial setup
 - Development mode (hot reload)
 - Production build
@@ -23,7 +27,9 @@ Setup instructions and development workflows:
 - Troubleshooting
 
 ### [Testing Guide](testing-guide.md)
+
 Testing strategies and recommendations:
+
 - Current test coverage
 - Unit testing (Go and TypeScript)
 - Integration testing
@@ -32,6 +38,7 @@ Testing strategies and recommendations:
 - Coverage analysis
 
 ### [Architecture](architecture.md)
+
 System architecture overview with diagrams.
 
 ---
@@ -48,4 +55,4 @@ See main [README.md](../README.md) for contributing guidelines.
 
 ---
 
-*Project documentation maintained by the development team*
+_Project documentation maintained by the development team_

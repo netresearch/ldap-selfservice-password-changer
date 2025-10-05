@@ -3,6 +3,7 @@
 ## JSON-RPC API
 
 ### Endpoint
+
 ```
 POST /api/rpc
 Content-Type: application/json
@@ -38,9 +39,9 @@ Changes a user's password in the LDAP/ActiveDirectory server.
 {
   "method": "change-password",
   "params": [
-    "username",        // sAMAccountName
+    "username", // sAMAccountName
     "currentPassword", // Current password for authentication
-    "newPassword"      // New password to set
+    "newPassword" // New password to set
   ]
 }
 ```
@@ -70,6 +71,7 @@ Changes a user's password in the LDAP/ActiveDirectory server.
 **HTTP Status**: 500 Internal Server Error
 
 **Common Validation Errors**:
+
 - `"the username can't be empty"`
 - `"the old password can't be empty"`
 - `"the new password can't be empty"`
@@ -93,6 +95,7 @@ Changes a user's password in the LDAP/ActiveDirectory server.
 **HTTP Status**: 500 Internal Server Error
 
 **Common LDAP Errors**:
+
 - Authentication failures (incorrect current password)
 - User not found in LDAP directory
 - Password policy violations from AD/LDAP server
@@ -150,10 +153,10 @@ form.onsubmit = async (e) => {
   e.preventDefault();
 
   // 1. Collect form values
-  const [username, oldPassword, newPassword] = fields.map(f => f.getValue());
+  const [username, oldPassword, newPassword] = fields.map((f) => f.getValue());
 
   // 2. Validate all fields
-  const hasErrors = fields.map(({validate}) => validate()).some(e => e === true);
+  const hasErrors = fields.map(({ validate }) => validate()).some((e) => e === true);
   if (hasErrors) return;
 
   // 3. Disable form during submission
@@ -186,14 +189,14 @@ form.onsubmit = async (e) => {
 
 All validation rules are configurable via environment variables or command-line flags:
 
-| Requirement | Config Variable | Default | Backend Validator | Frontend Validator |
-|-------------|----------------|---------|-------------------|-------------------|
-| Minimum Length | `MIN_LENGTH` / `--min-length` | 8 | `len(password) >= minLength` | `mustBeLongerThan(n)` |
-| Minimum Numbers | `MIN_NUMBERS` / `--min-numbers` | 1 | `MinNumbersInString` | `mustIncludeNumbers(n)` |
-| Minimum Symbols | `MIN_SYMBOLS` / `--min-symbols` | 1 | `MinSymbolsInString` | `mustIncludeSymbols(n)` |
-| Minimum Uppercase | `MIN_UPPERCASE` / `--min-uppercase` | 1 | `MinUppercaseLettersInString` | `mustIncludeUppercase(n)` |
-| Minimum Lowercase | `MIN_LOWERCASE` / `--min-lowercase` | 1 | `MinLowercaseLettersInString` | `mustIncludeLowercase(n)` |
-| Username Exclusion | `PASSWORD_CAN_INCLUDE_USERNAME` / `--password-can-include-username` | false | `!strings.Contains(username, password)` | `mustNotIncludeUsername` (conditional) |
+| Requirement        | Config Variable                                                     | Default | Backend Validator                       | Frontend Validator                     |
+| ------------------ | ------------------------------------------------------------------- | ------- | --------------------------------------- | -------------------------------------- |
+| Minimum Length     | `MIN_LENGTH` / `--min-length`                                       | 8       | `len(password) >= minLength`            | `mustBeLongerThan(n)`                  |
+| Minimum Numbers    | `MIN_NUMBERS` / `--min-numbers`                                     | 1       | `MinNumbersInString`                    | `mustIncludeNumbers(n)`                |
+| Minimum Symbols    | `MIN_SYMBOLS` / `--min-symbols`                                     | 1       | `MinSymbolsInString`                    | `mustIncludeSymbols(n)`                |
+| Minimum Uppercase  | `MIN_UPPERCASE` / `--min-uppercase`                                 | 1       | `MinUppercaseLettersInString`           | `mustIncludeUppercase(n)`              |
+| Minimum Lowercase  | `MIN_LOWERCASE` / `--min-lowercase`                                 | 1       | `MinLowercaseLettersInString`           | `mustIncludeLowercase(n)`              |
+| Username Exclusion | `PASSWORD_CAN_INCLUDE_USERNAME` / `--password-can-include-username` | false   | `!strings.Contains(username, password)` | `mustNotIncludeUsername` (conditional) |
 
 ### Symbol Character Set
 
@@ -201,7 +204,7 @@ All validation rules are configurable via environment variables or command-line 
 
 - `!` to `/` (ASCII 33-47): `! " # $ % & ' ( ) * + , - . /`
 - `:` to `@` (ASCII 58-64): `: ; < = > ? @`
-- `[` to `` ` `` (ASCII 91-96): `[ \ ] ^ _ \``
+- `[` to `` ` `` (ASCII 91-96): `[ \ ] ^ \_ \``
 - `{` to `~` (ASCII 123-126): `{ | } ~`
 
 **Total Special Characters**: 32 symbols
@@ -209,10 +212,12 @@ All validation rules are configurable via environment variables or command-line 
 ### Cross-Field Validations
 
 **Frontend Only**:
+
 - `mustMatchNewPassword`: Ensures password confirmation matches new password
 - `mustNotMatchCurrentPassword`: Prevents reusing current password
 
 **Backend**:
+
 - Implicitly validates via LDAP authentication (current password must be correct)
 
 ## Error Handling
@@ -222,6 +227,7 @@ All validation rules are configurable via environment variables or command-line 
 **Location**: internal/web/static/js/app.ts:76-91
 
 Errors are displayed below each input field in real-time:
+
 - Red border around input container
 - Error messages in red text (text-xs text-red-400)
 - Submit button disabled while errors exist
@@ -231,6 +237,7 @@ Errors are displayed below each input field in real-time:
 **Location**: internal/rpc/handler.go:33-46
 
 All errors are wrapped in consistent JSON-RPC response format:
+
 ```go
 return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
   Success: false,
@@ -241,22 +248,26 @@ return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
 ## Security Considerations
 
 ### Authentication
+
 - Current password required for all password change operations
 - LDAP server performs authentication (no password storage in application)
 - Password transmitted via HTTPS (enforced by LDAPS requirement)
 
 ### Authorization
+
 - Users can only change their own password
 - Readonly LDAP user has minimal permissions (read-only access)
 - No administrative privileges exposed via API
 
 ### Input Validation
+
 - Request body size limited to 4KB (main.go:31)
 - All parameters validated before LDAP operation
 - No SQL injection risk (LDAP-based, not SQL)
 - XSS protection via proper input handling
 
 ### Transport Security
+
 - LDAPS (LDAP over SSL/TLS) required for ActiveDirectory
 - HTTPS recommended for web frontend
 - Credentials never logged or stored
@@ -264,9 +275,11 @@ return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
 ## Performance Considerations
 
 ### Compression
+
 **Location**: main.go:34-36
 
 All responses compressed with Brotli:
+
 ```go
 app.Use(compress.New(compress.Config{
   Level: compress.LevelBestSpeed,
@@ -274,9 +287,11 @@ app.Use(compress.New(compress.Config{
 ```
 
 ### Caching
+
 **Location**: main.go:38-41
 
 Static assets cached for 24 hours:
+
 ```go
 app.Use("/static", filesystem.New(filesystem.Config{
   Root:   http.FS(static.Static),
@@ -285,9 +300,11 @@ app.Use("/static", filesystem.New(filesystem.Config{
 ```
 
 ### Body Limits
+
 **Location**: main.go:29-32
 
 Request size limited to prevent abuse:
+
 ```go
 app := fiber.New(fiber.Config{
   BodyLimit: 4 * 1024, // 4KB
@@ -345,4 +362,5 @@ No integration tests currently implemented. See [Testing Guide](testing-guide.md
 - [Component Reference](component-reference.md) - Detailed component documentation
 
 ---
-*Generated by /sc:index on 2025-10-04*
+
+_Generated by /sc:index on 2025-10-04_
