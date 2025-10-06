@@ -86,10 +86,10 @@ export const init = (opts: Opts) => {
       errorContainer.innerHTML = "";
 
       if (errors.length > 0) {
-        inputContainer.classList.add("border-red-600", "dark:border-red-400");
+        inputContainer.classList.add("border-red-700", "dark:border-red-400");
         input.setAttribute("aria-invalid", "true");
       } else {
-        inputContainer.classList.remove("border-red-600", "dark:border-red-400");
+        inputContainer.classList.remove("border-red-700", "dark:border-red-400");
         input.setAttribute("aria-invalid", "false");
       }
 
