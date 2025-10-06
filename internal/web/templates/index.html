@@ -106,7 +106,7 @@
 >
   <label for="input-{{ .Name }}" class="sr-only">{{ .Placeholder }}</label>
   <div
-    class="bg-opacity-0 input-focus:border-blue-500 dark:input-focus:border-blue-400 flex gap-2 rounded-md border border-gray-300 bg-white py-1.5 pr-1 pl-3 transition-colors outline-none dark:border-gray-700 dark:bg-gray-800 [&:has(input[disabled])]:bg-gray-50 dark:[&:has(input[disabled])]:bg-gray-900"
+    class="bg-opacity-0 input-focus:border-blue-500 dark:input-focus:border-blue-400 flex gap-2 rounded-md border border-gray-400 bg-white py-1.5 pr-1 pl-3 transition-colors outline-none dark:border-gray-500 dark:bg-gray-800 [&:has(input[disabled])]:bg-gray-50 dark:[&:has(input[disabled])]:bg-gray-900"
     data-purpose="inputContainer"
   >
     <input
@@ -115,7 +115,7 @@
       name="{{ .Name }}"
       placeholder="{{ .Placeholder }}"
       autocomplete="{{ .Autocomplete }}"
-      class="flex-1 bg-transparent text-gray-900 outline-none placeholder:text-gray-400 placeholder:select-none dark:text-gray-100 dark:placeholder:text-gray-500"
+      class="flex-1 bg-transparent text-gray-900 outline-none placeholder:text-gray-500 placeholder:select-none dark:text-gray-100 dark:placeholder:text-gray-400"
       aria-describedby="errors-{{ .Name }}"
       aria-invalid="false"
     />
@@ -178,7 +178,7 @@
 
   <body class="flex min-h-full items-center justify-center p-4">
     <div
-      class="max-w-lg space-y-4 rounded-lg border border-gray-200 bg-white p-8 shadow-sm dark:border-gray-800 dark:bg-gray-900"
+      class="max-w-lg space-y-4 rounded-lg border border-gray-400 bg-white p-8 shadow-sm dark:border-gray-600 dark:bg-gray-900"
     >
       <div class="flex items-center justify-between">
         <div class="flex-1"></div>
@@ -189,7 +189,7 @@
           <button
             type="button"
             id="themeToggle"
-            class="rounded-md border border-gray-200 p-2 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:border-gray-700 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-blue-400"
+            class="rounded-md border border-gray-400 p-2 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-blue-400"
             aria-label="Toggle theme"
           >
             <span class="dark:hidden">{{ template "MoonIcon" }}</span>
