@@ -21,6 +21,15 @@ type Opts = {
 };
 
 export const init = (opts: Opts) => {
+  // Theme toggle functionality
+  const themeToggle = document.getElementById("themeToggle");
+  if (themeToggle) {
+    themeToggle.addEventListener("click", () => {
+      const isDark = document.documentElement.classList.toggle("dark");
+      localStorage.setItem("theme", isDark ? "dark" : "light");
+    });
+  }
+
   const successContainer = document.querySelector<HTMLFormElement>("div[data-purpose='successContainer']");
   if (!successContainer) throw new Error("Could not find success container element");
 
@@ -77,9 +86,11 @@ export const init = (opts: Opts) => {
       errorContainer.innerHTML = "";
 
       if (errors.length > 0) {
-        inputContainer.classList.add("border-red-500");
+        inputContainer.classList.add("border-red-600", "dark:border-red-400");
+        input.setAttribute("aria-invalid", "true");
       } else {
-        inputContainer.classList.remove("border-red-500");
+        inputContainer.classList.remove("border-red-600", "dark:border-red-400");
+        input.setAttribute("aria-invalid", "false");
       }
 
       for (const error of errors) {
@@ -129,6 +140,7 @@ export const init = (opts: Opts) => {
   const toggleFields = (enabled: boolean) => {
     [submitButton, ...fields.map(({ input }) => input)].forEach((el) => (el.disabled = !enabled));
     submitButton.dataset["loading"] = (!enabled).toString();
+    submitButton.setAttribute("aria-busy", (!enabled).toString());
   };
 
   form.onsubmit = async (e) => {

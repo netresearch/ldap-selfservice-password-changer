@@ -71,29 +71,61 @@
 {{ end }}
 
 <!-- prettier-ignore -->
+{{ define "SunIcon" }}
+<!-- heroicons sun -->
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" class="h-5 w-5">
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+    <path
+      d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 1 1-7.5 0a3.75 3.75 0 0 1 7.5 0Z"
+    />
+  </g>
+</svg>
+{{ end }}
+
+<!-- prettier-ignore -->
+{{ define "MoonIcon" }}
+<!-- heroicons moon -->
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" class="h-5 w-5">
+  <path
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="1.5"
+    d="M21.752 15.002A9.718 9.718 0 0 1 18 15.75c-5.385 0-9.75-4.365-9.75-9.75c0-1.33.266-2.597.748-3.752A9.753 9.753 0 0 0 3 11.25C3 16.635 7.365 21 12.75 21a9.753 9.753 0 0 0 9.002-5.998Z"
+  />
+</svg>
+{{ end }}
+
+<!-- prettier-ignore -->
 {{ define "input" }}
 <div
   id="{{ .Name }}"
-  class="reveal-button:text-white reveal-eye:block reveal-eye-slash:hidden nonreveal-eye:hidden nonreveal-eye-slash:block space-y-[2px]"
+  class="reveal-button:text-gray-900 dark:reveal-button:text-white reveal-eye:block reveal-eye-slash:hidden nonreveal-eye:hidden nonreveal-eye-slash:block space-y-[2px]"
   data-revealed="false"
 >
+  <label for="input-{{ .Name }}" class="sr-only">{{ .Placeholder }}</label>
   <div
-    class="bg-opacity-0 input-focus:border-white [&:has(input[disabled])]:bg-opacity-10 flex gap-2 rounded-md border border-gray-600 bg-white py-1 pr-1 pl-3 outline-none"
+    class="bg-opacity-0 input-focus:border-blue-500 dark:input-focus:border-blue-400 [&:has(input[disabled])]:bg-opacity-10 flex gap-2 rounded-md border border-gray-300 bg-white py-1 pr-1 pl-3 outline-none dark:border-gray-600 dark:bg-black"
     data-purpose="inputContainer"
   >
     <input
+      id="input-{{ .Name }}"
       type="{{ .Type }}"
       name="{{ .Name }}"
       placeholder="{{ .Placeholder }}"
       autocomplete="{{ .Autocomplete }}"
-      class="flex-1 bg-transparent outline-none placeholder:select-none"
+      class="flex-1 bg-transparent text-gray-900 outline-none placeholder:text-gray-500 placeholder:select-none dark:text-white dark:placeholder:text-gray-400"
+      aria-describedby="errors-{{ .Name }}"
+      aria-invalid="false"
     />
 
     {{ if eq .Type "password" }}
     <button
       type="button"
-      class="flex items-center rounded-sm px-1 py-1 text-gray-500 ring-white outline-none hover:text-white focus:ring-1"
+      class="flex items-center rounded-sm px-1 py-1 text-gray-500 outline-none hover:text-gray-900 focus:ring-2 focus:ring-blue-500 dark:text-gray-400 dark:hover:text-white dark:focus:ring-blue-400"
       data-purpose="reveal"
+      aria-label="Toggle password visibility"
     >
       <!-- prettier-ignore -->
       {{ template "EyeSlashIcon" }}
@@ -102,17 +134,31 @@
     </button>
     {{ end }}
   </div>
-  <div class="text-xs text-red-400" data-purpose="errors"></div>
+  <div
+    id="errors-{{ .Name }}"
+    class="text-xs text-red-600 dark:text-red-400"
+    data-purpose="errors"
+    role="alert"
+    aria-live="polite"
+  ></div>
 </div>
 {{ end }}
 
 <!doctype html>
-<html lang="en" class="h-full bg-black text-white">
+<html lang="en" class="h-full bg-white text-gray-900 dark:bg-black dark:text-white">
   <head>
     <title>LDAP Password Changer</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="darkreader-lock" />
+    <script>
+      // Initialize theme before page renders to prevent flash
+      const storedTheme = localStorage.getItem("theme");
+      const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+      if (storedTheme === "dark" || (!storedTheme && prefersDark)) {
+        document.documentElement.classList.add("dark");
+      }
+    </script>
 
     <link rel="icon" type="image/png" sizes="32x32" href="/static/favicon-32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/static/favicon-16x16.png" />
@@ -131,12 +177,26 @@
   </head>
 
   <body class="flex min-h-full items-center justify-center p-4">
-    <div class="max-w-lg space-y-4 rounded-md border border-gray-600 p-8">
-      <div class="flex justify-center">
-        <img src="/static/logo.webp" class="center aspect-square h-28 sm:h-48" alt="" />
+    <div class="max-w-lg space-y-4 rounded-md border border-gray-300 bg-white p-8 dark:border-gray-600 dark:bg-black">
+      <div class="flex items-center justify-between">
+        <div class="flex-1"></div>
+        <div class="flex flex-1 justify-center">
+          <img src="/static/logo.webp" class="center aspect-square h-28 sm:h-48" alt="LDAP Password Changer logo" />
+        </div>
+        <div class="flex flex-1 justify-end">
+          <button
+            type="button"
+            id="themeToggle"
+            class="rounded-md border border-gray-300 p-2 text-gray-700 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-blue-500 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-900"
+            aria-label="Toggle theme"
+          >
+            <span class="dark:hidden">{{ template "MoonIcon" }}</span>
+            <span class="hidden dark:inline">{{ template "SunIcon" }}</span>
+          </button>
+        </div>
       </div>
 
-      <form class="space-y-4" id="form">
+      <form class="space-y-4" id="form" aria-label="Password change form">
         <!-- prettier-ignore -->
         {{ template "input" InputOpts "username" "Username" "text" "username" }}
         <!-- prettier-ignore -->
@@ -144,13 +204,14 @@
         <!-- prettier-ignore -->
         {{ template "input" InputOpts "new" "New Password" "password" "new-password" }}
         <!-- prettier-ignore -->
-        {{ template "input" InputOpts "new2" "New Password" "password" "new-password" }}
+        {{ template "input" InputOpts "new2" "Confirm New Password" "password" "new-password" }}
 
         <div class="space-y-[2px]" data-purpose="submit">
           <button
             type="submit"
-            class="disabled:bg-opacity-10 hocus:bg-opacity-0 hocus:text-white disabled:hocus:bg-opacity-10 disabled:hocus:text-gray-500 flex w-full items-center justify-center rounded-md border border-white bg-white px-3 py-1 font-bold text-black outline-none disabled:border-gray-600 disabled:text-gray-500 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
+            class="disabled:bg-opacity-10 hocus:bg-blue-700 dark:hocus:bg-blue-600 disabled:hocus:bg-gray-200 dark:disabled:hocus:bg-gray-800 disabled:hocus:text-gray-500 flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 px-3 py-1 font-bold text-white outline-none hover:bg-blue-700 focus:ring-2 focus:ring-blue-500 disabled:border-gray-300 disabled:bg-gray-200 disabled:text-gray-500 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-400 dark:disabled:border-gray-600 dark:disabled:bg-gray-800 dark:disabled:text-gray-500 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
             data-loading="false"
+            aria-busy="false"
           >
             <span>Change Password</span>
 
@@ -158,21 +219,28 @@
             {{ template "LoadingIcon" }}
           </button>
 
-          <div class="text-xs text-red-400" data-purpose="errors"></div>
+          <div
+            class="text-xs text-red-600 dark:text-red-400"
+            data-purpose="errors"
+            role="alert"
+            aria-live="assertive"
+          ></div>
         </div>
       </form>
 
-      <div class="hidden space-y-4" data-purpose="successContainer">
-        <div class="mx-auto h-12 w-12">{{ template "CheckIcon" }}</div>
+      <div class="hidden space-y-4" data-purpose="successContainer" role="status" aria-live="polite">
+        <div class="mx-auto h-12 w-12 text-green-600 dark:text-green-400" aria-hidden="true">
+          {{ template "CheckIcon" }}
+        </div>
 
-        <p class="text-center">Your password was changed successfully.</p>
+        <p class="text-center font-semibold">Your password was changed successfully.</p>
       </div>
 
-      <p class="text-center text-xs text-gray-500">
+      <p class="text-center text-xs text-gray-600 dark:text-gray-400">
         Powered by
         <a
           href="https://github.com/netresearch/ldap-selfservice-password-changer"
-          class="hocus:text-white hocus:underline hocus:decoration-white break-keep outline-none"
+          class="hocus:text-blue-600 dark:hocus:text-blue-400 hocus:underline break-keep outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400"
         >
           netresearch/ldap-selfservice-password-changer
         </a>
