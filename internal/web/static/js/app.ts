@@ -185,6 +185,23 @@ export const init = (opts: Opts) => {
       };
     }
 
+    // Help toggle functionality
+    const helpButton = f.querySelector<HTMLButtonElement>('button[data-purpose="help"]');
+    const helpText = f.querySelector<HTMLDivElement>('div[data-purpose="helpText"]');
+
+    if (helpButton && helpText) {
+      helpButton.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+
+        const isExpanded = helpButton.getAttribute("aria-expanded") === "true";
+        const newExpanded = !isExpanded;
+
+        helpButton.setAttribute("aria-expanded", newExpanded.toString());
+        helpText.classList.toggle("hidden", !newExpanded);
+      };
+    }
+
     return { input, errorContainer, getValue, validate };
   });
 

@@ -16,9 +16,10 @@ type InputOpts struct {
 	Placeholder  string
 	Type         string
 	Autocomplete string
+	Help         string
 }
 
-func MakeInputOpts(name, placeholder, type_, autocomplete string) InputOpts {
+func MakeInputOpts(name, placeholder, type_, autocomplete, help string) InputOpts {
 	if type_ != "password" && type_ != "text" {
 		panic("InputOpts type must be either `password` or `text`")
 	}
@@ -28,6 +29,7 @@ func MakeInputOpts(name, placeholder, type_, autocomplete string) InputOpts {
 		placeholder,
 		type_,
 		autocomplete,
+		help,
 	}
 }
 
