@@ -116,7 +116,7 @@
 >
   <label for="input-{{ .Name }}" class="sr-only">{{ .Placeholder }}</label>
   <div
-    class="bg-opacity-0 input-focus:border-gray-900 dark:input-focus:border-blue-400 flex gap-2 rounded-md border-2 border-gray-800 bg-white py-1.5 pr-1 pl-3 transition-colors outline-none dark:border-gray-400 dark:bg-gray-800 [&:has(input[disabled])]:bg-gray-50 dark:[&:has(input[disabled])]:bg-gray-900"
+    class="bg-opacity-0 input-focus:border-gray-900 dark:input-focus:border-gray-300 flex gap-2 rounded-md border-2 border-gray-800 bg-white py-1.5 pr-1 pl-3 transition-colors outline-none dark:border-gray-400 dark:bg-gray-800 [&:has(input[disabled])]:bg-gray-50 dark:[&:has(input[disabled])]:bg-gray-900"
     data-purpose="inputContainer"
   >
     <input
@@ -133,7 +133,7 @@
     {{ if eq .Type "password" }}
     <button
       type="button"
-      class="flex items-center rounded-sm px-2 py-2 text-gray-500 outline-none hover:text-gray-700 focus:ring-2 focus:ring-gray-900 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:ring-blue-400"
+      class="flex items-center rounded-sm px-2 py-2 text-gray-500 outline-none hover:text-gray-700 focus:ring-2 focus:ring-gray-900 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:ring-gray-300"
       data-purpose="reveal"
       aria-label="Show password"
       aria-pressed="false"
@@ -218,7 +218,7 @@
         <div class="space-y-[2px]" data-purpose="submit">
           <button
             type="submit"
-            class="flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 px-3 py-2 font-semibold text-white transition-colors outline-none hover:bg-blue-700 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-gray-100 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-900 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-800 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
+            class="flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 px-3 py-2 font-semibold text-white transition-colors outline-none hover:bg-blue-700 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-gray-100 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-800 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
             data-loading="false"
             aria-busy="false"
           >
@@ -251,7 +251,7 @@
         Powered by
         <a
           href="https://github.com/netresearch/ldap-selfservice-password-changer"
-          class="hocus:text-blue-700 dark:hocus:text-blue-400 hocus:underline break-keep outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:focus:ring-blue-400 dark:focus:ring-offset-gray-900"
+          class="hocus:text-blue-700 dark:hocus:text-blue-400 hocus:underline break-keep outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900"
         >
           netresearch/ldap-selfservice-password-changer
         </a>
@@ -260,7 +260,7 @@
       <button
         type="button"
         id="themeToggle"
-        class="absolute right-8 top-8 rounded-md border border-gray-400 p-2 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-900 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-blue-400"
+        class="absolute right-8 top-8 rounded-md border border-gray-400 p-2 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-900 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-gray-300"
         aria-label="Toggle theme"
         data-theme="auto"
       >
