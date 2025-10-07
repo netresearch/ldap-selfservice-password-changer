@@ -45,7 +45,10 @@ export const init = (opts: Opts) => {
         dark: "Dark mode",
         auto: "Auto mode (follows system preference)"
       };
-      themeToggle.setAttribute("aria-label", `Theme: ${themeLabels[theme]}. Click to switch to ${themeLabels[nextTheme]}`);
+      themeToggle.setAttribute(
+        "aria-label",
+        `Theme: ${themeLabels[theme]}. Click to switch to ${themeLabels[nextTheme]}`
+      );
 
       // Apply theme
       if (theme === "light") {
@@ -106,7 +109,11 @@ export const init = (opts: Opts) => {
         mustIncludeLowercase(opts.minLowercase, "New Password")
       ]
     ],
-    ["new2", "Password Confirmation", [mustNotBeEmpty("Password Confirmation"), mustMatchNewPassword("Password Confirmation")]]
+    [
+      "new2",
+      "Password Confirmation",
+      [mustNotBeEmpty("Password Confirmation"), mustMatchNewPassword("Password Confirmation")]
+    ]
   ] satisfies Field[];
 
   const fields = fieldsWithValidators.map(([name, _fieldLabel, validators]) => {
