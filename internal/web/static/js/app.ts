@@ -38,6 +38,15 @@ export const init = (opts: Opts) => {
       themeDarkIcon.classList.toggle("hidden", theme !== "dark");
       themeAutoIcon.classList.toggle("hidden", theme !== "auto");
 
+      // Update ARIA label to communicate current state and next action
+      const nextTheme = theme === "auto" ? "light" : theme === "light" ? "dark" : "auto";
+      const themeLabels = {
+        light: "Light mode",
+        dark: "Dark mode",
+        auto: "Auto mode (follows system preference)"
+      };
+      themeToggle.setAttribute("aria-label", `Theme: ${themeLabels[theme]}. Click to switch to ${themeLabels[nextTheme]}`);
+
       // Apply theme
       if (theme === "light") {
         document.documentElement.classList.remove("dark");
@@ -78,28 +87,29 @@ export const init = (opts: Opts) => {
   );
   if (!submitErrorContainer) throw new Error("Could not find submit error container element");
 
-  type Field = [string, ((v: string) => string)[]];
+  type Field = [string, string, ((v: string) => string)[]];
 
   const fieldsWithValidators = [
-    ["username", [mustNotBeEmpty]],
-    ["current", [mustNotBeEmpty]],
+    ["username", "Username", [mustNotBeEmpty("Username")]],
+    ["current", "Current Password", [mustNotBeEmpty("Current Password")]],
     [
       "new",
+      "New Password",
       [
-        mustNotBeEmpty,
-        mustBeLongerThan(opts.minLength),
-        mustNotMatchCurrentPassword,
-        toggleValidator(mustNotIncludeUsername, !opts.passwordCanIncludeUsername),
-        mustIncludeNumbers(opts.minNumbers),
-        mustIncludeSymbols(opts.minSymbols),
-        mustIncludeUppercase(opts.minUppercase),
-        mustIncludeLowercase(opts.minLowercase)
+        mustNotBeEmpty("New Password"),
+        mustBeLongerThan(opts.minLength, "New Password"),
+        mustNotMatchCurrentPassword("New Password"),
+        toggleValidator(mustNotIncludeUsername("New Password"), !opts.passwordCanIncludeUsername),
+        mustIncludeNumbers(opts.minNumbers, "New Password"),
+        mustIncludeSymbols(opts.minSymbols, "New Password"),
+        mustIncludeUppercase(opts.minUppercase, "New Password"),
+        mustIncludeLowercase(opts.minLowercase, "New Password")
       ]
     ],
-    ["new2", [mustNotBeEmpty, mustMatchNewPassword]]
+    ["new2", "Password Confirmation", [mustNotBeEmpty("Password Confirmation"), mustMatchNewPassword("Password Confirmation")]]
   ] satisfies Field[];
 
-  const fields = fieldsWithValidators.map(([name, validators]) => {
+  const fields = fieldsWithValidators.map(([name, _fieldLabel, validators]) => {
     const f = form.querySelector<HTMLDivElement>(`#${name}`);
     if (!f) throw new Error(`Field "${name}" does not exist`);
 
@@ -161,6 +171,10 @@ export const init = (opts: Opts) => {
 
         input.type = newType;
         f.dataset["revealed"] = revealed.toString();
+
+        // Update ARIA label to communicate current state
+        revealButton.setAttribute("aria-label", revealed ? "Hide password" : "Show password");
+        revealButton.setAttribute("aria-pressed", revealed.toString());
       };
     }
 
