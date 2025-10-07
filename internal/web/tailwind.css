@@ -20,6 +20,9 @@
 /* Custom variant for input focus within container */
 @custom-variant input-focus (&:has(input:focus));
 
+/* Custom variant for error input focus within container */
+@custom-variant error-input-focus (&:has(input[aria-invalid="true"]:focus));
+
 /* Custom variant for hover and focus states */
 @custom-variant hocus {
   &:hover,
