@@ -4,6 +4,9 @@
 <span>LDAP Selfservice Password Changer is a web frontend and JSON RPC API for allowing your users to change their own passwords in your LDAP or ActiveDirectory server.</span>
 
   <img src="./internal/web/static/logo.webp" height="256">
+
+[![WCAG 2.2 AA](https://img.shields.io/badge/WCAG%202.2-AA%20Compliant-brightgreen?style=flat-square)](https://www.w3.org/WAI/WCAG22/quickref/?currentsidebar=%23col_customize&levels=aaa)
+
 </div>
 
 ## Features
@@ -11,6 +14,9 @@
 - **Self-Service Password Changes**: Users can change their own LDAP/AD passwords without admin intervention
 - **Configurable Password Policies**: Minimum length, numbers, symbols, uppercase, lowercase requirements
 - **Real-Time Validation**: Client-side validation with immediate feedback
+- **Accessible**: WCAG 2.2 Level AA compliant, full keyboard navigation, screen reader support
+- **Dark Mode**: Three-state theme toggle (light/dark/auto) with WCAG-compliant contrast ratios
+- **Password Manager Support**: Optimized for autofill with proper autocomplete attributes
 - **Secure**: LDAPS support, no password storage, minimal attack surface
 - **Single Binary**: All assets embedded, easy deployment
 - **Modern Stack**: Go backend, TypeScript frontend, Tailwind CSS
