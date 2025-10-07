@@ -160,7 +160,7 @@
 <!doctype html>
 <html lang="en" class="h-full bg-gray-50 text-gray-900 dark:bg-gray-950 dark:text-gray-50">
   <head>
-    <title>LDAP Password Changer</title>
+    <title>LDAP (Lightweight Directory Access Protocol) Password Changer</title>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="darkreader-lock" />
@@ -201,63 +201,71 @@
     <div
       class="relative max-w-lg space-y-4 rounded-lg border border-gray-400 bg-white p-8 shadow-sm dark:border-gray-600 dark:bg-gray-900"
     >
-      <div class="flex justify-center">
-        <img src="/static/logo.webp" class="aspect-square h-28 w-28 sm:h-48 sm:w-48" alt="" />
-      </div>
+      <header role="banner">
+        <div class="flex justify-center">
+          <img src="/static/logo.webp" class="aspect-square h-28 w-28 sm:h-48 sm:w-48" alt="" />
+        </div>
+      </header>
 
-      <h1 class="text-center text-2xl font-semibold text-gray-900 dark:text-gray-100">Change Your Password</h1>
+      <main role="main">
+        <h1 class="text-center text-2xl font-semibold text-gray-900 dark:text-gray-100">Change Your Password</h1>
 
-      <form class="space-y-4" id="form" aria-label="Password change form" autocomplete="on">
-        <!-- prettier-ignore -->
-        {{ template "input" InputOpts "username" "Username" "text" "username" }}
-        <!-- prettier-ignore -->
-        {{ template "input" InputOpts "current" "Current Password" "password" "current-password" }}
-        <!-- prettier-ignore -->
-        {{ template "input" InputOpts "new" "New Password" "password" "new-password" }}
-        <!-- prettier-ignore -->
-        {{ template "input" InputOpts "new2" "Confirm New Password" "password" "new-password" }}
+        <h2 class="sr-only">Password Change Form</h2>
+        <form class="space-y-4" id="form" aria-label="Password change form" autocomplete="on">
+          <!-- prettier-ignore -->
+          {{ template "input" InputOpts "username" "Username" "text" "username" }}
+          <!-- prettier-ignore -->
+          {{ template "input" InputOpts "current" "Current Password" "password" "current-password" }}
+          <!-- prettier-ignore -->
+          {{ template "input" InputOpts "new" "New Password" "password" "new-password" }}
+          <!-- prettier-ignore -->
+          {{ template "input" InputOpts "new2" "Confirm New Password" "password" "new-password" }}
 
-        <div class="space-y-[2px]" data-purpose="submit">
-          <button
-            type="submit"
-            class="flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 px-3 py-2 font-semibold text-white transition-colors outline-none hover:bg-blue-700 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-gray-100 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-800 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
-            data-loading="false"
-            aria-busy="false"
+          <div class="space-y-[2px]" data-purpose="submit">
+            <button
+              type="submit"
+              class="flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 px-3 py-2 font-semibold text-white transition-colors outline-none hover:bg-blue-700 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-gray-100 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-800 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
+              data-loading="false"
+              aria-busy="false"
+            >
+              <span>Change Password</span>
+
+              <!-- prettier-ignore -->
+              {{ template "LoadingIcon" }}
+            </button>
+
+            <div
+              class="text-xs text-red-700 dark:text-red-400"
+              data-purpose="errors"
+              role="alert"
+              aria-live="assertive"
+            ></div>
+          </div>
+        </form>
+
+        <h2 class="sr-only">Success Message</h2>
+        <div class="hidden space-y-4" data-purpose="successContainer" role="status" aria-live="polite">
+          <div class="mx-auto h-12 w-12 text-green-700 dark:text-green-400" aria-hidden="true">
+            {{ template "CheckIcon" }}
+          </div>
+
+          <p class="text-center font-semibold text-gray-900 dark:text-gray-100">
+            Your password was changed successfully.
+          </p>
+        </div>
+      </main>
+
+      <footer role="contentinfo">
+        <p class="text-center text-xs text-gray-500 dark:text-gray-400">
+          Powered by
+          <a
+            href="https://github.com/netresearch/ldap-selfservice-password-changer"
+            class="hocus:text-blue-700 dark:hocus:text-blue-400 hocus:underline break-keep outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900"
           >
-            <span>Change Password</span>
-
-            <!-- prettier-ignore -->
-            {{ template "LoadingIcon" }}
-          </button>
-
-          <div
-            class="text-xs text-red-700 dark:text-red-400"
-            data-purpose="errors"
-            role="alert"
-            aria-live="assertive"
-          ></div>
-        </div>
-      </form>
-
-      <div class="hidden space-y-4" data-purpose="successContainer" role="status" aria-live="polite">
-        <div class="mx-auto h-12 w-12 text-green-700 dark:text-green-400" aria-hidden="true">
-          {{ template "CheckIcon" }}
-        </div>
-
-        <p class="text-center font-semibold text-gray-900 dark:text-gray-100">
-          Your password was changed successfully.
+            netresearch/ldap-selfservice-password-changer
+          </a>
         </p>
-      </div>
-
-      <p class="text-center text-xs text-gray-500 dark:text-gray-400">
-        Powered by
-        <a
-          href="https://github.com/netresearch/ldap-selfservice-password-changer"
-          class="hocus:text-blue-700 dark:hocus:text-blue-400 hocus:underline break-keep outline-none focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900"
-        >
-          netresearch/ldap-selfservice-password-changer
-        </a>
-      </p>
+      </footer>
 
       <button
         type="button"
