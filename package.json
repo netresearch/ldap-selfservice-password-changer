@@ -1,6 +1,5 @@
 {
   "name": "@netresearch/ldap-selfservice-password-changer",
-  "version": "1.0.0",
   "author": "DevMiner <devminer@devminer.xyz>",
   "license": "MIT",
   "packageManager": "pnpm@10.18.0",
