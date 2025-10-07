@@ -21,12 +21,46 @@ type Opts = {
 };
 
 export const init = (opts: Opts) => {
-  // Theme toggle functionality
+  // Theme toggle functionality - three states: light, dark, auto
   const themeToggle = document.getElementById("themeToggle");
-  if (themeToggle) {
+  const themeLightIcon = document.getElementById("theme-light");
+  const themeDarkIcon = document.getElementById("theme-dark");
+  const themeAutoIcon = document.getElementById("theme-auto");
+
+  if (themeToggle && themeLightIcon && themeDarkIcon && themeAutoIcon) {
+    // Initialize button state from localStorage
+    const storedTheme = localStorage.getItem("theme") || "auto";
+    const applyTheme = (theme: "light" | "dark" | "auto") => {
+      themeToggle.dataset["theme"] = theme;
+
+      // Update icon visibility
+      themeLightIcon.classList.toggle("hidden", theme !== "light");
+      themeDarkIcon.classList.toggle("hidden", theme !== "dark");
+      themeAutoIcon.classList.toggle("hidden", theme !== "auto");
+
+      // Apply theme
+      if (theme === "light") {
+        document.documentElement.classList.remove("dark");
+        localStorage.setItem("theme", "light");
+      } else if (theme === "dark") {
+        document.documentElement.classList.add("dark");
+        localStorage.setItem("theme", "dark");
+      } else {
+        // Auto: follow OS preference
+        const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.toggle("dark", prefersDark);
+        localStorage.setItem("theme", "auto");
+      }
+    };
+
+    // Initialize on load
+    applyTheme(storedTheme as "light" | "dark" | "auto");
+
+    // Cycle through states: auto -> light -> dark -> auto
     themeToggle.addEventListener("click", () => {
-      const isDark = document.documentElement.classList.toggle("dark");
-      localStorage.setItem("theme", isDark ? "dark" : "light");
+      const currentTheme = themeToggle.dataset["theme"] || "auto";
+      const nextTheme = currentTheme === "auto" ? "light" : currentTheme === "light" ? "dark" : "auto";
+      applyTheme(nextTheme);
     });
   }
 
@@ -112,8 +146,6 @@ export const init = (opts: Opts) => {
           return acc;
         }, [] as string[]);
 
-      console.log(`Validated "${name}": ${errors.length} error(s)`);
-
       setErrors(errors);
 
       return errors.length > 0;
@@ -126,8 +158,6 @@ export const init = (opts: Opts) => {
 
         const newType = input.type === "password" ? "text" : "password";
         const revealed = newType === "text";
-
-        console.log(`${revealed ? "Showing" : "Hiding"} content of "${name}"`);
 
         input.type = newType;
         f.dataset["revealed"] = revealed.toString();
@@ -153,7 +183,6 @@ export const init = (opts: Opts) => {
     submitButton.disabled = hasErrors;
     if (hasErrors) return;
 
-    console.log("Changing password...");
     toggleFields(false);
 
     try {
@@ -181,8 +210,6 @@ export const init = (opts: Opts) => {
 
         throw new Error(`An error occurred: ${err}`);
       }
-
-      console.log("Changed successfully");
 
       form.style.display = "none";
       successContainer.style.display = "block";
