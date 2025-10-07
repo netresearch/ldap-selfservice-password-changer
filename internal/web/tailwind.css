@@ -2,6 +2,12 @@
 
 @import "tailwindcss";
 
+@theme {
+  /* Enhanced contrast colors for WCAG 2.2 AAA (7:1 ratio) - WCAG 1.4.6 */
+  --color-gray-900: oklch(15% 0.034 264.665);
+  --color-gray-100: oklch(99.5% 0.003 264.542);
+}
+
 @variant dark (&:where(.dark, .dark *));
 
 /* Custom variants for password reveal functionality */
