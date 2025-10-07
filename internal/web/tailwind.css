@@ -21,3 +21,10 @@
     @slot;
   }
 }
+
+/* Respect user's motion preferences (WCAG 2.3.3 Animation from Interactions - Level AAA) */
+@media (prefers-reduced-motion: reduce) {
+  .animate-spin {
+    animation: none !important;
+  }
+}
