@@ -2,6 +2,8 @@
 
 @import "tailwindcss";
 
+@variant dark (&:where(.dark, .dark *));
+
 /* Custom variants for password reveal functionality */
 @custom-variant reveal-button (&[data-revealed="true"] [data-purpose="reveal"]);
 @custom-variant reveal-eye (&[data-revealed="true"] .on-content-revealed);
