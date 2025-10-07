@@ -168,7 +168,10 @@
   data-revealed="false"
 >
   <div class="flex items-center gap-1">
-    <label for="input-{{ .Name }}" class="text-xs font-semibold text-gray-900 uppercase dark:text-gray-100 comfortable:block compact:sr-only">
+    <label
+      for="input-{{ .Name }}"
+      class="comfortable:block compact:sr-only text-xs font-semibold text-gray-900 uppercase dark:text-gray-100"
+    >
       {{ .Placeholder }}
     </label>
     {{ if .Help }}
@@ -201,7 +204,7 @@
   {{ end }}
 
   <div
-    class="bg-opacity-0 input-focus:!border-gray-900 input-focus:ring-2 input-focus:ring-gray-900 dark:input-focus:!border-gray-100 dark:input-focus:ring-gray-100 error-input-focus:!border-red-900 error-input-focus:ring-2 error-input-focus:ring-red-900 dark:error-input-focus:!border-red-300 dark:error-input-focus:ring-red-300 flex gap-2 rounded-md border-2 border-gray-300 bg-white pr-1 pl-3 transition-colors outline-none dark:border-gray-400 dark:bg-gray-800 [&:has(input[disabled])]:bg-gray-50 dark:[&:has(input[disabled])]:bg-gray-900 comfortable:py-2 compact:py-1.5"
+    class="bg-opacity-0 input-focus:!border-gray-900 input-focus:ring-2 input-focus:ring-gray-900 dark:input-focus:!border-gray-100 dark:input-focus:ring-gray-100 error-input-focus:!border-red-900 error-input-focus:ring-2 error-input-focus:ring-red-900 dark:error-input-focus:!border-red-300 dark:error-input-focus:ring-red-300 comfortable:py-2 compact:py-1.5 flex gap-2 rounded-md border-2 border-gray-300 bg-white pr-1 pl-3 transition-colors outline-none dark:border-gray-400 dark:bg-gray-800 [&:has(input[disabled])]:bg-gray-50 dark:[&:has(input[disabled])]:bg-gray-900"
     data-purpose="inputContainer"
   >
     <input
@@ -218,7 +221,7 @@
     {{ if eq .Type "password" }}
     <button
       type="button"
-      class="flex items-center rounded-sm text-gray-500 outline-none hover:text-gray-700 focus:ring-2 focus:ring-gray-900 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:ring-gray-300 comfortable:px-3 comfortable:py-2 compact:px-1.5 compact:py-1"
+      class="comfortable:px-3 comfortable:py-2 compact:px-1.5 compact:py-1 flex items-center rounded-sm text-gray-500 outline-none hover:text-gray-700 focus:ring-2 focus:ring-gray-900 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:ring-gray-300"
       data-purpose="reveal"
       aria-label="Show password"
       aria-pressed="false"
@@ -282,17 +285,26 @@
 
   <body class="flex min-h-full items-center justify-center p-4">
     <div
-      class="relative max-w-lg rounded-lg border border-gray-400 bg-white shadow-sm dark:border-gray-600 dark:bg-gray-900 comfortable:space-y-4 comfortable:p-8 compact:space-y-3 compact:p-6"
+      class="comfortable:space-y-4 comfortable:p-8 compact:space-y-3 compact:p-6 relative max-w-lg rounded-lg border border-gray-400 bg-white shadow-sm dark:border-gray-600 dark:bg-gray-900"
       data-density="comfortable"
     >
       <header role="banner">
         <div class="flex justify-center">
-          <img src="/static/logo.webp" fetchpriority="high" class="aspect-square comfortable:h-28 comfortable:w-28 comfortable:sm:h-48 comfortable:sm:w-48 compact:h-24 compact:w-24 compact:sm:h-32 compact:sm:w-32" alt="" />
+          <img
+            src="/static/logo.webp"
+            fetchpriority="high"
+            class="comfortable:h-28 comfortable:w-28 comfortable:sm:h-48 comfortable:sm:w-48 compact:h-24 compact:w-24 compact:sm:h-32 compact:sm:w-32 aspect-square"
+            alt=""
+          />
         </div>
       </header>
 
       <main role="main">
-        <h1 class="text-center text-2xl font-semibold text-gray-900 dark:text-gray-100 comfortable:block compact:sr-only">Change Your Password</h1>
+        <h1
+          class="comfortable:block compact:sr-only text-center text-2xl font-semibold text-gray-900 dark:text-gray-100"
+        >
+          Change Your Password
+        </h1>
 
         <h2 class="sr-only">Password Change Form</h2>
         <form class="space-y-4" id="form" aria-label="Password change form" autocomplete="on">
@@ -308,7 +320,7 @@
           <div class="space-y-[2px]" data-purpose="submit">
             <button
               type="submit"
-              class="flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 font-semibold text-white transition-colors outline-none hover:bg-blue-700 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-gray-100 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-800 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block comfortable:px-3 comfortable:py-2 compact:px-2.5 compact:py-1.5 compact:text-sm"
+              class="comfortable:px-3 comfortable:py-2 compact:px-2.5 compact:py-1.5 compact:text-sm flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 font-semibold text-white transition-colors outline-none hover:bg-blue-700 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-gray-100 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-800 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
               data-loading="false"
               aria-busy="false"
             >

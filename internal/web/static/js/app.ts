@@ -123,8 +123,7 @@ export const init = (opts: Opts) => {
         compact: "Compact mode (WCAG AA, simplified layout with hidden labels)"
       };
 
-      const nextMode: DensityMode =
-        mode === "auto" ? "comfortable" : mode === "comfortable" ? "compact" : "auto";
+      const nextMode: DensityMode = mode === "auto" ? "comfortable" : mode === "comfortable" ? "compact" : "auto";
 
       densityToggle.setAttribute(
         "aria-label",
