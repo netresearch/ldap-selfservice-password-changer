@@ -122,6 +122,45 @@
 {{ end }}
 
 <!-- prettier-ignore -->
+{{ define "Squares2x2Icon" }}
+<!-- heroicons squares-2x2 -->
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" class="h-5 w-5">
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+    <path
+      d="M3.75 6A2.25 2.25 0 0 1 6 3.75h2.25A2.25 2.25 0 0 1 10.5 6v2.25a2.25 2.25 0 0 1-2.25 2.25H6a2.25 2.25 0 0 1-2.25-2.25V6ZM3.75 15.75A2.25 2.25 0 0 1 6 13.5h2.25a2.25 2.25 0 0 1 2.25 2.25V18a2.25 2.25 0 0 1-2.25 2.25H6A2.25 2.25 0 0 1 3.75 18v-2.25ZM13.5 6a2.25 2.25 0 0 1 2.25-2.25H18A2.25 2.25 0 0 1 20.25 6v2.25A2.25 2.25 0 0 1 18 10.5h-2.25a2.25 2.25 0 0 1-2.25-2.25V6ZM13.5 15.75a2.25 2.25 0 0 1 2.25-2.25H18a2.25 2.25 0 0 1 2.25 2.25V18A2.25 2.25 0 0 1 18 20.25h-2.25A2.25 2.25 0 0 1 13.5 18v-2.25Z"
+    />
+  </g>
+</svg>
+{{ end }}
+
+<!-- prettier-ignore -->
+{{ define "SquaresPlusIcon" }}
+<!-- heroicons squares-plus -->
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" class="h-5 w-5">
+  <g fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5">
+    <path
+      d="M13.5 16.875h3.375m0 0h3.375m-3.375 0V13.5m0 3.375v3.375M6 10.5h2.25a2.25 2.25 0 0 0 2.25-2.25V6a2.25 2.25 0 0 0-2.25-2.25H6A2.25 2.25 0 0 0 3.75 6v2.25A2.25 2.25 0 0 0 6 10.5Zm0 9.75h2.25A2.25 2.25 0 0 0 10.5 18v-2.25a2.25 2.25 0 0 0-2.25-2.25H6a2.25 2.25 0 0 0-2.25 2.25V18A2.25 2.25 0 0 0 6 20.25Zm9.75-9.75H18a2.25 2.25 0 0 0 2.25-2.25V6A2.25 2.25 0 0 0 18 3.75h-2.25A2.25 2.25 0 0 0 13.5 6v2.25a2.25 2.25 0 0 0 2.25 2.25Z"
+    />
+  </g>
+</svg>
+{{ end }}
+
+<!-- prettier-ignore -->
+{{ define "SparklesIcon" }}
+<!-- heroicons sparkles -->
+<svg xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" viewBox="0 0 24 24" class="h-5 w-5">
+  <path
+    fill="none"
+    stroke="currentColor"
+    stroke-linecap="round"
+    stroke-linejoin="round"
+    stroke-width="1.5"
+    d="M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 0 0-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 0 0 3.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 0 0 3.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 0 0-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 0 0-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 0 0 2.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 0 0 2.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 0 0-2.456 2.456zM16.894 20.567L16.5 21.75l-.394-1.183a2.25 2.25 0 0 0-1.423-1.423L13.5 18.75l1.183-.394a2.25 2.25 0 0 0 1.423-1.423l.394-1.183l.394 1.183a2.25 2.25 0 0 0 1.423 1.423l1.183.394l-1.183.394a2.25 2.25 0 0 0-1.423 1.423z"
+  />
+</svg>
+{{ end }}
+
+<!-- prettier-ignore -->
 {{ define "input" }}
 <div
   id="{{ .Name }}"
@@ -129,21 +168,23 @@
   data-revealed="false"
 >
   <div class="flex items-center gap-1">
-    <label for="input-{{ .Name }}" class="text-xs font-semibold text-gray-900 uppercase dark:text-gray-100">
+    <label for="input-{{ .Name }}" class="text-xs font-semibold text-gray-900 uppercase dark:text-gray-100 comfortable:block compact:sr-only">
       {{ .Placeholder }}
     </label>
     {{ if .Help }}
-    <button
-      type="button"
-      class="rounded-sm p-2.5 text-gray-500 outline-none hover:text-gray-700 focus:ring-2 focus:ring-gray-900 dark:text-gray-400 dark:hover:text-gray-300 dark:focus:ring-gray-300"
-      data-purpose="help"
-      aria-label="Help for {{ .Placeholder }}"
-      aria-expanded="false"
-      aria-controls="help-{{ .Name }}"
-    >
-      <!-- prettier-ignore -->
-      {{ template "HelpIcon" }}
-    </button>
+    <div class="comfortable:contents compact:hidden">
+      <button
+        type="button"
+        class="rounded-sm p-2.5 text-gray-500 outline-none hover:text-gray-700 focus:ring-2 focus:ring-gray-900 dark:text-gray-400 dark:hover:text-gray-300 dark:focus:ring-gray-300"
+        data-purpose="help"
+        aria-label="Help for {{ .Placeholder }}"
+        aria-expanded="false"
+        aria-controls="help-{{ .Name }}"
+      >
+        <!-- prettier-ignore -->
+        {{ template "HelpIcon" }}
+      </button>
+    </div>
     {{ end }}
   </div>
 
@@ -160,7 +201,7 @@
   {{ end }}
 
   <div
-    class="bg-opacity-0 input-focus:!border-gray-900 input-focus:ring-2 input-focus:ring-gray-900 dark:input-focus:!border-gray-100 dark:input-focus:ring-gray-100 error-input-focus:!border-red-900 error-input-focus:ring-2 error-input-focus:ring-red-900 dark:error-input-focus:!border-red-300 dark:error-input-focus:ring-red-300 flex gap-2 rounded-md border-2 border-gray-300 bg-white py-1.5 pr-1 pl-3 transition-colors outline-none dark:border-gray-400 dark:bg-gray-800 [&:has(input[disabled])]:bg-gray-50 dark:[&:has(input[disabled])]:bg-gray-900"
+    class="bg-opacity-0 input-focus:!border-gray-900 input-focus:ring-2 input-focus:ring-gray-900 dark:input-focus:!border-gray-100 dark:input-focus:ring-gray-100 error-input-focus:!border-red-900 error-input-focus:ring-2 error-input-focus:ring-red-900 dark:error-input-focus:!border-red-300 dark:error-input-focus:ring-red-300 flex gap-2 rounded-md border-2 border-gray-300 bg-white pr-1 pl-3 transition-colors outline-none dark:border-gray-400 dark:bg-gray-800 [&:has(input[disabled])]:bg-gray-50 dark:[&:has(input[disabled])]:bg-gray-900 comfortable:py-2 compact:py-1.5"
     data-purpose="inputContainer"
   >
     <input
@@ -177,7 +218,7 @@
     {{ if eq .Type "password" }}
     <button
       type="button"
-      class="flex items-center rounded-sm px-3 py-3 text-gray-500 outline-none hover:text-gray-700 focus:ring-2 focus:ring-gray-900 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:ring-gray-300"
+      class="flex items-center rounded-sm text-gray-500 outline-none hover:text-gray-700 focus:ring-2 focus:ring-gray-900 dark:text-gray-400 dark:hover:text-gray-200 dark:focus:ring-gray-300 comfortable:px-3 comfortable:py-2 compact:px-1.5 compact:py-1"
       data-purpose="reveal"
       aria-label="Show password"
       aria-pressed="false"
@@ -241,16 +282,17 @@
 
   <body class="flex min-h-full items-center justify-center p-4">
     <div
-      class="relative max-w-lg space-y-4 rounded-lg border border-gray-400 bg-white p-8 shadow-sm dark:border-gray-600 dark:bg-gray-900"
+      class="relative max-w-lg rounded-lg border border-gray-400 bg-white shadow-sm dark:border-gray-600 dark:bg-gray-900 comfortable:space-y-4 comfortable:p-8 compact:space-y-3 compact:p-6"
+      data-density="comfortable"
     >
       <header role="banner">
         <div class="flex justify-center">
-          <img src="/static/logo.webp" fetchpriority="high" class="aspect-square h-28 w-28 sm:h-48 sm:w-48" alt="" />
+          <img src="/static/logo.webp" fetchpriority="high" class="aspect-square comfortable:h-28 comfortable:w-28 comfortable:sm:h-48 comfortable:sm:w-48 compact:h-24 compact:w-24 compact:sm:h-32 compact:sm:w-32" alt="" />
         </div>
       </header>
 
       <main role="main">
-        <h1 class="text-center text-2xl font-semibold text-gray-900 dark:text-gray-100">Change Your Password</h1>
+        <h1 class="text-center text-2xl font-semibold text-gray-900 dark:text-gray-100 comfortable:block compact:sr-only">Change Your Password</h1>
 
         <h2 class="sr-only">Password Change Form</h2>
         <form class="space-y-4" id="form" aria-label="Password change form" autocomplete="on">
@@ -266,7 +308,7 @@
           <div class="space-y-[2px]" data-purpose="submit">
             <button
               type="submit"
-              class="flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 px-3 py-2 font-semibold text-white transition-colors outline-none hover:bg-blue-700 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-gray-100 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-800 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
+              class="flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 font-semibold text-white transition-colors outline-none hover:bg-blue-700 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-gray-100 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-800 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block comfortable:px-3 comfortable:py-2 compact:px-2.5 compact:py-1.5 compact:text-sm"
               data-loading="false"
               aria-busy="false"
             >
@@ -311,9 +353,21 @@
 
       <button
         type="button"
+        id="densityToggle"
+        class="absolute top-4 right-16 rounded-md border border-gray-400 p-2.5 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-900 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-gray-300"
+        aria-label="Display density"
+        data-density-mode="auto"
+      >
+        <span id="density-comfortable" class="hidden">{{ template "Squares2x2Icon" }}</span>
+        <span id="density-compact" class="hidden">{{ template "SquaresPlusIcon" }}</span>
+        <span id="density-auto">{{ template "SparklesIcon" }}</span>
+      </button>
+
+      <button
+        type="button"
         id="themeToggle"
-        class="absolute top-8 right-8 rounded-md border border-gray-400 p-3 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-900 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-gray-300"
-        aria-label="Toggle theme"
+        class="absolute top-4 right-4 rounded-md border border-gray-400 p-2.5 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-900 dark:border-gray-600 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-gray-300"
+        aria-label="Theme"
         data-theme="auto"
       >
         <span id="theme-light" class="hidden">{{ template "SunIcon" }}</span>
