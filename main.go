@@ -50,8 +50,8 @@ func main() {
 
 	app.Post("/api/rpc", rpcHandler.Handle)
 
-	slog.Info("starting server", "port", 3000)
-	if err := app.Listen(":3000"); err != nil {
+	slog.Info("starting server", "port", opts.Port)
+	if err := app.Listen(":" + opts.Port); err != nil {
 		slog.Error("failed to start web server", "error", err)
 	}
 }

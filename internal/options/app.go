@@ -12,6 +12,7 @@ import (
 )
 
 type Opts struct {
+	Port             string
 	LDAP             ldap.Config
 	ReadonlyUser     string
 	ReadonlyPassword string
@@ -69,6 +70,7 @@ func Parse() *Opts {
 	}
 
 	var (
+		fPort              = flag.String("port", envStringOrDefault("PORT", "3000"), "Port to listen on.")
 		fLdapServer        = flag.String("ldap-server", envStringOrDefault("LDAP_SERVER", ""), "LDAP server URI, has to begin with `ldap://` or `ldaps://`. If this is an ActiveDirectory server, this *has* to be `ldaps://`.")
 		fIsActiveDirectory = flag.Bool("active-directory", envBoolOrDefault("LDAP_IS_AD", false), "Mark the LDAP server as ActiveDirectory.")
 		fBaseDN            = flag.String("base-dn", envStringOrDefault("LDAP_BASE_DN", ""), "Base DN of your LDAP directory.")
@@ -93,6 +95,7 @@ func Parse() *Opts {
 	panicWhenEmpty("readonly-password", fReadonlyPassword)
 
 	return &Opts{
+		Port: *fPort,
 		LDAP: ldap.Config{
 			Server:            *fLdapServer,
 			BaseDN:            *fBaseDN,
