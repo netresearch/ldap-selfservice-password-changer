@@ -37,6 +37,17 @@ Testing strategies and recommendations:
 - Test organization
 - Coverage analysis
 
+### [Accessibility Guide](accessibility.md)
+
+WCAG 2.2 AAA compliance and testing:
+
+- Accessibility features overview
+- WCAG 2.2 compliance matrix
+- Adaptive dark mode and density
+- Screen reader testing procedures
+- System preference testing
+- Keyboard navigation verification
+
 ### [Architecture](architecture.md)
 
 System architecture overview with diagrams.
@@ -48,6 +59,7 @@ System architecture overview with diagrams.
 1. **New to the project?** Start with [Development Guide: Initial Setup](development-guide.md#initial-setup)
 2. **Need API details?** See [API Reference](api-reference.md)
 3. **Writing tests?** Check [Testing Guide](testing-guide.md)
+4. **Accessibility testing?** See [Accessibility Guide](accessibility.md)
 
 ## Contributing
 

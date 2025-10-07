@@ -5,7 +5,7 @@
 
   <img src="./internal/web/static/logo.webp" height="256">
 
-[![WCAG 2.2 AA](https://img.shields.io/badge/WCAG%202.2-AA%20Compliant-brightgreen?style=flat-square)](https://www.w3.org/WAI/WCAG22/quickref/?currentsidebar=%23col_customize&levels=aaa)
+[![WCAG 2.2 AAA](https://img.shields.io/badge/WCAG%202.2-AAA%20Compliant-brightgreen?style=flat-square)](https://www.w3.org/WAI/WCAG22/quickref/?currentsidebar=%23col_customize&levels=aaa)
 
 </div>
 
@@ -14,8 +14,8 @@
 - **Self-Service Password Changes**: Users can change their own LDAP/AD passwords without admin intervention
 - **Configurable Password Policies**: Minimum length, numbers, symbols, uppercase, lowercase requirements
 - **Real-Time Validation**: Client-side validation with immediate feedback
-- **Accessible**: WCAG 2.2 Level AA compliant, full keyboard navigation, screen reader support
-- **Dark Mode**: Three-state theme toggle (light/dark/auto) with WCAG-compliant contrast ratios
+- **Accessible**: WCAG 2.2 Level AAA compliant, full keyboard navigation, screen reader support, adaptive density
+- **Dark Mode**: Three-state theme toggle (light/dark/auto) with 7:1 contrast ratios (AAA)
 - **Password Manager Support**: Optimized for autofill with proper autocomplete attributes
 - **Secure**: LDAPS support, no password storage, minimal attack surface
 - **Single Binary**: All assets embedded, easy deployment
@@ -28,6 +28,7 @@ Comprehensive documentation is available in the [`docs/`](docs/) directory:
 - **[API Reference](docs/api-reference.md)** - JSON-RPC API specification and validation rules
 - **[Development Guide](docs/development-guide.md)** - Setup, workflows, and troubleshooting
 - **[Testing Guide](docs/testing-guide.md)** - Testing strategies and recommendations
+- **[Accessibility Guide](docs/accessibility.md)** - WCAG 2.2 AAA compliance and testing procedures
 - **[Architecture](docs/architecture.md)** - System architecture overview
 
 For a complete overview, see the [Documentation Index](docs/README.md).
