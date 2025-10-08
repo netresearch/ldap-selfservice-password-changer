@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"fmt"
+	"log/slog"
 	"strings"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/validators"
@@ -65,8 +66,10 @@ func (c *Handler) changePassword(params []string) ([]string, error) {
 	}
 
 	if err := c.ldap.ChangePasswordForSAMAccountName(sAMAccountName, currentPassword, newPassword); err != nil {
+		slog.Error("password_change_failed", "username", sAMAccountName, "error", err)
 		return nil, err
 	}
 
+	slog.Info("password_changed", "username", sAMAccountName)
 	return []string{"password changed successfully"}, nil
 }
