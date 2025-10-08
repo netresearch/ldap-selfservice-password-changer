@@ -28,16 +28,19 @@ Implement token-based password reset with email verification following these arc
 ### 1. Security Model
 
 **Token Generation**: Cryptographically secure random tokens
+
 - 32 bytes (256 bits) from `crypto/rand`
 - Base64 URL-safe encoding without padding
 - No collision risk with sufficient entropy
 
 **Token Storage**: In-memory thread-safe store
+
 - `sync.RWMutex` for concurrent access protection
 - Metadata: token, username, email, timestamps, used flag
 - Automatic cleanup of expired tokens via background goroutine
 
 **Token Lifecycle**:
+
 - 15-minute expiration (configurable via `RESET_TOKEN_EXPIRY_MINUTES`)
 - Single-use enforcement with `Used` flag
 - Automatic periodic cleanup to prevent memory growth
@@ -45,11 +48,13 @@ Implement token-based password reset with email verification following these arc
 ### 2. User Enumeration Prevention
 
 **Generic Response Pattern**: All requests return identical success message
+
 - "If an account exists, a reset email has been sent"
 - No indication whether email exists in system
 - Internal logging only for debugging
 
 **Silent Failure Handling**:
+
 - User not found → generic success
 - LDAP errors → generic success
 - Email delivery failures → generic success
@@ -58,30 +63,35 @@ Implement token-based password reset with email verification following these arc
 ### 3. Rate Limiting
 
 **Sliding Window Implementation**:
+
 - Configurable limits (default: 3 requests per 60 minutes)
 - Per-email/username tracking with `sync.RWMutex`
 - Automatic cleanup of expired entries
 - Prevents brute force and enumeration attempts
 
 **Configuration Parameters**:
+
 - `RESET_RATE_LIMIT_REQUESTS`: Max requests in window
 - `RESET_RATE_LIMIT_WINDOW_MINUTES`: Time window duration
 
 ### 4. Email Delivery
 
 **SMTP Integration**:
+
 - Standard Go `net/smtp` library
 - STARTTLS support for secure communication
 - Plain auth with configurable credentials
 - RFC 5322 compliant message formatting
 
 **Email Content**:
+
 - Clear reset link with embedded token
 - 15-minute expiration notice
 - Security reminder about ignoring unsolicited emails
 - Plain text format for maximum compatibility
 
 **Configuration Parameters**:
+
 - `SMTP_HOST`, `SMTP_PORT`: Server connection details
 - `SMTP_USERNAME`, `SMTP_PASSWORD`: Authentication credentials
 - `SMTP_FROM_ADDRESS`: Sender email address
@@ -90,11 +100,13 @@ Implement token-based password reset with email verification following these arc
 ### 5. LDAP Integration
 
 **User Lookup**:
+
 - Find user by email address (`FindUserByMail`)
 - Retrieve SAMAccountName for token association
 - Validates user exists before token generation
 
 **Password Update**:
+
 - Uses readonly user credentials by default
 - Optional dedicated reset service account (`LDAP_RESET_USER`) for separation of concerns
 - Validates token before LDAP modification
@@ -103,6 +115,7 @@ Implement token-based password reset with email verification following these arc
 ### 6. Architecture Components
 
 **Package Structure**:
+
 ```
 internal/resettoken/     # Token generation and storage
 internal/email/          # SMTP service for sending emails
@@ -112,6 +125,7 @@ internal/options/        # Configuration parsing
 ```
 
 **Interfaces for Testing**:
+
 - `EmailService`: Email delivery abstraction
 - `RateLimiter`: Rate limiting abstraction
 - `TokenStore`: Token storage abstraction
@@ -119,6 +133,7 @@ internal/options/        # Configuration parsing
 ### 7. Frontend Integration
 
 **User Flow**:
+
 1. User visits `/forgot-password`
 2. Enters email address
 3. System sends email (or silently fails)
@@ -127,6 +142,7 @@ internal/options/        # Configuration parsing
 6. System validates token and updates LDAP password
 
 **Templates**:
+
 - `forgot-password.html`: Email input form
 - `reset-password.html`: New password form
 - Atomic design pattern with reusable components
@@ -191,33 +207,43 @@ internal/options/        # Configuration parsing
 ## Alternatives Considered
 
 ### Alternative 1: Security Questions
+
 **Rejected**:
+
 - Weak security (answers often guessable or publicly available)
 - Poor UX (users forget answers)
 - Storage complexity (encrypted answers in database)
 
 ### Alternative 2: SMS/Two-Factor Authentication
+
 **Rejected**:
+
 - Requires phone number collection and storage
 - SMS delivery costs and reliability issues
 - Regulatory compliance complexity (GDPR, telecoms)
 - Overkill for internal LDAP system
 
 ### Alternative 3: Admin-Only Reset
+
 **Rejected**:
+
 - Original problem: high administrative burden
 - Doesn't scale with organization size
 - Creates bottleneck and user friction
 
 ### Alternative 4: Persistent Database Storage
+
 **Rejected**:
+
 - Adds database dependency and complexity
 - Unnecessary for 15-minute token lifecycle
 - In-memory sufficient for expected load
 - Can revisit if scale requirements change
 
 ### Alternative 5: Magic Links (Passwordless)
+
 **Rejected**:
+
 - Requires session management complexity
 - Doesn't match LDAP authentication model
 - Users expect password-based auth for enterprise systems
@@ -225,6 +251,7 @@ internal/options/        # Configuration parsing
 ## Implementation Timeline
 
 **Phase 1** (Current):
+
 - Token-based reset with email verification
 - In-memory token storage
 - Rate limiting and enumeration protection
@@ -232,6 +259,7 @@ internal/options/        # Configuration parsing
 - Configurable security parameters
 
 **Phase 2** (Future):
+
 - Admin approval workflow (designed but not implemented)
 - Enhanced monitoring and alerting
 - Audit trail for compliance
@@ -240,21 +268,25 @@ internal/options/        # Configuration parsing
 ## Configuration Reference
 
 ### Required (when `PASSWORD_RESET_ENABLED=true`):
+
 - `SMTP_FROM_ADDRESS`: Sender email address
 - `APP_BASE_URL`: Application base URL for links
 
 ### Security Configuration:
+
 - `RESET_TOKEN_EXPIRY_MINUTES`: Token validity (default: 15)
 - `RESET_RATE_LIMIT_REQUESTS`: Max requests per window (default: 3)
 - `RESET_RATE_LIMIT_WINDOW_MINUTES`: Rate limit window (default: 60)
 
 ### SMTP Configuration:
+
 - `SMTP_HOST`: SMTP server hostname (default: smtp.gmail.com)
 - `SMTP_PORT`: SMTP server port (default: 587)
 - `SMTP_USERNAME`: SMTP authentication username (optional)
 - `SMTP_PASSWORD`: SMTP authentication password (optional)
 
 ### LDAP Configuration (Optional):
+
 - `LDAP_RESET_USER`: Dedicated service account for resets
 - `LDAP_RESET_PASSWORD`: Password for dedicated account
 - Falls back to `LDAP_READONLY_USER` if not specified

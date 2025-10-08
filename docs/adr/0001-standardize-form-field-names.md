@@ -7,6 +7,7 @@
 ## Context
 
 The LDAP self-service password changer application contains multiple password-related forms:
+
 - Password change form (requires current password + new password)
 - Password reset request form (email input)
 - Password reset form (set new password via token)
@@ -16,6 +17,7 @@ Password managers (1Password, LastPass, Bitwarden, etc.) and browser autofill fe
 ### Previous Implementation
 
 The application used non-standard `name` attributes:
+
 - `name="current"` for current password
 - `name="new"` for new password
 - `name="new2"` for password confirmation
@@ -28,26 +30,29 @@ Adopt standardized HTML form field naming conventions that align with the HTML L
 
 ### Standard Field Names
 
-| Field Type | `name` Attribute | `autocomplete` Attribute |
-|------------|------------------|--------------------------|
-| Username/Login | `username`, `email`, or `login` | `username` or `email` |
-| Current Password | `current_password` | `current-password` |
-| New Password | `new_password` | `new-password` |
-| Confirm Password | `confirm_password` | `new-password` |
-| Email (standalone) | `email` | `email` |
+| Field Type         | `name` Attribute                | `autocomplete` Attribute |
+| ------------------ | ------------------------------- | ------------------------ |
+| Username/Login     | `username`, `email`, or `login` | `username` or `email`    |
+| Current Password   | `current_password`              | `current-password`       |
+| New Password       | `new_password`                  | `new-password`           |
+| Confirm Password   | `confirm_password`              | `new-password`           |
+| Email (standalone) | `email`                         | `email`                  |
 
 ### Implementation
 
 **Templates Changed:**
+
 - `templates/index.html`: Updated `current` → `current_password`, `new` → `new_password`, `new2` → `confirm_password`
 - `templates/reset-password.html`: Updated `new` → `new_password`, `new2` → `confirm_password`
 - `templates/forgot-password.html`: No changes needed (already using `email`)
 
 **JavaScript Changed:**
+
 - `static/js/app.ts`: Updated field definition array to reference new field names
 - `static/js/reset-password.ts`: Updated field definition array to reference new field names
 
 **Backend Impact:**
+
 - No changes required to Go backend handlers
 - Application uses JSON-RPC with positional parameters, not named form fields
 - JavaScript sends data as `params: [username, oldPassword, newPassword]`
@@ -86,10 +91,13 @@ Adopt standardized HTML form field naming conventions that align with the HTML L
 ## Alternatives Considered
 
 ### Alternative 1: Keep Non-Standard Names, Rely Only on Autocomplete
+
 - **Rejected**: Password managers use field names as fallback detection mechanism when autocomplete attributes are ambiguous or missing in DOM manipulation scenarios
 
 ### Alternative 2: Use Single-Character Names (p, p1, p2)
+
 - **Rejected**: Cryptic naming reduces maintainability and provides zero semantic value for assistive technologies
 
 ### Alternative 3: Use Framework-Specific Conventions
+
 - **Rejected**: Web standards provide better long-term compatibility than framework-specific patterns
