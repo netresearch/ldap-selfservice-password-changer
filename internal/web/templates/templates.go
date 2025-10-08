@@ -91,10 +91,9 @@ func RenderIndex(opts *options.Opts) ([]byte, error) {
 		"slice":     makeSlice,
 	}
 
-	tpl, err := template.New("index").Funcs(funcs).Parse(rawIndex)
-	if err != nil {
-		return nil, err
-	}
+	// Parse dependencies first, BEFORE parsing main template
+	tpl := template.New("index").Funcs(funcs)
+	var err error
 
 	// Parse atom and molecule templates
 	if _, err = tpl.Parse(rawIcons); err != nil {
@@ -137,6 +136,11 @@ func RenderIndex(opts *options.Opts) ([]byte, error) {
 		return nil, err
 	}
 	if _, err = tpl.Parse(rawPageTitle); err != nil {
+		return nil, err
+	}
+
+	// NOW parse the main template after all dependencies are defined
+	if _, err = tpl.Parse(rawIndex); err != nil {
 		return nil, err
 	}
 
@@ -158,10 +162,9 @@ func RenderForgotPassword() ([]byte, error) {
 		"slice":     makeSlice,
 	}
 
-	tpl, err := template.New("forgot-password").Funcs(funcs).Parse(rawForgotPassword)
-	if err != nil {
-		return nil, err
-	}
+	// Parse dependencies first, BEFORE parsing main template
+	tpl := template.New("forgot-password").Funcs(funcs)
+	var err error
 
 	// Parse atom and molecule templates
 	if _, err = tpl.Parse(rawIcons); err != nil {
@@ -204,6 +207,11 @@ func RenderForgotPassword() ([]byte, error) {
 		return nil, err
 	}
 	if _, err = tpl.Parse(rawPageTitle); err != nil {
+		return nil, err
+	}
+
+	// NOW parse the main template after all dependencies are defined
+	if _, err = tpl.Parse(rawForgotPassword); err != nil {
 		return nil, err
 	}
 
@@ -221,10 +229,9 @@ func RenderResetPassword(opts *options.Opts) ([]byte, error) {
 		"slice":     makeSlice,
 	}
 
-	tpl, err := template.New("reset-password").Funcs(funcs).Parse(rawResetPassword)
-	if err != nil {
-		return nil, err
-	}
+	// Parse dependencies first, BEFORE parsing main template
+	tpl := template.New("reset-password").Funcs(funcs)
+	var err error
 
 	// Parse atom and molecule templates
 	if _, err = tpl.Parse(rawIcons); err != nil {
@@ -267,6 +274,11 @@ func RenderResetPassword(opts *options.Opts) ([]byte, error) {
 		return nil, err
 	}
 	if _, err = tpl.Parse(rawPageTitle); err != nil {
+		return nil, err
+	}
+
+	// NOW parse the main template after all dependencies are defined
+	if _, err = tpl.Parse(rawResetPassword); err != nil {
 		return nil, err
 	}
 
