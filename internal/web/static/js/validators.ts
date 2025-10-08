@@ -52,13 +52,13 @@ export const mustIncludeLowercase = (amount: number, fieldName: string) => (v: s
     : "";
 
 export const mustMatchNewPassword = (fieldName: string) => (v: string) => {
-  const passwordInput = form.querySelector<HTMLInputElement>(`#new input`);
+  const passwordInput = form.querySelector<HTMLInputElement>(`#new_password input`);
   if (!passwordInput) throw new Error("Could not find password input element");
 
   return passwordInput.value !== v ? `${fieldName} must match the new password` : "";
 };
 export const mustNotMatchCurrentPassword = (fieldName: string) => (v: string) => {
-  const passwordInput = form.querySelector<HTMLInputElement>(`#current input`);
+  const passwordInput = form.querySelector<HTMLInputElement>(`#current_password input`);
   if (!passwordInput) throw new Error("Could not find password input element");
 
   return passwordInput.value === v ? `${fieldName} must not match the current password` : "";
