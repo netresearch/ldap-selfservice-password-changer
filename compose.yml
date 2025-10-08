@@ -1,0 +1,37 @@
+services:
+  # Main application service
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "${APP_PORT:-3000}:3000"
+    env_file:
+      - .env # Defaults and documentation
+      - .env.local # Local overrides (loaded second, takes precedence)
+    volumes:
+      # Mount SSL certs if using self-signed LDAPS certificates
+      - ${SSL_CERTS_PATH:-/etc/ssl/certs}:/etc/ssl/certs:ro
+    depends_on:
+      - mailhog
+    profiles:
+      - dev
+      - test
+    networks:
+      - ldap-network
+
+  # Mailhog for email testing (dev/test only)
+  mailhog:
+    image: mailhog/mailhog:v1.0.1
+    ports:
+      - "${MAILHOG_WEB_PORT:-8025}:8025" # Web UI
+    # SMTP port 1025 only accessible within docker network, not exposed to host
+    profiles:
+      - dev
+      - test
+    networks:
+      - ldap-network
+
+networks:
+  ldap-network:
+    driver: bridge

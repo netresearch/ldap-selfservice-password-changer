@@ -18,9 +18,8 @@ RUN pnpm build:assets
 FROM golang:1.25-alpine@sha256:b6ed3fd0452c0e9bcdef5597f29cc1418f61672e9d3a2f55bf02e7222c014abd AS backend-builder
 WORKDIR /build
 
-# Download dependencies first for better layer caching
+# Copy dependency files
 COPY go.mod go.sum ./
-RUN go mod download
 
 # Copy only Go source files
 COPY main.go ./
@@ -30,8 +29,9 @@ COPY internal/ ./internal/
 COPY --from=frontend-builder /build/internal/web/static/styles.css /build/internal/web/static/styles.css
 COPY --from=frontend-builder /build/internal/web/static/js/*.js /build/internal/web/static/js/
 
-# Build with size optimization flags (-w removes DWARF debug info, -s removes symbol table)
-RUN CGO_ENABLED=0 go build -ldflags="-w -s" -o /build/ldap-passwd
+# Download dependencies and build with size optimization flags
+RUN go mod download && \
+    CGO_ENABLED=0 go build -ldflags="-w -s" -o /build/ldap-passwd
 
 FROM scratch AS runner
 
