@@ -12,12 +12,14 @@
 ## Features
 
 - **Self-Service Password Changes**: Users can change their own LDAP/AD passwords without admin intervention
+- **Password Reset via Email**: Users can reset forgotten passwords through secure email-based token verification
 - **Configurable Password Policies**: Minimum length, numbers, symbols, uppercase, lowercase requirements
+- **Rate Limiting**: Protection against abuse with configurable request limits (3 requests/hour)
 - **Real-Time Validation**: Client-side validation with immediate feedback
 - **Accessible**: WCAG 2.2 Level AAA compliant, full keyboard navigation, screen reader support, adaptive density
 - **Dark Mode**: Three-state theme toggle (light/dark/auto) with 7:1 contrast ratios (AAA)
 - **Password Manager Support**: Optimized for autofill with proper autocomplete attributes
-- **Secure**: LDAPS support, no password storage, minimal attack surface
+- **Secure**: LDAPS support, cryptographic token generation, no password storage, minimal attack surface
 - **Single Binary**: All assets embedded, easy deployment
 - **Modern Stack**: Go backend, TypeScript frontend, Tailwind CSS
 
@@ -44,6 +46,111 @@ For a complete overview, see the [Documentation Index](docs/README.md).
 ### For Production
 
 Use our [Docker image](https://github.com/netresearch/ldap-selfservice-password-changer/pkgs/container/ldap-selfservice-password-changer) or build from source.
+
+## Password Reset Feature
+
+The password reset feature allows users to reset forgotten passwords via email-based token verification.
+
+### Key Features
+
+- **Email-Based Verification**: Secure tokens sent via SMTP (Google Workspace supported)
+- **Cryptographic Security**: 32-byte tokens generated with `crypto/rand`
+- **Rate Limiting**: Configurable limits prevent abuse (default: 3 requests/hour per user)
+- **Token Expiration**: Tokens expire after 15 minutes (configurable)
+- **Single-Use Tokens**: Tokens cannot be reused after password reset
+- **No User Enumeration**: Generic responses prevent account discovery
+- **LDAP Integration**: Automatic email-to-username lookup
+
+### How It Works
+
+1. User navigates to `/forgot-password` and enters their email
+2. System looks up user in LDAP and generates secure token
+3. Reset email sent with link: `https://your-domain.com/reset-password?token=XXX`
+4. User clicks link, enters new password with real-time validation
+5. Password updated in LDAP, token marked as used
+
+### Configuration
+
+Enable password reset by setting these environment variables:
+
+```bash
+# Feature flag
+PASSWORD_RESET_ENABLED=true
+
+# Token settings
+RESET_TOKEN_EXPIRY_MINUTES=15
+RESET_RATE_LIMIT_REQUESTS=3
+RESET_RATE_LIMIT_WINDOW_MINUTES=60
+
+# SMTP configuration (Google Workspace example)
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USERNAME=notifications@example.com
+SMTP_PASSWORD=your_app_password_here
+SMTP_FROM_ADDRESS=noreply@example.com
+
+# Application URL for reset links
+APP_BASE_URL=https://password.example.com
+
+# Optional: Dedicated service account for password reset (recommended for security)
+# If not set, LDAP_READONLY_USER will be used (backward compatible)
+LDAP_RESET_USER=cn=password-reset,dc=example,dc=com
+LDAP_RESET_PASSWORD=reset_account_password
+```
+
+### LDAP Permissions
+
+**Security Best Practice:** Use a dedicated service account for password reset operations with minimal permissions.
+
+Configure **two separate service accounts** for better security isolation:
+
+1. **LDAP_READONLY_USER** - Read-only access for authentication (change-password operations)
+2. **LDAP_RESET_USER** - Write access ONLY for password reset operations (optional, falls back to LDAP_READONLY_USER if not set)
+
+**Active Directory Permissions:**
+
+For `LDAP_READONLY_USER` (required):
+
+- Read access to user objects (default Users group permission)
+
+For `LDAP_RESET_USER` (optional, recommended):
+
+1. Open Active Directory Users and Computers
+2. Right-click on the OU containing users → Properties → Security → Advanced
+3. Add dedicated reset account with **"Reset password" permission** ONLY
+
+**OpenLDAP Permissions:**
+
+For `LDAP_READONLY_USER` (required):
+
+```ldif
+access to dn.subtree="ou=users,dc=example,dc=com"
+    by dn="cn=readonly,dc=example,dc=com" read
+```
+
+For `LDAP_RESET_USER` (optional, recommended):
+
+```ldif
+access to attrs=userPassword
+    by dn="cn=password-reset,dc=example,dc=com" write
+    by self write
+    by * auth
+```
+
+**Security Notes:**
+
+- Connection must use LDAPS (`ldaps://`) for all password operations
+- Dedicated reset account provides better security isolation and audit trails
+- If `LDAP_RESET_USER` is not configured, `LDAP_READONLY_USER` needs both read and password reset permissions (less secure)
+
+### API Methods
+
+The password reset feature adds two new JSON-RPC methods:
+
+- `request-password-reset` - Initiates password reset, sends email with token
+- `reset-password` - Completes password reset with valid token
+
+See [API Reference](docs/api-reference.md) for detailed specifications.
 
 ## Running
 
@@ -74,7 +181,35 @@ pnpm build
   -base-dn DC=example,DC=com
 ```
 
-### Docker
+### Docker Compose (Recommended for Development)
+
+The easiest way to run the application for development and testing with email support:
+
+```bash
+# Copy example environment file
+cp .env.local.example .env.local
+# Edit .env.local with your LDAP server details
+
+# Start with dev profile (includes Mailhog for email testing)
+docker compose --profile dev up
+
+# Application: http://localhost:3000
+# Mailhog Web UI: http://localhost:8025 (view sent emails)
+```
+
+**What's included:**
+
+- Application with hot-reload support
+- Mailhog SMTP server for email testing (no real emails sent)
+- Mailhog Web UI to view password reset emails
+- Automatic service networking
+
+**Available profiles:**
+
+- `dev` - Development mode with Mailhog
+- `test` - Testing mode with Mailhog
+
+### Docker (Production)
 
 We have a Docker image available [here](https://github.com/netresearch/ldap-selfservice-password-changer/pkgs/container/ldap-selfservice-password-changer).
 
@@ -90,9 +225,33 @@ docker run \
   `# if you have a self-signed certificate for your LDAPS connection` \
   -v /etc/ssl/certs:/etc/ssl/certs:ro \
   -p 3000:3000 \
+  `# LDAP Configuration` \
+  -e LDAP_SERVER=ldaps://dc1.example.com:636 \
+  -e LDAP_IS_AD=true \
+  -e LDAP_BASE_DN=DC=example,DC=com \
+  -e LDAP_READONLY_USER=readonly \
+  -e LDAP_READONLY_PASSWORD=readonly \
+  `# Password Reset Configuration (optional)` \
+  -e PASSWORD_RESET_ENABLED=true \
+  -e SMTP_HOST=smtp.gmail.com \
+  -e SMTP_PORT=587 \
+  -e SMTP_USERNAME=notifications@example.com \
+  -e SMTP_PASSWORD=your_app_password \
+  -e SMTP_FROM_ADDRESS=noreply@example.com \
+  -e APP_BASE_URL=https://password.example.com \
+  `# Optional: Dedicated reset account for better security isolation` \
+  -e LDAP_RESET_USER=cn=password-reset,dc=example,dc=com \
+  -e LDAP_RESET_PASSWORD=reset_password \
+  ghcr.io/netresearch/ldap-selfservice-password-changer
+```
+
+**Alternative with command-line flags:**
+
+```bash
+docker run -d --name ldap-password-changer \
+  -v /etc/ssl/certs:/etc/ssl/certs:ro \
+  -p 3000:3000 \
   ghcr.io/netresearch/ldap-selfservice-password-changer \
-  `# You can also configure these via environment variables,` \
-  `# please see the .env file for available options.` \
   -ldap-server ldaps://dc1.example.com:636 -active-directory \
   -readonly-password readonly -readonly-user readonly \
   -base-dn DC=example,DC=com
@@ -156,6 +315,31 @@ The Docker image uses a minimal `scratch` base for security and size optimizatio
 
 ## Developing
 
+### Option 1: Docker Compose (Recommended)
+
+**Easiest setup with Mailhog for email testing:**
+
+```bash
+# Copy example environment file
+cp .env.local.example .env.local
+# Edit .env.local with your LDAP server details
+
+# Start development environment
+docker compose --profile dev up
+
+# Application runs on http://localhost:3000
+# Mailhog Web UI on http://localhost:8025 (view password reset emails)
+```
+
+**Benefits:**
+
+- No local Go/Node.js installation required
+- Mailhog included for email testing
+- Consistent development environment
+- Easy to test password reset emails
+
+### Option 2: Native Development
+
 Prerequisites:
 
 - Go 1.25+
@@ -168,20 +352,21 @@ corepack enable
 # Install dependencies
 pnpm i
 
-touch .env.local
-# Edit the `.env.local` to include the arguments, you want to give to the application.
-# Required are:
-# - LDAP_SERVER
-# - LDAP_BASE_DN
-# - LDAP_READONLY_USER
-# - LDAP_READONLY_PASSWORD
+# Copy and configure environment
+cp .env.local.example .env.local
+# Edit .env.local with your settings:
+# - LDAP_SERVER, LDAP_BASE_DN, LDAP_READONLY_USER, LDAP_READONLY_PASSWORD
+# - For password reset: PASSWORD_RESET_ENABLED=true, SMTP_*, APP_BASE_URL
+# - For email testing: Use Mailhog (SMTP_HOST=localhost, SMTP_PORT=1025)
+
+# Option A: Run Mailhog locally for email testing
+docker run -d -p 1025:1025 -p 8025:8025 mailhog/mailhog:v1.0.1
+# Mailhog Web UI: http://localhost:8025
 
 # Running normally
 pnpm start
 
-# Running in dev mode
-#   This will restart the application every time, you make
-#   a change.
+# Running in dev mode (auto-restart on changes)
 pnpm dev
 ```
 
