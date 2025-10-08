@@ -27,7 +27,9 @@
         </form>
 
         {{ template "success-message" "Your password was changed successfully." }} {{ if .opts.PasswordResetEnabled }}
-        <p class="text-center">{{ template "link" (slice "/forgot-password" "Forgot Password?") }}</p>
+        <div class="comfortable:mt-6 compact:mt-4">
+          {{ template "button-secondary" (slice "/forgot-password" "Forgot Password?") }}
+        </div>
         {{ end }}
       </main>
 

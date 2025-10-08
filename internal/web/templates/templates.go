@@ -20,6 +20,9 @@ var rawResetPassword string
 //go:embed atoms/button-primary.html
 var rawButtonPrimary string
 
+//go:embed atoms/button-secondary.html
+var rawButtonSecondary string
+
 //go:embed atoms/link.html
 var rawLink string
 
@@ -102,6 +105,9 @@ func RenderIndex(opts *options.Opts) ([]byte, error) {
 	if _, err = tpl.Parse(rawButtonPrimary); err != nil {
 		return nil, err
 	}
+	if _, err = tpl.Parse(rawButtonSecondary); err != nil {
+		return nil, err
+	}
 	if _, err = tpl.Parse(rawLink); err != nil {
 		return nil, err
 	}
@@ -173,6 +179,9 @@ func RenderForgotPassword() ([]byte, error) {
 	if _, err = tpl.Parse(rawButtonPrimary); err != nil {
 		return nil, err
 	}
+	if _, err = tpl.Parse(rawButtonSecondary); err != nil {
+		return nil, err
+	}
 	if _, err = tpl.Parse(rawLink); err != nil {
 		return nil, err
 	}
@@ -238,6 +247,9 @@ func RenderResetPassword(opts *options.Opts) ([]byte, error) {
 		return nil, err
 	}
 	if _, err = tpl.Parse(rawButtonPrimary); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawButtonSecondary); err != nil {
 		return nil, err
 	}
 	if _, err = tpl.Parse(rawLink); err != nil {
