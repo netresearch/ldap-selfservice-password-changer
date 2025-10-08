@@ -72,3 +72,8 @@ export const mustNotIncludeUsername = (fieldName: string) => (v: string) => {
 
 export const toggleValidator = (validate: (v: string) => string, enabled: boolean) => (v: string) =>
   enabled ? validate(v) : "";
+
+export const isValidEmail = (v: string) => {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  return !emailRegex.test(v) ? "The input must be a valid email address" : "";
+};

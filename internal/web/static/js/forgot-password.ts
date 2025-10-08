@@ -1,26 +1,6 @@
-import {
-  mustBeLongerThan,
-  mustIncludeLowercase,
-  mustIncludeNumbers,
-  mustIncludeSymbols,
-  mustIncludeUppercase,
-  mustMatchNewPassword,
-  mustNotBeEmpty,
-  mustNotIncludeUsername,
-  mustNotMatchCurrentPassword,
-  toggleValidator
-} from "./validators.js";
+import { mustNotBeEmpty, isValidEmail } from "./validators.js";
 
-type Opts = {
-  minLength: number;
-  minNumbers: number;
-  minSymbols: number;
-  minUppercase: number;
-  minLowercase: number;
-  passwordCanIncludeUsername: boolean;
-};
-
-export const init = (opts: Opts) => {
+export const init = () => {
   // Theme toggle functionality - three states: light, dark, auto
   const themeToggle = document.getElementById("themeToggle");
   const themeLightIcon = document.getElementById("theme-light");
@@ -167,7 +147,7 @@ export const init = (opts: Opts) => {
     });
   }
 
-  const successContainer = document.querySelector<HTMLFormElement>("div[data-purpose='successContainer']");
+  const successContainer = document.querySelector<HTMLDivElement>("div[data-purpose='successContainer']");
   if (!successContainer) throw new Error("Could not find success container element");
 
   const form = document.querySelector<HTMLFormElement>("#form");
@@ -181,33 +161,11 @@ export const init = (opts: Opts) => {
   );
   if (!submitErrorContainer) throw new Error("Could not find submit error container element");
 
-  type Field = [string, string, ((v: string) => string)[]];
+  type Field = [string, ((v: string) => string)[]];
 
-  const fieldsWithValidators = [
-    ["username", "Username", [mustNotBeEmpty("Username")]],
-    ["current_password", "Current Password", [mustNotBeEmpty("Current Password")]],
-    [
-      "new_password",
-      "New Password",
-      [
-        mustNotBeEmpty("New Password"),
-        mustBeLongerThan(opts.minLength, "New Password"),
-        mustNotMatchCurrentPassword("New Password"),
-        toggleValidator(mustNotIncludeUsername("New Password"), !opts.passwordCanIncludeUsername),
-        mustIncludeNumbers(opts.minNumbers, "New Password"),
-        mustIncludeSymbols(opts.minSymbols, "New Password"),
-        mustIncludeUppercase(opts.minUppercase, "New Password"),
-        mustIncludeLowercase(opts.minLowercase, "New Password")
-      ]
-    ],
-    [
-      "confirm_password",
-      "Password Confirmation",
-      [mustNotBeEmpty("Password Confirmation"), mustMatchNewPassword("Password Confirmation")]
-    ]
-  ] satisfies Field[];
+  const fieldsWithValidators = [["email", [mustNotBeEmpty("Email"), isValidEmail]]] satisfies Field[];
 
-  const fields = fieldsWithValidators.map(([name, _fieldLabel, validators]) => {
+  const fields = fieldsWithValidators.map(([name, validators]) => {
     const f = form.querySelector<HTMLDivElement>(`#${name}`);
     if (!f) throw new Error(`Field "${name}" does not exist`);
 
@@ -217,9 +175,6 @@ export const init = (opts: Opts) => {
     const input = inputContainer.querySelector<HTMLInputElement>("input");
     if (!input) throw new Error(`Input for "${name}" does not exist`);
 
-    const revealButton = inputContainer.querySelector<HTMLButtonElement>('button[data-purpose="reveal"]');
-    if (!revealButton && input.type === "password") throw new Error(`Reveal button for "${name}" does not exist`);
-
     const errorContainer = f.querySelector<HTMLDivElement>('div[data-purpose="errors"]');
     if (!errorContainer) throw new Error(`Error for "${name}" does not exist`);
 
@@ -228,11 +183,9 @@ export const init = (opts: Opts) => {
       errorContainer.innerHTML = "";
 
       if (errors.length > 0) {
-        inputContainer.classList.add("!border-red-700", "dark:!border-red-400");
-        input.setAttribute("aria-invalid", "true");
+        inputContainer.classList.add("border-red-500");
       } else {
-        inputContainer.classList.remove("!border-red-700", "dark:!border-red-400");
-        input.setAttribute("aria-invalid", "false");
+        inputContainer.classList.remove("border-red-500");
       }
 
       for (const error of errors) {
@@ -254,27 +207,12 @@ export const init = (opts: Opts) => {
           return acc;
         }, [] as string[]);
 
+      console.log(`Validated "${name}": ${errors.length} error(s)`);
+
       setErrors(errors);
 
       return errors.length > 0;
     };
-
-    if (revealButton) {
-      revealButton.onclick = (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-
-        const newType = input.type === "password" ? "text" : "password";
-        const revealed = newType === "text";
-
-        input.type = newType;
-        f.dataset["revealed"] = revealed.toString();
-
-        // Update ARIA label to communicate current state
-        revealButton.setAttribute("aria-label", revealed ? "Hide password" : "Show password");
-        revealButton.setAttribute("aria-pressed", revealed.toString());
-      };
-    }
 
     // Help toggle functionality
     const helpButton = f.querySelector<HTMLButtonElement>('button[data-purpose="help"]');
@@ -299,19 +237,19 @@ export const init = (opts: Opts) => {
   const toggleFields = (enabled: boolean) => {
     [submitButton, ...fields.map(({ input }) => input)].forEach((el) => (el.disabled = !enabled));
     submitButton.dataset["loading"] = (!enabled).toString();
-    submitButton.setAttribute("aria-busy", (!enabled).toString());
   };
 
   form.onsubmit = async (e) => {
     e.preventDefault();
     e.stopPropagation();
 
-    const [username, oldPassword, newPassword] = fields.map((f) => f.getValue());
+    const [email] = fields.map((f) => f.getValue());
 
     const hasErrors = fields.map(({ validate }) => validate()).some((e) => e === true);
     submitButton.disabled = hasErrors;
     if (hasErrors) return;
 
+    console.log("Requesting password reset...");
     toggleFields(false);
 
     try {
@@ -321,8 +259,8 @@ export const init = (opts: Opts) => {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          method: "change-password",
-          params: [username, oldPassword, newPassword]
+          method: "request-password-reset",
+          params: [email]
         })
       });
 
@@ -340,6 +278,8 @@ export const init = (opts: Opts) => {
         throw new Error(`An error occurred: ${err}`);
       }
 
+      console.log("Password reset requested successfully");
+
       form.style.display = "none";
       successContainer.style.display = "block";
     } catch (e) {
@@ -347,9 +287,7 @@ export const init = (opts: Opts) => {
 
       submitErrorContainer.innerText = (e as Error).message;
 
-      // Re-enable inputs but keep the submit button disabled,
-      // since we know that this isn't going to work. After the validators
-      // successfully re-run, it will enable the submit button again.
+      // Re-enable inputs but keep the submit button disabled
       toggleFields(true);
       submitButton.disabled = true;
     }
