@@ -217,7 +217,7 @@ export const init = (opts: Opts) => {
     const input = inputContainer.querySelector<HTMLInputElement>("input");
     if (!input) throw new Error(`Input for "${name}" does not exist`);
 
-    const revealButton = inputContainer.querySelector<HTMLButtonElement>('button[data-purpose="reveal"]');
+    const revealButton = f.querySelector<HTMLButtonElement>('button[data-purpose="reveal"]');
     if (!revealButton && input.type === "password") throw new Error(`Reveal button for "${name}" does not exist`);
 
     const errorContainer = f.querySelector<HTMLDivElement>('div[data-purpose="errors"]');
