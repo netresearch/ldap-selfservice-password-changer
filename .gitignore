@@ -4,3 +4,5 @@ internal/web/static/styles.css
 .env.local
 # Claude Code temporary documentation
 claudedocs/
+vendor/
+ldap-selfservice-password-changer
