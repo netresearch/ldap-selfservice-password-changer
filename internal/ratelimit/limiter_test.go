@@ -1,0 +1,208 @@
+package ratelimit
+
+import (
+	"sync"
+	"testing"
+	"time"
+)
+
+func TestNewLimiter(t *testing.T) {
+	limiter := NewLimiter(3, 60*time.Minute)
+	if limiter == nil {
+		t.Fatal("NewLimiter() returned nil")
+	}
+	if limiter.maxRequests != 3 {
+		t.Errorf("maxRequests = %d, want 3", limiter.maxRequests)
+	}
+	if limiter.window != 60*time.Minute {
+		t.Errorf("window = %v, want 60m", limiter.window)
+	}
+}
+
+func TestAllowRequest(t *testing.T) {
+	limiter := NewLimiter(3, 60*time.Minute)
+	identifier := "user@example.com"
+
+	// First 3 requests should be allowed
+	for i := 1; i <= 3; i++ {
+		allowed := limiter.AllowRequest(identifier)
+		if !allowed {
+			t.Errorf("Request %d should be allowed", i)
+		}
+	}
+
+	// 4th request should be blocked
+	allowed := limiter.AllowRequest(identifier)
+	if allowed {
+		t.Error("Request 4 should be blocked (rate limit exceeded)")
+	}
+}
+
+func TestAllowRequestDifferentUsers(t *testing.T) {
+	limiter := NewLimiter(3, 60*time.Minute)
+
+	// User 1 makes 3 requests
+	for i := 0; i < 3; i++ {
+		limiter.AllowRequest("user1@example.com")
+	}
+
+	// User 2 should still be allowed
+	allowed := limiter.AllowRequest("user2@example.com")
+	if !allowed {
+		t.Error("Different user should not be rate limited")
+	}
+}
+
+func TestSlidingWindow(t *testing.T) {
+	limiter := NewLimiter(2, 100*time.Millisecond)
+	identifier := "user@example.com"
+
+	// Make 2 requests (limit reached)
+	limiter.AllowRequest(identifier)
+	limiter.AllowRequest(identifier)
+
+	// 3rd request should be blocked
+	allowed := limiter.AllowRequest(identifier)
+	if allowed {
+		t.Error("Request should be blocked immediately")
+	}
+
+	// Wait for window to pass
+	time.Sleep(150 * time.Millisecond)
+
+	// Should be allowed again
+	allowed = limiter.AllowRequest(identifier)
+	if !allowed {
+		t.Error("Request should be allowed after window expired")
+	}
+}
+
+func TestCleanupExpiredEntries(t *testing.T) {
+	limiter := NewLimiter(3, 100*time.Millisecond)
+
+	// Make requests from multiple users
+	limiter.AllowRequest("user1@example.com")
+	limiter.AllowRequest("user2@example.com")
+	limiter.AllowRequest("user3@example.com")
+
+	// Verify entries exist
+	limiter.mu.RLock()
+	initialCount := len(limiter.entries)
+	limiter.mu.RUnlock()
+	if initialCount != 3 {
+		t.Errorf("Expected 3 entries, got %d", initialCount)
+	}
+
+	// Wait for entries to expire
+	time.Sleep(150 * time.Millisecond)
+
+	// Run cleanup
+	count := limiter.CleanupExpired()
+	if count != 3 {
+		t.Errorf("CleanupExpired() removed %d entries, want 3", count)
+	}
+
+	// Verify entries are gone
+	limiter.mu.RLock()
+	finalCount := len(limiter.entries)
+	limiter.mu.RUnlock()
+	if finalCount != 0 {
+		t.Errorf("Expected 0 entries after cleanup, got %d", finalCount)
+	}
+}
+
+func TestConcurrentAccess(t *testing.T) {
+	limiter := NewLimiter(100, 60*time.Minute)
+	var wg sync.WaitGroup
+	const goroutines = 50
+	const requestsPerGoroutine = 2
+
+	// Concurrent requests from same user
+	identifier := "concurrent@example.com"
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < requestsPerGoroutine; j++ {
+				limiter.AllowRequest(identifier)
+			}
+		}()
+	}
+
+	wg.Wait()
+
+	// Verify request count is accurate (thread-safe)
+	limiter.mu.RLock()
+	entry, exists := limiter.entries[identifier]
+	limiter.mu.RUnlock()
+
+	if !exists {
+		t.Fatal("Entry should exist for concurrent user")
+	}
+
+	expected := goroutines * requestsPerGoroutine
+	if len(entry.timestamps) != expected {
+		t.Errorf("Request count = %d, want %d", len(entry.timestamps), expected)
+	}
+}
+
+func TestRateLimitReset(t *testing.T) {
+	limiter := NewLimiter(1, 50*time.Millisecond)
+	identifier := "reset@example.com"
+
+	// Make first request (allowed)
+	if !limiter.AllowRequest(identifier) {
+		t.Error("First request should be allowed")
+	}
+
+	// Second request blocked
+	if limiter.AllowRequest(identifier) {
+		t.Error("Second request should be blocked")
+	}
+
+	// Wait for window
+	time.Sleep(60 * time.Millisecond)
+
+	// Should be allowed again
+	if !limiter.AllowRequest(identifier) {
+		t.Error("Request should be allowed after window reset")
+	}
+}
+
+func TestCount(t *testing.T) {
+	limiter := NewLimiter(3, 60*time.Minute)
+
+	if limiter.Count() != 0 {
+		t.Errorf("Initial count = %d, want 0", limiter.Count())
+	}
+
+	limiter.AllowRequest("user1@example.com")
+	limiter.AllowRequest("user2@example.com")
+
+	if limiter.Count() != 2 {
+		t.Errorf("Count after 2 users = %d, want 2", limiter.Count())
+	}
+}
+
+func BenchmarkAllowRequest(b *testing.B) {
+	limiter := NewLimiter(1000, 60*time.Minute)
+	identifier := "bench@example.com"
+
+	b.ResetTimer()
+	for i := 0; i < b.N; i++ {
+		limiter.AllowRequest(identifier)
+	}
+}
+
+func BenchmarkAllowRequestConcurrent(b *testing.B) {
+	limiter := NewLimiter(100000, 60*time.Minute)
+
+	b.RunParallel(func(pb *testing.PB) {
+		i := 0
+		for pb.Next() {
+			identifier := "bench" + string(rune(i%100)) + "@example.com"
+			limiter.AllowRequest(identifier)
+			i++
+		}
+	})
+}
