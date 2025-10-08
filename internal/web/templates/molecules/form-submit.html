@@ -1,0 +1,7 @@
+{{define "form-submit"}}
+<div class="space-y-[2px]" data-purpose="submit">
+  {{ template "button-primary" . }}
+
+  <div class="text-xs text-red-700 dark:text-red-400" data-purpose="errors" role="alert" aria-live="assertive"></div>
+</div>
+{{ end }}

@@ -1,0 +1,21 @@
+{{ define "density-init-script" }}
+<script>
+  // Initialize density before page renders to prevent layout shift
+  const storedDensityMode = localStorage.getItem("densityMode") || "auto";
+
+  // Determine actual density to apply
+  const determineDensity = () => {
+    const isTouch = window.matchMedia("(pointer: coarse)").matches;
+    const highContrast = window.matchMedia("(prefers-contrast: more)").matches;
+    return isTouch || highContrast ? "comfortable" : "compact";
+  };
+
+  const actualDensity = storedDensityMode === "auto" ? determineDensity() : storedDensityMode;
+
+  if (actualDensity === "compact") {
+    document.documentElement.classList.add("compact");
+  } else {
+    document.documentElement.classList.remove("compact");
+  }
+</script>
+{{ end }}

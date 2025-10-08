@@ -1,0 +1,11 @@
+{{ define "button-primary" }}
+<button
+  type="submit"
+  class="comfortable:px-3 comfortable:py-2 compact:px-2.5 compact:py-1.5 compact:text-sm flex w-full items-center justify-center rounded-md border border-blue-600 bg-blue-600 font-semibold text-white transition-colors outline-none hover:bg-blue-700 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 disabled:border-gray-300 disabled:bg-gray-100 disabled:text-gray-400 disabled:hover:bg-gray-100 dark:border-blue-500 dark:bg-blue-500 dark:hover:bg-blue-600 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900 dark:disabled:border-gray-700 dark:disabled:bg-gray-800 dark:disabled:text-gray-600 dark:disabled:hover:bg-gray-800 [&[data-loading='true']>span]:hidden [&[data-loading='true']>svg]:inline-block"
+  data-loading="false"
+  aria-busy="false"
+>
+  <span>{{ . }}</span>
+  {{ template "LoadingIcon" }}
+</button>
+{{ end }}
