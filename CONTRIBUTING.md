@@ -58,23 +58,27 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 ### Initial Setup
 
 1. **Fork and clone the repository**:
+
    ```bash
    git clone https://github.com/YOUR-USERNAME/ldap-selfservice-password-changer.git
    cd ldap-selfservice-password-changer
    ```
 
 2. **Install dependencies**:
+
    ```bash
    pnpm install
    ```
 
 3. **Configure environment**:
+
    ```bash
    cp .env.local.example .env.local
    # Edit .env.local with your LDAP/SMTP settings
    ```
 
 4. **Start development server**:
+
    ```bash
    pnpm dev
    ```
@@ -94,6 +98,7 @@ For detailed setup instructions, see the [Development Guide](docs/development-gu
 We use a feature branch workflow:
 
 1. **Create a feature branch** from `main`:
+
    ```bash
    git checkout main
    git pull origin main
@@ -101,12 +106,14 @@ We use a feature branch workflow:
    ```
 
 2. **Make your changes** with descriptive commits:
+
    ```bash
    git add .
    git commit -m "feat: add password strength indicator"
    ```
 
 3. **Push to your fork**:
+
    ```bash
    git push -u origin feature/your-feature-name
    ```
@@ -126,6 +133,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format:
 ```
 
 **Types**:
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -136,6 +144,7 @@ Use [Conventional Commits](https://www.conventionalcommits.org/) format:
 - `perf`: Performance improvements
 
 **Examples**:
+
 ```bash
 feat(reset): add email-based password reset
 fix(validators): correct uppercase character detection
@@ -151,12 +160,14 @@ refactor(rpc): extract token validation logic
 ### Go Code
 
 **Style Guide**:
+
 - Use `gofmt` for formatting (automatic)
 - Follow [Effective Go](https://go.dev/doc/effective_go) principles
 - Keep functions focused (single responsibility)
 - Use descriptive names (avoid abbreviations)
 
 **GoDoc Comments**:
+
 ```go
 // GenerateToken generates a cryptographically secure random token.
 // Returns a base64 URL-safe encoded string of 32 random bytes (256 bits).
@@ -166,6 +177,7 @@ func GenerateToken() (string, error) {
 ```
 
 **Error Handling**:
+
 ```go
 // ✅ Good: Wrap errors with context
 if err != nil {
@@ -179,6 +191,7 @@ if err != nil {
 ```
 
 **Package Structure**:
+
 - Keep packages focused on single responsibility
 - Internal packages in `internal/` (not exported)
 - Add package documentation in `doc.go` or first file
@@ -186,12 +199,14 @@ if err != nil {
 ### TypeScript/JavaScript Code
 
 **Style Guide**:
+
 - Use TypeScript strict mode (enforced in `tsconfig.json`)
 - Use `prettier` for formatting
 - No `any` types (use proper type annotations)
 - Use ES modules with `.js` extensions in imports
 
 **JSDoc Comments** (for exported functions):
+
 ```typescript
 /**
  * Validates that a password contains minimum required numbers.
@@ -199,12 +214,15 @@ if err != nil {
  * @param fieldName - Name of the field for error messages
  * @returns Validation function that returns error message or empty string
  */
-export const mustIncludeNumbers = (amount: number, fieldName: string) => (v: string): string => {
-  // Implementation
-};
+export const mustIncludeNumbers =
+  (amount: number, fieldName: string) =>
+  (v: string): string => {
+    // Implementation
+  };
 ```
 
 **Type Safety**:
+
 ```typescript
 // ✅ Good: Explicit types
 const form = document.querySelector<HTMLFormElement>("#form");
@@ -217,12 +235,14 @@ const form = document.querySelector("#form");
 ### HTML Templates
 
 **Accessibility**:
+
 - Use semantic HTML (`<button>` not `<div onclick>`)
 - Include ARIA labels for icon-only buttons
 - Ensure 7:1 contrast ratios (WCAG AAA)
 - Support keyboard navigation
 
 **Atomic Design**:
+
 - **Atoms**: Basic elements (buttons, icons, links) in `templates/atoms/`
 - **Molecules**: Composite components (forms, headers) in `templates/molecules/`
 - **Pages**: Full page templates in `templates/`
@@ -230,6 +250,7 @@ const form = document.querySelector("#form");
 ### CSS/Tailwind
 
 **Guidelines**:
+
 - Use Tailwind utility classes (avoid custom CSS)
 - Follow density variants: `comfortable:` and `compact:`
 - Support dark mode with `dark:` variants
@@ -266,6 +287,7 @@ go test ./internal/rpc -v
 ### Writing Tests
 
 **Unit Tests**:
+
 ```go
 func TestValidateMinLength(t *testing.T) {
     tests := []struct {
@@ -290,6 +312,7 @@ func TestValidateMinLength(t *testing.T) {
 ```
 
 **Integration Tests** (use testcontainers):
+
 ```go
 func TestPasswordReset_Integration(t *testing.T) {
     // Start LDAP container
@@ -313,17 +336,20 @@ func TestPasswordReset_Integration(t *testing.T) {
 ### Before Submitting
 
 1. **Run tests**:
+
    ```bash
    go test ./... -cover
    ```
 
 2. **Format code**:
+
    ```bash
    gofmt -w .
    pnpm prettier --write .
    ```
 
 3. **Build assets**:
+
    ```bash
    pnpm build:assets
    ```
@@ -354,23 +380,28 @@ func TestPasswordReset_Integration(t *testing.T) {
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
 - [ ] Manual testing completed
 
 ## Screenshots (if UI changes)
+
 [Add screenshots here]
 
 ## Related Issues
+
 Fixes #123
 ```
 
@@ -388,11 +419,13 @@ Fixes #123
 For significant architectural or design decisions, create an ADR:
 
 1. **Create ADR file**:
+
    ```bash
    docs/adr/NNNN-short-title.md
    ```
 
 2. **Use the template**:
+
    ```markdown
    # ADR-NNNN: Title
 
@@ -401,21 +434,26 @@ For significant architectural or design decisions, create an ADR:
    **Authors**: @username
 
    ## Context
+
    What is the issue we're facing?
 
    ## Decision
+
    What decision did we make?
 
    ## Consequences
+
    What are the positive and negative outcomes?
 
    ## Alternatives Considered
+
    What other options were evaluated?
    ```
 
 3. **Update index** in `docs/README.md`
 
 **See existing ADRs**:
+
 - [ADR-0001: Standardize Form Field Names](docs/adr/0001-standardize-form-field-names.md)
 - [ADR-0002: Password Reset Functionality](docs/adr/0002-password-reset-functionality.md)
 
@@ -432,6 +470,7 @@ For significant architectural or design decisions, create an ADR:
 ### Reporting Bugs
 
 When reporting bugs, include:
+
 - **Environment**: OS, Go version, browser (if frontend issue)
 - **Steps to reproduce**: Clear, step-by-step instructions
 - **Expected behavior**: What should happen
@@ -441,6 +480,7 @@ When reporting bugs, include:
 ### Suggesting Features
 
 For feature requests:
+
 - **Use case**: Describe the problem you're solving
 - **Proposed solution**: How would you implement it?
 - **Alternatives**: What other approaches did you consider?
@@ -451,6 +491,7 @@ For feature requests:
 **Do not open public issues for security vulnerabilities.**
 
 Report security issues to the maintainers privately:
+
 - See [SECURITY.md](SECURITY.md) for reporting process
 - Use GitHub Security Advisories for responsible disclosure
 

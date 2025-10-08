@@ -35,6 +35,7 @@ We take security seriously and appreciate responsible disclosure of vulnerabilit
 **Alternative: Email**
 
 If you cannot use GitHub Security Advisories, email the maintainers at:
+
 - **Security Contact**: [Create issue requesting contact email]
 
 ### What to Include
@@ -92,12 +93,14 @@ When you plan to disclose publicly (90 days is standard)
 We use the following criteria to assess vulnerability severity:
 
 **Critical**:
+
 - Remote code execution
 - Authentication bypass
 - Data breach affecting multiple users
 - Complete system compromise
 
 **High**:
+
 - Privilege escalation
 - SQL injection
 - LDAP injection
@@ -105,12 +108,14 @@ We use the following criteria to assess vulnerability severity:
 - Sensitive data exposure
 
 **Medium**:
+
 - XSS vulnerabilities
 - CSRF vulnerabilities
 - Rate limit bypass
 - Information disclosure
 
 **Low**:
+
 - Minor information leaks
 - Configuration issues
 - Non-exploitable edge cases
@@ -132,6 +137,7 @@ We use the following criteria to assess vulnerability severity:
 ### Deployment Security
 
 **Required**:
+
 - ✅ **HTTPS Only**: Never deploy without TLS/SSL
 - ✅ **LDAPS**: Use encrypted LDAP connections (port 636)
 - ✅ **SMTP TLS**: Enable TLS for email delivery
@@ -139,6 +145,7 @@ We use the following criteria to assess vulnerability severity:
 - ✅ **Firewall Rules**: Restrict network access to necessary ports
 
 **Recommended**:
+
 - ⚠️ **Dedicated Service Accounts**: Use separate LDAP accounts for read/write operations
 - ⚠️ **Rate Limiting**: Configure reverse proxy rate limits in addition to application limits
 - ⚠️ **IP Whitelisting**: Restrict access to known IP ranges if possible
@@ -148,6 +155,7 @@ We use the following criteria to assess vulnerability severity:
 ### Configuration Security
 
 **Environment Variables**:
+
 ```bash
 # ✅ Good: Use secret managers
 LDAP_PASSWORD=$(vault kv get -field=password secret/ldap)
@@ -157,12 +165,14 @@ LDAP_PASSWORD=supersecret123
 ```
 
 **Secrets Management**:
+
 - Never commit `.env.local` to version control
 - Use Docker secrets or Kubernetes secrets in production
 - Rotate credentials regularly (every 90 days)
 - Use separate service accounts for read/write operations
 
 **LDAP Security**:
+
 ```bash
 # ✅ Good: LDAPS with certificate validation
 LDAP_SERVER=ldaps://ldap.example.com:636
@@ -174,6 +184,7 @@ LDAP_SERVER=ldap://ldap.example.com:389
 ### Monitoring and Detection
 
 **Monitor for**:
+
 - High volume of password reset requests from single IP
 - Failed LDAP authentication attempts
 - SMTP delivery failures
@@ -181,6 +192,7 @@ LDAP_SERVER=ldap://ldap.example.com:389
 - Certificate expiration warnings
 
 **Alerting**:
+
 ```yaml
 # Example: Alert on rate limit exceeded
 alert: HighResetRequestRate
@@ -196,23 +208,27 @@ description: "Unusual password reset activity detected"
 ### Design Decisions
 
 **Email Enumeration Protection**:
+
 - Password reset always returns success (prevents email discovery)
 - Timing attacks mitigated by consistent response times
 - Rate limiting prevents mass enumeration
 
 **Token Security**:
+
 - 256-bit cryptographically random tokens (2^256 combinations)
 - Single-use tokens (deleted after consumption)
 - Short expiration (default 15 minutes)
 - No token persistence (in-memory only)
 
 **Password Security**:
+
 - Passwords never stored in application
 - Transmitted over TLS only (HTTPS + LDAPS)
 - Password policy enforced client and server-side
 - LDAP handles password hashing
 
 **Session Security**:
+
 - Stateless application (no session management)
 - No cookies (no session hijacking risk)
 - No authentication state stored
@@ -220,18 +236,21 @@ description: "Unusual password reset activity detected"
 ### Attack Surface Analysis
 
 **Public Endpoints**:
+
 - `/` - Password change page (requires current password)
 - `/forgot-password` - Request password reset (rate limited)
 - `/reset-password` - Complete password reset (requires token)
 - `/api/rpc` - JSON-RPC API (authentication via LDAP)
 
 **Dependencies**:
+
 - Go standard library
 - Fiber v2 (web framework)
 - simple-ldap-go (LDAP client)
 - Minimal external dependencies
 
 **Container Security**:
+
 - Runs as non-root user (UID 65534)
 - Scratch-based image (minimal attack surface)
 - No shell or package manager
@@ -244,6 +263,7 @@ description: "Unusual password reset activity detected"
 ### Notification
 
 Security updates are announced via:
+
 - GitHub Security Advisories
 - GitHub Releases (tagged as security release)
 - CHANGELOG.md with [SECURITY] prefix
@@ -251,6 +271,7 @@ Security updates are announced via:
 ### Update Process
 
 **For Users**:
+
 1. Check [Security Advisories](https://github.com/netresearch/ldap-selfservice-password-changer/security/advisories)
 2. Review CHANGELOG for security fixes
 3. Pull latest Docker image or rebuild from source
@@ -258,6 +279,7 @@ Security updates are announced via:
 5. Deploy to production
 
 **For Developers**:
+
 ```bash
 # Check for updates
 git fetch origin
@@ -279,6 +301,7 @@ pnpm audit
 ### Automated Scanning
 
 **Go Security**:
+
 ```bash
 # Vulnerability scanning
 go install golang.org/x/vuln/cmd/govulncheck@latest
@@ -290,6 +313,7 @@ gosec ./...
 ```
 
 **Node Dependencies**:
+
 ```bash
 # Audit dependencies
 pnpm audit
@@ -299,6 +323,7 @@ pnpm audit --fix
 ```
 
 **Container Scanning**:
+
 ```bash
 # Trivy
 docker run aquasec/trivy image \
@@ -311,11 +336,13 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 ### Manual Testing
 
 **Recommended Tools**:
+
 - OWASP ZAP for DAST scanning
 - Burp Suite for penetration testing
 - Nikto for web server scanning
 
 **Test Checklist**:
+
 - [ ] HTTPS enforcement
 - [ ] Security headers
 - [ ] Rate limiting effectiveness
@@ -343,6 +370,7 @@ See [docs/security.md](docs/security.md) for detailed compliance documentation.
 ### Certifications
 
 **WCAG 2.2 Level AAA**: Accessibility compliance
+
 - No impact on security
 - Ensures application usable by all users
 - Prevents exclusion of users with disabilities
@@ -354,6 +382,7 @@ See [docs/security.md](docs/security.md) for detailed compliance documentation.
 **Status**: No formal bug bounty program at this time
 
 We appreciate security research but do not currently offer monetary rewards. We do offer:
+
 - Public acknowledgment in security advisories (if desired)
 - Credit in CHANGELOG.md
 - Our sincere gratitude for responsible disclosure

@@ -99,21 +99,25 @@ Design decisions and their rationale:
 ## Quick Start by Role
 
 ### Developers
+
 1. **New to the project?** Start with [Development Guide: Initial Setup](development-guide.md#initial-setup)
 2. **Understanding the code?** See [Code Structure Reference](code-structure.md)
 3. **Need API details?** Check [API Reference](api-reference.md)
 4. **Writing tests?** See [Testing Guide](testing-guide.md)
 
 ### DevOps/SRE
+
 1. **Deploying to production?** Start with [Deployment Guide](deployment.md)
 2. **Security hardening?** See [Security Documentation](security.md)
 3. **System architecture?** Check [Architecture](architecture.md)
 
 ### QA/Accessibility
+
 1. **Accessibility testing?** See [Accessibility Guide](accessibility.md)
 2. **Test coverage?** Check [Testing Guide](testing-guide.md)
 
 ### Architects
+
 1. **Design decisions?** Review [Architecture Decision Records](adr/)
 2. **System design?** See [Architecture](architecture.md)
 3. **Security architecture?** Check [Security Documentation](security.md)

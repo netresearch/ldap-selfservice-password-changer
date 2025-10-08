@@ -7,23 +7,27 @@
 ## 🎯 Quick Navigation by Role
 
 ### 👨‍💻 **For Developers**
+
 1. Start: [Development Guide](docs/development-guide.md#initial-setup)
 2. Code: [Code Structure Reference](docs/code-structure.md)
 3. API: [JSON-RPC API Reference](docs/api-reference.md)
 4. Test: [Testing Guide](docs/testing-guide.md)
 
 ### 🚀 **For DevOps/SRE**
+
 1. Deploy: [Deployment Guide](docs/deployment.md)
 2. Config: [Environment Variables](docs/development-guide.md#configuration-reference)
 3. Monitor: [Architecture Overview](docs/architecture.md)
 4. Security: [Security Documentation](docs/security.md)
 
 ### ♿ **For Accessibility/QA**
+
 1. WCAG: [Accessibility Guide](docs/accessibility.md)
 2. Test: [Testing Procedures](docs/testing-guide.md)
 3. Validate: [WCAG Compliance Matrix](docs/accessibility.md#wcag-22-compliance-matrix)
 
 ### 🏗️ **For Architects**
+
 1. Design: [Architecture Overview](docs/architecture.md)
 2. Decisions: [Architecture Decision Records](docs/adr/)
 3. Security: [Security Architecture](docs/security.md)
@@ -35,44 +39,48 @@
 
 ### Core Documentation (`docs/`)
 
-| Document | Purpose | Audience |
-|----------|---------|----------|
-| [README](docs/README.md) | Documentation index | All |
-| [API Reference](docs/api-reference.md) | JSON-RPC API specification | Developers, Integrators |
-| [Development Guide](docs/development-guide.md) | Setup and workflows | Developers |
-| [Testing Guide](docs/testing-guide.md) | Test strategies and coverage | Developers, QA |
-| [Accessibility Guide](docs/accessibility.md) | WCAG 2.2 AAA compliance | Accessibility, QA |
-| [Architecture](docs/architecture.md) | System design overview | Architects, Developers |
-| [Code Structure](docs/code-structure.md) | Internal package reference | Developers |
-| [Deployment](docs/deployment.md) | Production deployment | DevOps, SRE |
-| [Security](docs/security.md) | Security architecture | Security, DevOps |
+| Document                                       | Purpose                      | Audience                |
+| ---------------------------------------------- | ---------------------------- | ----------------------- |
+| [README](docs/README.md)                       | Documentation index          | All                     |
+| [API Reference](docs/api-reference.md)         | JSON-RPC API specification   | Developers, Integrators |
+| [Development Guide](docs/development-guide.md) | Setup and workflows          | Developers              |
+| [Testing Guide](docs/testing-guide.md)         | Test strategies and coverage | Developers, QA          |
+| [Accessibility Guide](docs/accessibility.md)   | WCAG 2.2 AAA compliance      | Accessibility, QA       |
+| [Architecture](docs/architecture.md)           | System design overview       | Architects, Developers  |
+| [Code Structure](docs/code-structure.md)       | Internal package reference   | Developers              |
+| [Deployment](docs/deployment.md)               | Production deployment        | DevOps, SRE             |
+| [Security](docs/security.md)                   | Security architecture        | Security, DevOps        |
 
 ### Architecture Decision Records (`docs/adr/`)
 
-| ADR | Title | Status | Date |
-|-----|-------|--------|------|
+| ADR                                                       | Title                        | Status      | Date       |
+| --------------------------------------------------------- | ---------------------------- | ----------- | ---------- |
 | [ADR-0001](docs/adr/0001-standardize-form-field-names.md) | Standardize Form Field Names | ✅ Accepted | 2024-10-06 |
 | [ADR-0002](docs/adr/0002-password-reset-functionality.md) | Password Reset Functionality | ✅ Accepted | 2024-10-07 |
 
 ### Analysis & Planning (`claudedocs/`)
 
 **Project Context**
+
 - [Project Context Snapshot](claudedocs/project-context-2025-10-04.md)
 - [Component Reference](claudedocs/component-reference.md)
 - [Architecture Patterns](claudedocs/architecture-patterns.md)
 
 **Feature Implementation**
+
 - [Password Reset PRD](claudedocs/password-reset-prd.md)
 - [Implementation Workflow](claudedocs/password-reset-implementation-workflow.md)
 - [Phase 1 Complete](claudedocs/phase1-implementation-complete.md)
 
 **Quality & Validation**
+
 - [Validation Report](claudedocs/VALIDATION-REPORT.md)
 - [WCAG 2.2 Analysis](claudedocs/wcag-2.2-analysis-2025-10-07.md)
 - [WCAG Contrast Analysis](claudedocs/wcag-contrast-analysis.md)
 - [Accessibility Redesign Plan](claudedocs/accessibility-redesign-plan.md)
 
 **Testing & Guides**
+
 - [Testing Guide](claudedocs/testing-guide.md)
 - [Density Toggle Testing](claudedocs/density-toggle-testing-guide.md)
 - [Maintenance Guide](claudedocs/MAINTENANCE.md)
@@ -100,14 +108,14 @@ LDAP Selfservice Password Changer provides:
 
 ### Technology Stack
 
-| Layer | Technology | Version |
-|-------|------------|---------|
-| Backend | Go | 1.25+ |
-| Web Framework | Fiber | v2.52+ |
-| Frontend | TypeScript | 5.9+ |
-| CSS | Tailwind CSS | v4.1+ |
-| Build | pnpm | 10.18+ |
-| Testing | testcontainers | Latest |
+| Layer         | Technology     | Version |
+| ------------- | -------------- | ------- |
+| Backend       | Go             | 1.25+   |
+| Web Framework | Fiber          | v2.52+  |
+| Frontend      | TypeScript     | 5.9+    |
+| CSS           | Tailwind CSS   | v4.1+   |
+| Build         | pnpm           | 10.18+  |
+| Testing       | testcontainers | Latest  |
 
 ---
 
@@ -185,11 +193,13 @@ go build -o ldap-selfservice-password-changer
 ## 🧪 Testing
 
 **Run all tests**:
+
 ```bash
 go test ./... -cover
 ```
 
 **Current coverage**:
+
 - ✅ validators: 100.0%
 - ✅ ratelimit: 72.3%
 - ✅ resettoken: 71.7%
@@ -232,17 +242,20 @@ go test ./... -cover
 ## 📖 Additional Resources
 
 ### Official Links
+
 - **Repository**: https://github.com/netresearch/ldap-selfservice-password-changer
 - **Docker Image**: https://github.com/netresearch/ldap-selfservice-password-changer/pkgs/container/ldap-selfservice-password-changer
 - **License**: [MIT License](LICENSE)
 
 ### External Documentation
+
 - [Go Fiber Documentation](https://docs.gofiber.io/)
 - [Tailwind CSS v4 Docs](https://tailwindcss.com/docs)
 - [WCAG 2.2 Guidelines](https://www.w3.org/WAI/WCAG22/quickref/)
 - [simple-ldap-go](https://github.com/netresearch/simple-ldap-go)
 
 ### Contributing
+
 See [README.md](README.md) for contributing guidelines.
 
 ---

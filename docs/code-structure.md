@@ -26,10 +26,12 @@ internal/
 **Purpose**: SMTP email service for sending password reset links.
 
 **Files**:
+
 - `service.go` - Email service implementation with SMTP configuration
 - `service_test.go` - Unit and integration tests (31.2% coverage)
 
 **Key Types**:
+
 ```go
 type Service struct {
     smtpHost     string
@@ -42,14 +44,17 @@ type Service struct {
 ```
 
 **Public API**:
+
 - `NewService(...)` - Create new email service with SMTP config
 - `SendPasswordResetEmail(to, token, resetURL string)` - Send reset email
 
 **Dependencies**:
+
 - `net/smtp` - SMTP client
 - Environment variables for configuration
 
 **Test Coverage**: 31.2%
+
 - ✅ Service creation and configuration
 - ✅ Email template rendering
 - ⚠️ Limited SMTP connection testing (requires test server)
@@ -61,9 +66,11 @@ type Service struct {
 **Purpose**: Application configuration and environment variable management.
 
 **Files**:
+
 - `app.go` - Configuration struct and environment variable loading
 
 **Key Types**:
+
 ```go
 type Opts struct {
     // LDAP Configuration
@@ -94,10 +101,12 @@ type Opts struct {
 ```
 
 **Public API**:
+
 - `LoadFromEnv()` - Load configuration from environment variables
 - `Validate()` - Validate configuration completeness
 
 **Configuration Sources**:
+
 1. Environment variables (`.env` file)
 2. Default values for optional settings
 3. Validation on startup
@@ -109,10 +118,12 @@ type Opts struct {
 **Purpose**: Rate limiting middleware to prevent abuse of password reset requests.
 
 **Files**:
+
 - `limiter.go` - Rate limiter implementation with IP-based tracking
 - `limiter_test.go` - Comprehensive unit tests (72.3% coverage)
 
 **Key Types**:
+
 ```go
 type Limiter struct {
     maxRequests int
@@ -123,22 +134,26 @@ type Limiter struct {
 ```
 
 **Public API**:
+
 - `NewLimiter(maxRequests int, window time.Duration)` - Create rate limiter
 - `Allow(ip string) bool` - Check if IP is allowed to make request
 - `Reset(ip string)` - Clear rate limit for IP (for testing)
 
 **Implementation Details**:
+
 - **Sliding window algorithm**: Tracks requests in time window
 - **IP-based**: Uses client IP address as key
 - **Thread-safe**: Uses RWMutex for concurrent access
 - **Memory bounded**: Automatic cleanup of expired entries
 
 **Default Configuration**:
+
 - Max requests: 3
 - Time window: 1 hour
 - Per IP address
 
 **Test Coverage**: 72.3%
+
 - ✅ Basic allow/deny logic
 - ✅ Sliding window behavior
 - ✅ Concurrent access
@@ -152,12 +167,14 @@ type Limiter struct {
 **Purpose**: Secure token generation and storage for password reset flow.
 
 **Files**:
+
 - `token.go` - Cryptographic token generation
 - `token_test.go` - Token generation tests
 - `store.go` - In-memory token storage with expiration
 - `store_test.go` - Comprehensive store tests (71.7% coverage)
 
 **Key Types**:
+
 ```go
 // Token generation
 func GenerateToken() (string, error)
@@ -175,6 +192,7 @@ type TokenData struct {
 ```
 
 **Public API**:
+
 ```go
 // Token operations
 GenerateToken() (string, error)           // Generate 256-bit secure token
@@ -185,6 +203,7 @@ Delete(token string)                      // Explicitly delete token
 ```
 
 **Security Features**:
+
 - **Cryptographically secure**: Uses `crypto/rand` for token generation
 - **256-bit tokens**: Encoded as URL-safe base64 (43 characters)
 - **Time-limited**: Configurable TTL (default 24 hours)
@@ -192,6 +211,7 @@ Delete(token string)                      // Explicitly delete token
 - **Automatic expiration**: Background cleanup of expired tokens
 
 **Test Coverage**: 71.7%
+
 - ✅ Token generation and uniqueness
 - ✅ Store/validate/delete operations
 - ✅ Expiration handling
@@ -205,6 +225,7 @@ Delete(token string)                      // Explicitly delete token
 **Purpose**: JSON-RPC handlers for all API methods.
 
 **Files**:
+
 - `handler.go` - Main RPC router and middleware
 - `dto.go` - Data transfer objects for RPC methods
 - `change_password.go` - Password change RPC handler
@@ -216,6 +237,7 @@ Delete(token string)                      // Explicitly delete token
 **RPC Methods**:
 
 #### `change-password`
+
 ```typescript
 Request: {
   method: "change-password",
@@ -227,12 +249,14 @@ Response: {
 ```
 
 **Handler**: `internal/rpc/change_password.go`
+
 - Validates input parameters
 - Authenticates with LDAP using current password
 - Changes password via LDAP modify operation
 - Returns success/error
 
 #### `request-password-reset`
+
 ```typescript
 Request: {
   method: "request-password-reset",
@@ -244,6 +268,7 @@ Response: {
 ```
 
 **Handler**: `internal/rpc/request_password_reset.go`
+
 - Rate limiting check (3 requests/hour per IP)
 - Lookup user by email in LDAP
 - Generate secure reset token
@@ -251,6 +276,7 @@ Response: {
 - Always returns success (prevents email enumeration)
 
 #### `reset-password`
+
 ```typescript
 Request: {
   method: "reset-password",
@@ -262,6 +288,7 @@ Response: {
 ```
 
 **Handler**: `internal/rpc/reset_password.go`
+
 - Validate and consume reset token
 - Retrieve user email from token store
 - Lookup user DN in LDAP
@@ -269,6 +296,7 @@ Response: {
 - Delete token after successful reset
 
 **Test Coverage**: 45.6%
+
 - ✅ Happy path for all methods
 - ✅ Error handling for invalid inputs
 - ✅ LDAP integration with testcontainers
@@ -281,10 +309,12 @@ Response: {
 **Purpose**: Password validation rules matching server-side policy.
 
 **Files**:
+
 - `validate.go` - Validation rule implementations
 - `validate_test.go` - Comprehensive validation tests (100% coverage)
 
 **Public API**:
+
 ```go
 // Validation functions
 ValidateMinLength(password string, minLength int) error
@@ -299,6 +329,7 @@ ValidatePassword(password, username string, opts *options.Opts) error
 ```
 
 **Validation Rules**:
+
 - ✅ Minimum length (configurable, default 8)
 - ✅ Minimum numbers (configurable, default 1)
 - ✅ Minimum symbols (configurable, default 1)
@@ -307,6 +338,7 @@ ValidatePassword(password, username string, opts *options.Opts) error
 - ✅ Username exclusion (optional, default enabled)
 
 **Test Coverage**: 100% ✅
+
 - All validation rules tested
 - Edge cases covered
 - Combined validation tested
@@ -319,6 +351,7 @@ ValidatePassword(password, username string, opts *options.Opts) error
 **Purpose**: Web server, static asset serving, and HTML template rendering.
 
 **Structure**:
+
 ```
 web/
 ├── static/
@@ -359,6 +392,7 @@ web/
 #### TypeScript Modules
 
 **`app.ts`** (Main Password Change Page)
+
 - Theme toggle (light/dark/auto)
 - Density toggle (comfortable/compact/auto)
 - Password reveal buttons
@@ -367,12 +401,14 @@ web/
 - Password strength indicators
 
 **`forgot-password.ts`** (Reset Request)
+
 - Email input with validation
 - Theme and density toggles
 - RPC call to request reset
 - Success message display
 
 **`reset-password.ts`** (Reset Completion)
+
 - Token-based authentication
 - New password input with validation
 - Password strength indicators
@@ -380,6 +416,7 @@ web/
 - RPC call to reset password
 
 **`validators.ts`** (Shared Validation)
+
 - Client-side validation matching server rules
 - Real-time feedback on input
 - Error message generation
@@ -388,11 +425,13 @@ web/
 #### Template System
 
 **Atomic Design Pattern**:
+
 - **Atoms**: Basic building blocks (buttons, icons, links)
 - **Molecules**: Composite components (forms, headers, footers)
 - **Pages**: Full page templates (index, forgot-password, reset-password)
 
 **Template Rendering** (`templates.go`):
+
 ```go
 RenderIndex(opts *options.Opts) ([]byte, error)
 RenderForgotPassword() ([]byte, error)
@@ -400,6 +439,7 @@ RenderResetPassword(opts *options.Opts) ([]byte, error)
 ```
 
 **Features**:
+
 - Go `html/template` for server-side rendering
 - Embedded templates (no external files)
 - Configuration-driven (password policy displayed)
@@ -412,12 +452,14 @@ RenderResetPassword(opts *options.Opts) ([]byte, error)
 ### Asset Compilation
 
 **TypeScript → JavaScript**:
+
 ```bash
 tsc                    # Compile TypeScript
 uglify-js             # Minify for production
 ```
 
 **Tailwind CSS → CSS**:
+
 ```bash
 postcss               # Process Tailwind directives
 autoprefixer          # Add vendor prefixes
@@ -425,6 +467,7 @@ cssnano              # Minify for production
 ```
 
 **Build Scripts** (`package.json`):
+
 - `pnpm build:assets` - Build both JS and CSS
 - `pnpm js:build` - TypeScript compilation + minification
 - `pnpm css:build` - Tailwind CSS compilation
@@ -433,12 +476,14 @@ cssnano              # Minify for production
 ### Go Embed
 
 Static assets embedded in binary via `//go:embed`:
+
 ```go
 //go:embed static
 var staticFS embed.FS
 ```
 
 **Benefits**:
+
 - Single binary deployment
 - No external file dependencies
 - Simplified distribution
@@ -450,11 +495,13 @@ var staticFS embed.FS
 ### Go Dependencies (go.mod)
 
 **Direct**:
+
 - `github.com/gofiber/fiber/v2` - Web framework
 - `github.com/joho/godotenv` - Environment variable loading
 - `github.com/netresearch/simple-ldap-go` - LDAP client
 
 **Testing**:
+
 - `github.com/testcontainers/testcontainers-go` - Integration testing
 - `github.com/testcontainers/testcontainers-go/modules/openldap` - LDAP test server
 - `github.com/stretchr/testify` - Test assertions
@@ -462,6 +509,7 @@ var staticFS embed.FS
 ### Node Dependencies (package.json)
 
 **Build Tools**:
+
 - `typescript` - Type-safe JavaScript
 - `@tailwindcss/postcss` - CSS framework
 - `uglify-js` - JavaScript minification
@@ -469,6 +517,7 @@ var staticFS embed.FS
 - `cssnano` - CSS minification
 
 **Development**:
+
 - `concurrently` - Parallel script execution
 - `nodemon` - File watching and hot reload
 - `prettier` - Code formatting
@@ -478,17 +527,20 @@ var staticFS embed.FS
 ## Testing Strategy
 
 ### Unit Tests
+
 - **Package**: `internal/validators` - 100% coverage ✅
 - **Package**: `internal/ratelimit` - 72.3% coverage
 - **Package**: `internal/resettoken` - 71.7% coverage
 
 ### Integration Tests
+
 - **Package**: `internal/rpc` - 45.6% coverage
 - **Package**: `internal/email` - 31.2% coverage
 - Uses testcontainers for real LDAP server
 - Tests complete RPC workflows
 
 ### E2E Tests
+
 - Recommended: Playwright for browser automation
 - See [Testing Guide](testing-guide.md) for setup
 
@@ -497,18 +549,21 @@ var staticFS embed.FS
 ## Code Style and Conventions
 
 ### Go Code
+
 - **Formatting**: `gofmt` standard
 - **Linting**: `golint` compliance
 - **Naming**: Exported functions capitalized, private lowercase
 - **Error handling**: Explicit error returns, no panics in production code
 
 ### TypeScript Code
+
 - **Strict mode**: Enabled in `tsconfig.json`
 - **No `any` types**: Type safety enforced
 - **Naming**: camelCase for variables, PascalCase for types
 - **Module system**: ES modules with `.js` extension
 
 ### HTML Templates
+
 - **Atomic design**: atoms < molecules < pages
 - **Accessibility**: ARIA labels, semantic HTML
 - **Formatting**: Prettier with go-template plugin
@@ -518,12 +573,14 @@ var staticFS embed.FS
 ## Performance Considerations
 
 ### Backend
+
 - **Connection pooling**: LDAP connections reused
 - **Concurrent requests**: Fiber handles async I/O
 - **Memory management**: Token store with automatic cleanup
 - **Rate limiting**: Protects against abuse
 
 ### Frontend
+
 - **Asset minification**: UglifyJS and cssnano
 - **HTTP/2**: Parallel asset loading
 - **Lazy loading**: Module imports for page-specific code
@@ -536,6 +593,7 @@ var staticFS embed.FS
 See [Security Documentation](security.md) for comprehensive security architecture.
 
 **Key security components in code**:
+
 - `internal/ratelimit` - Abuse prevention
 - `internal/resettoken` - Cryptographic token generation
 - `internal/validators` - Input validation
