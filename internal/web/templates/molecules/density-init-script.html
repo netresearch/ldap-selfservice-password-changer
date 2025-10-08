@@ -12,10 +12,23 @@
 
   const actualDensity = storedDensityMode === "auto" ? determineDensity() : storedDensityMode;
 
+  // Apply to HTML element for global CSS variants
   if (actualDensity === "compact") {
     document.documentElement.classList.add("compact");
   } else {
     document.documentElement.classList.remove("compact");
+  }
+
+  // Apply to page-card container for density-variant classes
+  // Wait for DOM to be ready before querying elements
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", () => {
+      const pageCard = document.querySelector("div[data-density]");
+      if (pageCard) pageCard.dataset.density = actualDensity;
+    });
+  } else {
+    const pageCard = document.querySelector("div[data-density]");
+    if (pageCard) pageCard.dataset.density = actualDensity;
   }
 </script>
 {{ end }}
