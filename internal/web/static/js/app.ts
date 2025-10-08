@@ -111,6 +111,12 @@ export const init = (opts: Opts) => {
       // Apply to main container (this triggers all density-variant classes)
       mainContainer.dataset["density"] = actualState;
 
+      // Apply to html element (this triggers all density-variant classes)
+      document.documentElement.classList.remove("compact");
+      if (actualState === "compact") {
+        document.documentElement.classList.add("compact");
+      }
+
       // Update icon visibility (show only current mode's icon)
       densityComfortableIcon.classList.toggle("hidden", mode !== "comfortable");
       densityCompactIcon.classList.toggle("hidden", mode !== "compact");
