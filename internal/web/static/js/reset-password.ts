@@ -81,8 +81,9 @@ export const init = (opts: Opts) => {
   const densityComfortableIcon = document.getElementById("density-comfortable");
   const densityCompactIcon = document.getElementById("density-compact");
   const densityAutoIcon = document.getElementById("density-auto");
+  const mainContainer = document.querySelector<HTMLDivElement>("div[data-density]");
 
-  if (densityToggle && densityComfortableIcon && densityCompactIcon && densityAutoIcon) {
+  if (densityToggle && densityComfortableIcon && densityCompactIcon && densityAutoIcon && mainContainer) {
     // Determine appropriate density based on system preferences
     const determineDensityFromPreferences = (): DensityState => {
       const isTouch = window.matchMedia("(pointer: coarse)").matches;
@@ -102,6 +103,9 @@ export const init = (opts: Opts) => {
 
       // Determine actual state to apply
       const actualState: DensityState = mode === "auto" ? determineDensityFromPreferences() : mode;
+
+      // Apply to main container (this triggers all density-variant classes)
+      mainContainer.dataset["density"] = actualState;
 
       // Apply to html element (this triggers all density-variant classes)
       document.documentElement.classList.remove("compact");
