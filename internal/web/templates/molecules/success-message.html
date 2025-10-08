@@ -1,0 +1,8 @@
+{{ define "success-message" }}
+<h2 class="sr-only">Success Message</h2>
+<div class="hidden space-y-4" data-purpose="successContainer" role="status" aria-live="polite">
+  <div class="mx-auto h-12 w-12 text-green-700 dark:text-green-400" aria-hidden="true">{{ template "CheckIcon" }}</div>
+
+  <p class="text-center font-semibold text-gray-900 dark:text-gray-100">{{ . }}</p>
+</div>
+{{ end }}

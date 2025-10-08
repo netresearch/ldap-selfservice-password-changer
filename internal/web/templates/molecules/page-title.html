@@ -1,0 +1,10 @@
+{{ define "page-title" }}
+<h1 class="comfortable:block compact:sr-only text-center text-2xl font-semibold text-gray-900 dark:text-gray-100">
+  {{ index . 0 }}
+</h1>
+
+{{ if gt (len .) 1 }}
+<p class="comfortable:block compact:sr-only text-center text-sm text-gray-500 dark:text-gray-400">{{ index . 1 }}</p>
+{{ end }} {{ if gt (len .) 2 }}
+<h2 class="sr-only">{{ index . 2 }}</h2>
+{{ end }} {{ end }}

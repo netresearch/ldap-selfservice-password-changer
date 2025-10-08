@@ -11,6 +11,54 @@ import (
 //go:embed index.html
 var rawIndex string
 
+//go:embed forgot-password.html
+var rawForgotPassword string
+
+//go:embed reset-password.html
+var rawResetPassword string
+
+//go:embed atoms/button-primary.html
+var rawButtonPrimary string
+
+//go:embed atoms/link.html
+var rawLink string
+
+//go:embed atoms/button-toggle.html
+var rawButtonToggle string
+
+//go:embed atoms/icons.html
+var rawIcons string
+
+//go:embed molecules/input-field.html
+var rawInputField string
+
+//go:embed molecules/theme-init-script.html
+var rawThemeInitScript string
+
+//go:embed molecules/density-init-script.html
+var rawDensityInitScript string
+
+//go:embed molecules/html-head.html
+var rawHtmlHead string
+
+//go:embed molecules/page-header.html
+var rawPageHeader string
+
+//go:embed molecules/page-footer.html
+var rawPageFooter string
+
+//go:embed molecules/toggle-buttons.html
+var rawToggleButtons string
+
+//go:embed molecules/form-submit.html
+var rawFormSubmit string
+
+//go:embed molecules/success-message.html
+var rawSuccessMessage string
+
+//go:embed molecules/page-title.html
+var rawPageTitle string
+
 type InputOpts struct {
 	Name         string
 	Placeholder  string
@@ -33,11 +81,62 @@ func MakeInputOpts(name, placeholder, type_, autocomplete, help string) InputOpt
 	}
 }
 
+func makeSlice(args ...interface{}) []interface{} {
+	return args
+}
+
 func RenderIndex(opts *options.Opts) ([]byte, error) {
-	funcs := template.FuncMap{"InputOpts": MakeInputOpts}
+	funcs := template.FuncMap{
+		"InputOpts": MakeInputOpts,
+		"slice":     makeSlice,
+	}
 
 	tpl, err := template.New("index").Funcs(funcs).Parse(rawIndex)
 	if err != nil {
+		return nil, err
+	}
+
+	// Parse atom and molecule templates
+	if _, err = tpl.Parse(rawIcons); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawButtonPrimary); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawLink); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawButtonToggle); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawInputField); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawThemeInitScript); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawDensityInitScript); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawHtmlHead); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawPageHeader); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawPageFooter); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawToggleButtons); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawFormSubmit); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawSuccessMessage); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawPageTitle); err != nil {
 		return nil, err
 	}
 
@@ -47,6 +146,136 @@ func RenderIndex(opts *options.Opts) ([]byte, error) {
 
 	var buf bytes.Buffer
 	if err = tpl.ExecuteTemplate(&buf, "index", data); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func RenderForgotPassword() ([]byte, error) {
+	funcs := template.FuncMap{
+		"InputOpts": MakeInputOpts,
+		"slice":     makeSlice,
+	}
+
+	tpl, err := template.New("forgot-password").Funcs(funcs).Parse(rawForgotPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse atom and molecule templates
+	if _, err = tpl.Parse(rawIcons); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawButtonPrimary); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawLink); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawButtonToggle); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawInputField); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawThemeInitScript); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawDensityInitScript); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawHtmlHead); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawPageHeader); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawPageFooter); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawToggleButtons); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawFormSubmit); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawSuccessMessage); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawPageTitle); err != nil {
+		return nil, err
+	}
+
+	var buf bytes.Buffer
+	if err = tpl.ExecuteTemplate(&buf, "forgot-password", nil); err != nil {
+		return nil, err
+	}
+
+	return buf.Bytes(), nil
+}
+
+func RenderResetPassword(opts *options.Opts) ([]byte, error) {
+	funcs := template.FuncMap{
+		"InputOpts": MakeInputOpts,
+		"slice":     makeSlice,
+	}
+
+	tpl, err := template.New("reset-password").Funcs(funcs).Parse(rawResetPassword)
+	if err != nil {
+		return nil, err
+	}
+
+	// Parse atom and molecule templates
+	if _, err = tpl.Parse(rawIcons); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawButtonPrimary); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawLink); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawButtonToggle); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawInputField); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawThemeInitScript); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawDensityInitScript); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawHtmlHead); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawPageHeader); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawPageFooter); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawToggleButtons); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawFormSubmit); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawSuccessMessage); err != nil {
+		return nil, err
+	}
+	if _, err = tpl.Parse(rawPageTitle); err != nil {
+		return nil, err
+	}
+
+	data := map[string]any{
+		"opts": opts,
+	}
+
+	var buf bytes.Buffer
+	if err = tpl.ExecuteTemplate(&buf, "reset-password", data); err != nil {
 		return nil, err
 	}
 
