@@ -77,11 +77,13 @@ APP_BASE_URL=https://passwd.example.com \
 ### System Requirements
 
 **Minimal**:
+
 - CPU: 1 core
 - RAM: 128MB
 - Disk: 50MB
 
 **Recommended**:
+
 - CPU: 2 cores
 - RAM: 256MB
 - Disk: 100MB
@@ -222,8 +224,8 @@ cp .env.local.example .env.local
 ```yaml
 # compose.yml uses both files:
 env_file:
-  - .env         # Defaults and docs (version controlled)
-  - .env.local   # Overrides (gitignored)
+  - .env # Defaults and docs (version controlled)
+  - .env.local # Overrides (gitignored)
 ```
 
 ---
@@ -239,7 +241,7 @@ services:
     image: ghcr.io/netresearch/ldap-selfservice-password-changer:latest
     restart: unless-stopped
     ports:
-      - "127.0.0.1:3000:3000"  # Bind to localhost only
+      - "127.0.0.1:3000:3000" # Bind to localhost only
     env_file:
       - .env.production
     volumes:
@@ -286,8 +288,7 @@ services:
       - ldap_readonly_password
       - ldap_reset_password
       - smtp_password
-    environment:
-      LDAP_READONLY_PASSWORD_FILE=/run/secrets/ldap_readonly_password
+    environment: LDAP_READONLY_PASSWORD_FILE=/run/secrets/ldap_readonly_password
       LDAP_RESET_PASSWORD_FILE=/run/secrets/ldap_reset_password
       SMTP_PASSWORD_FILE=/run/secrets/smtp_password
 
@@ -323,57 +324,57 @@ spec:
         app: ldap-passwd
     spec:
       containers:
-      - name: ldap-passwd
-        image: ghcr.io/netresearch/ldap-selfservice-password-changer:latest
-        ports:
-        - containerPort: 3000
-          name: http
-        env:
-        - name: LDAP_SERVER
-          value: "ldaps://ldap.example.com:636"
-        - name: LDAP_BASE_DN
-          value: "dc=example,dc=com"
-        - name: LDAP_READONLY_USER
-          valueFrom:
-            secretKeyRef:
-              name: ldap-credentials
-              key: readonly-user
-        - name: LDAP_READONLY_PASSWORD
-          valueFrom:
-            secretKeyRef:
-              name: ldap-credentials
-              key: readonly-password
-        - name: SMTP_HOST
-          value: "smtp.example.com"
-        - name: APP_BASE_URL
-          value: "https://passwd.example.com"
-        resources:
-          requests:
-            memory: "128Mi"
-            cpu: "100m"
-          limits:
-            memory: "256Mi"
-            cpu: "500m"
-        livenessProbe:
-          httpGet:
-            path: /
-            port: 3000
-          initialDelaySeconds: 10
-          periodSeconds: 30
-        readinessProbe:
-          httpGet:
-            path: /
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 10
-        securityContext:
-          runAsNonRoot: true
-          runAsUser: 65534
-          readOnlyRootFilesystem: true
-          allowPrivilegeEscalation: false
-          capabilities:
-            drop:
-            - ALL
+        - name: ldap-passwd
+          image: ghcr.io/netresearch/ldap-selfservice-password-changer:latest
+          ports:
+            - containerPort: 3000
+              name: http
+          env:
+            - name: LDAP_SERVER
+              value: "ldaps://ldap.example.com:636"
+            - name: LDAP_BASE_DN
+              value: "dc=example,dc=com"
+            - name: LDAP_READONLY_USER
+              valueFrom:
+                secretKeyRef:
+                  name: ldap-credentials
+                  key: readonly-user
+            - name: LDAP_READONLY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: ldap-credentials
+                  key: readonly-password
+            - name: SMTP_HOST
+              value: "smtp.example.com"
+            - name: APP_BASE_URL
+              value: "https://passwd.example.com"
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "256Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65534
+            readOnlyRootFilesystem: true
+            allowPrivilegeEscalation: false
+            capabilities:
+              drop:
+                - ALL
 ---
 apiVersion: v1
 kind: Service
@@ -384,9 +385,9 @@ spec:
   selector:
     app: ldap-passwd
   ports:
-  - port: 80
-    targetPort: 3000
-    name: http
+    - port: 80
+      targetPort: 3000
+      name: http
   type: ClusterIP
 ---
 apiVersion: networking.k8s.io/v1
@@ -400,20 +401,20 @@ metadata:
 spec:
   ingressClassName: nginx
   tls:
-  - hosts:
-    - passwd.example.com
-    secretName: ldap-passwd-tls
+    - hosts:
+        - passwd.example.com
+      secretName: ldap-passwd-tls
   rules:
-  - host: passwd.example.com
-    http:
-      paths:
-      - path: /
-        pathType: Prefix
-        backend:
-          service:
-            name: ldap-passwd
-            port:
-              number: 80
+    - host: passwd.example.com
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: ldap-passwd
+                port:
+                  number: 80
 ```
 
 ### Secrets
@@ -495,6 +496,7 @@ server {
 ```
 
 Enable site:
+
 ```bash
 ln -s /etc/nginx/sites-available/ldap-passwd /etc/nginx/sites-enabled/
 nginx -t
@@ -582,6 +584,7 @@ networks:
 ```
 
 Enable modules and site:
+
 ```bash
 a2enmod ssl proxy proxy_http headers
 a2ensite ldap-passwd
@@ -598,11 +601,13 @@ systemctl reload apache2
 #### Read-Only Account
 
 **Required permissions**:
+
 - Read access to user objects in Base DN
 - Read `mail` attribute for email lookup
 - Read `userPrincipalName` or `uid` for authentication
 
 **OpenLDAP ACL**:
+
 ```ldif
 # /etc/ldap/slapd.conf or cn=config
 access to dn.subtree="dc=example,dc=com"
@@ -611,6 +616,7 @@ access to dn.subtree="dc=example,dc=com"
 ```
 
 **Active Directory**:
+
 ```powershell
 # Grant read permissions to service account
 $user = Get-ADUser -Identity "readonly"
@@ -627,11 +633,13 @@ Set-Acl -Path "AD:\DC=example,DC=com" -AclObject $acl
 #### Password Reset Account (Optional)
 
 **Required permissions**:
+
 - All permissions of read-only account
 - Write access to `userPassword` (OpenLDAP) or `unicodePwd` (AD)
 - Reset password permission
 
 **OpenLDAP ACL**:
+
 ```ldif
 access to attrs=userPassword
     by dn="cn=password-reset,dc=example,dc=com" write
@@ -639,6 +647,7 @@ access to attrs=userPassword
 ```
 
 **Active Directory**:
+
 ```powershell
 # Grant "Reset Password" permission
 $user = Get-ADUser -Identity "password-reset"
@@ -802,6 +811,7 @@ WantedBy=multi-user.target
 ```
 
 View logs:
+
 ```bash
 journalctl -u ldap-passwd -f
 ```
@@ -819,19 +829,21 @@ kubectl logs -n identity deployment/ldap-passwd -f
 ### Metrics
 
 Application exposes standard HTTP metrics via reverse proxy logs:
+
 - Request count
 - Response times
 - Status codes
 - Client IPs
 
 **Prometheus + Grafana** (via nginx exporter):
+
 ```yaml
 # docker-compose.monitoring.yml
 services:
   nginx-exporter:
     image: nginx/nginx-prometheus-exporter:latest
     command:
-      - '-nginx.scrape-uri=http://nginx:8080/stub_status'
+      - "-nginx.scrape-uri=http://nginx:8080/stub_status"
     ports:
       - "9113:9113"
 ```
@@ -839,6 +851,7 @@ services:
 ### Alerting
 
 **Common alerts to configure**:
+
 - High error rate (5xx responses)
 - LDAP connection failures
 - SMTP delivery failures
@@ -870,11 +883,13 @@ kubectl rollout restart deployment/ldap-passwd -n identity
 ### Backup and Disaster Recovery
 
 **No persistent data** - Application state is fully ephemeral:
+
 - Password reset tokens stored in memory (expire automatically)
 - Configuration via environment variables
 - No database or filesystem persistence
 
 **Recovery steps**:
+
 1. Deploy new instance with same configuration
 2. Update DNS if needed
 3. Application is immediately ready
@@ -945,7 +960,7 @@ securityContext:
   allowPrivilegeEscalation: false
   capabilities:
     drop:
-    - ALL
+      - ALL
   seccompProfile:
     type: RuntimeDefault
 ```
@@ -953,6 +968,7 @@ securityContext:
 ### Security Headers
 
 Already configured in reverse proxy examples:
+
 - `Strict-Transport-Security` - Force HTTPS
 - `X-Frame-Options: DENY` - Prevent clickjacking
 - `X-Content-Type-Options: nosniff` - Prevent MIME sniffing
@@ -966,11 +982,13 @@ Already configured in reverse proxy examples:
 ### Application Won't Start
 
 **Check environment variables**:
+
 ```bash
 docker logs ldap-passwd 2>&1 | grep -i "error\|fatal\|missing"
 ```
 
 **Common issues**:
+
 - Missing required env vars (LDAP_SERVER, SMTP_HOST, etc.)
 - Invalid LDAP DN format
 - Port already in use
@@ -978,6 +996,7 @@ docker logs ldap-passwd 2>&1 | grep -i "error\|fatal\|missing"
 ### LDAP Connection Errors
 
 **Test LDAP connectivity**:
+
 ```bash
 # From container
 docker exec -it ldap-passwd sh
@@ -986,12 +1005,14 @@ ldapsearch -x -H $LDAP_SERVER -D "$LDAP_READONLY_USER" -w "$LDAP_READONLY_PASSWO
 ```
 
 **Common issues**:
+
 - Certificate validation failure (self-signed certs)
 - Firewall blocking port 636
 - Incorrect service account credentials
 - Wrong Base DN
 
 **Fix certificate issues**:
+
 ```bash
 # Add custom CA certificate
 docker run -v /path/to/ca-cert.crt:/etc/ssl/certs/custom-ca.crt:ro ...
@@ -1000,6 +1021,7 @@ docker run -v /path/to/ca-cert.crt:/etc/ssl/certs/custom-ca.crt:ro ...
 ### SMTP Delivery Failures
 
 **Test SMTP from container**:
+
 ```bash
 docker exec -it ldap-passwd sh
 apk add curl
@@ -1010,6 +1032,7 @@ curl -v --url "smtp://$SMTP_HOST:$SMTP_PORT" \
 ```
 
 **Common issues**:
+
 - SMTP authentication failure
 - Sender address not verified (SES, SendGrid)
 - Port 587/25 blocked by firewall
@@ -1018,11 +1041,13 @@ curl -v --url "smtp://$SMTP_HOST:$SMTP_PORT" \
 ### Rate Limiting Issues
 
 **Reset rate limit** (requires application restart):
+
 ```bash
 docker restart ldap-passwd
 ```
 
 **Adjust rate limits**:
+
 ```bash
 RESET_RATE_LIMIT_REQUESTS=10
 RESET_RATE_LIMIT_WINDOW_MINUTES=60
@@ -1031,6 +1056,7 @@ RESET_RATE_LIMIT_WINDOW_MINUTES=60
 ### Password Policy Errors
 
 **Verify policy settings**:
+
 ```bash
 docker exec ldap-passwd env | grep MIN_
 ```

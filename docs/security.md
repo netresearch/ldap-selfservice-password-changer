@@ -27,27 +27,30 @@
 
 ### Assets
 
-| Asset | Sensitivity | Protection |
-|-------|-------------|------------|
-| User passwords | **Critical** | Never stored, transmitted over TLS only |
-| LDAP credentials | **Critical** | Environment variables, never logged |
-| Reset tokens | **High** | Cryptographically random, single-use, time-limited |
-| User email addresses | **Medium** | Protected by rate limiting, no enumeration |
-| SMTP credentials | **Medium** | Environment variables, never logged |
+| Asset                | Sensitivity  | Protection                                         |
+| -------------------- | ------------ | -------------------------------------------------- |
+| User passwords       | **Critical** | Never stored, transmitted over TLS only            |
+| LDAP credentials     | **Critical** | Environment variables, never logged                |
+| Reset tokens         | **High**     | Cryptographically random, single-use, time-limited |
+| User email addresses | **Medium**   | Protected by rate limiting, no enumeration         |
+| SMTP credentials     | **Medium**   | Environment variables, never logged                |
 
 ### Threat Actors
 
 **External Attackers**:
+
 - **Motivation**: Account takeover, data breach, service disruption
 - **Capabilities**: Network access, automated tools, credential stuffing
 - **Mitigations**: Rate limiting, HTTPS, strong password policy
 
 **Malicious Insiders**:
+
 - **Motivation**: Privilege escalation, data theft
 - **Capabilities**: Network access, knowledge of infrastructure
 - **Mitigations**: Audit logging, least privilege service accounts
 
 **Accidental Misuse**:
+
 - **Motivation**: None (human error)
 - **Capabilities**: Legitimate access
 - **Mitigations**: Input validation, user-friendly error messages
@@ -55,9 +58,11 @@
 ### Attack Scenarios
 
 #### 1. Credential Brute Force
+
 **Attack**: Attacker tries multiple password combinations to gain access.
 
 **Mitigations**:
+
 - No login functionality - users authenticate via LDAP directly
 - Password change requires current password knowledge
 - LDAP server enforces account lockout policies
@@ -67,9 +72,11 @@
 ---
 
 #### 2. Password Reset Token Theft
+
 **Attack**: Attacker intercepts or guesses password reset tokens.
 
 **Mitigations**:
+
 - 256-bit cryptographically random tokens (2^256 possible values)
 - Tokens transmitted via email (out-of-band verification)
 - Single-use tokens deleted after consumption
@@ -79,6 +86,7 @@
 **Residual Risk**: Low - requires email compromise or timing attack
 
 **Risk Calculation**:
+
 ```
 Token entropy: 256 bits = 2^256 combinations
 Guessing rate: 1000 attempts/sec (aggressive)
@@ -88,9 +96,11 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 ---
 
 #### 3. Email Enumeration
+
 **Attack**: Attacker discovers valid email addresses by testing reset requests.
 
 **Mitigations**:
+
 - Always return success response regardless of email validity
 - Rate limiting prevents mass enumeration (3 requests/hour per IP)
 - No timing differences between valid/invalid emails
@@ -98,6 +108,7 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 **Residual Risk**: Medium - rate limiting can be circumvented with distributed IPs
 
 **Detection**: Monitor for:
+
 - High volume of reset requests from single IP
 - Pattern of sequential email tests
 - Requests from known bad actors (IP reputation)
@@ -105,9 +116,11 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 ---
 
 #### 4. Denial of Service (DoS)
+
 **Attack**: Overwhelm application with requests to disrupt availability.
 
 **Mitigations**:
+
 - Rate limiting per IP address (3 requests/hour for reset)
 - Reverse proxy rate limiting (recommended 10 req/sec globally)
 - Lightweight Go application with low resource footprint
@@ -116,6 +129,7 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 **Residual Risk**: Medium - DDoS requires network-level mitigation
 
 **Recommendations**:
+
 - Deploy behind CDN (Cloudflare, Fastly)
 - Configure reverse proxy connection limits
 - Implement IP reputation filtering
@@ -123,9 +137,11 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 ---
 
 #### 5. Man-in-the-Middle (MITM)
+
 **Attack**: Intercept traffic to steal credentials or tokens.
 
 **Mitigations**:
+
 - HTTPS enforced via reverse proxy
 - HSTS headers prevent protocol downgrade
 - LDAPS (TLS) for all LDAP communications
@@ -136,9 +152,11 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 ---
 
 #### 6. Cross-Site Scripting (XSS)
+
 **Attack**: Inject malicious scripts to steal session data or credentials.
 
 **Mitigations**:
+
 - No session cookies (stateless application)
 - Content Security Policy headers (via reverse proxy)
 - Go's `html/template` package auto-escapes output
@@ -149,9 +167,11 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 ---
 
 #### 7. LDAP Injection
+
 **Attack**: Manipulate LDAP queries through malicious input.
 
 **Mitigations**:
+
 - `simple-ldap-go` library escapes all user inputs
 - Username/email validated before LDAP queries
 - No dynamic filter construction from user input
@@ -159,6 +179,7 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 **Residual Risk**: Very Low - library handles escaping
 
 **Example Attack (Prevented)**:
+
 ```
 Input: user@example.com)(uid=*
 Query: (&(mail=user@example.com)(uid=*))(objectClass=person))
@@ -168,9 +189,11 @@ Result: Library escapes parentheses, preventing injection
 ---
 
 #### 8. Privilege Escalation
+
 **Attack**: Normal user gains admin privileges or changes others' passwords.
 
 **Mitigations**:
+
 - Password change requires current password (self-service only)
 - Password reset requires token from user's email
 - No admin interface or elevated privileges
@@ -181,9 +204,11 @@ Result: Library escapes parentheses, preventing injection
 ---
 
 #### 9. Token Replay Attack
+
 **Attack**: Reuse captured reset token to change password multiple times.
 
 **Mitigations**:
+
 - Tokens are single-use (deleted after consumption)
 - Token validation checks expiration before use
 - No token persistence across restarts (in-memory only)
@@ -193,9 +218,11 @@ Result: Library escapes parentheses, preventing injection
 ---
 
 #### 10. Information Disclosure
+
 **Attack**: Extract sensitive information from error messages or logs.
 
 **Mitigations**:
+
 - Generic error messages to users ("An error occurred")
 - Detailed errors only in server logs (not exposed to client)
 - No password or token values in logs
@@ -210,18 +237,21 @@ Result: Library escapes parentheses, preventing injection
 ### Authentication and Authorization
 
 **Password Change Flow**:
+
 1. User provides username, current password, new password
 2. Application authenticates against LDAP using current password
 3. If auth succeeds, password changed via LDAP modify operation
 4. LDAP enforces password policy and access control
 
 **Security Properties**:
+
 - ✅ No password storage in application
 - ✅ Authentication delegated to LDAP
 - ✅ Authorization enforced by LDAP ACLs
 - ✅ Passwords transmitted over TLS only
 
 **Password Reset Flow**:
+
 1. User provides email address
 2. Application rate-limits request (3/hour per IP)
 3. Lookup user by email in LDAP (read-only account)
@@ -234,6 +264,7 @@ Result: Library escapes parentheses, preventing injection
 10. Delete token (single-use)
 
 **Security Properties**:
+
 - ✅ Out-of-band verification via email
 - ✅ Cryptographically random tokens
 - ✅ Single-use tokens
@@ -244,6 +275,7 @@ Result: Library escapes parentheses, preventing injection
 ### Cryptography
 
 **Password Reset Tokens**:
+
 ```go
 // internal/resettoken/token.go
 func GenerateToken() (string, error) {
@@ -257,12 +289,14 @@ func GenerateToken() (string, error) {
 ```
 
 **Properties**:
+
 - ✅ `crypto/rand` provides cryptographically secure randomness
 - ✅ 256-bit entropy (2^256 ≈ 10^77 combinations)
 - ✅ URL-safe base64 encoding (43 characters)
 - ✅ No predictable patterns
 
 **Token Storage**:
+
 ```go
 // internal/resettoken/store.go
 type TokenData struct {
@@ -275,6 +309,7 @@ tokens map[string]TokenData
 ```
 
 **Properties**:
+
 - ✅ In-memory only (no persistence)
 - ✅ Automatic expiration cleanup
 - ✅ Thread-safe with RWMutex
@@ -283,6 +318,7 @@ tokens map[string]TokenData
 ### Input Validation
 
 **Password Validation** (`internal/validators`):
+
 ```go
 // All validators return error if validation fails
 ValidateMinLength(password string, minLength int) error
@@ -294,6 +330,7 @@ ValidateNoUsername(password, username string) error
 ```
 
 **Default Policy**:
+
 - Minimum length: 8 characters
 - Minimum numbers: 1
 - Minimum symbols: 1
@@ -302,12 +339,14 @@ ValidateNoUsername(password, username string) error
 - Username exclusion: enabled
 
 **Properties**:
+
 - ✅ Client-side validation (UX feedback)
 - ✅ Server-side validation (security enforcement)
 - ✅ Configurable via environment variables
 - ✅ 100% test coverage
 
 **Email Validation**:
+
 ```typescript
 // internal/web/static/js/validators.ts
 export const isValidEmail = (email: string): string => {
@@ -320,6 +359,7 @@ export const isValidEmail = (email: string): string => {
 ```
 
 **Properties**:
+
 - ✅ Client-side for UX
 - ✅ LDAP lookup provides server-side validation
 - ✅ Prevents injection via email field
@@ -327,6 +367,7 @@ export const isValidEmail = (email: string): string => {
 ### Rate Limiting
 
 **Implementation** (`internal/ratelimit`):
+
 ```go
 type Limiter struct {
     maxRequests int           // 3 (default)
@@ -343,12 +384,14 @@ func (l *Limiter) Allow(ip string) bool {
 ```
 
 **Configuration**:
+
 ```bash
 RESET_RATE_LIMIT_REQUESTS=3
 RESET_RATE_LIMIT_WINDOW_MINUTES=60
 ```
 
 **Properties**:
+
 - ✅ Per-IP rate limiting
 - ✅ Sliding window algorithm (more accurate than fixed window)
 - ✅ Automatic cleanup of expired entries
@@ -356,11 +399,13 @@ RESET_RATE_LIMIT_WINDOW_MINUTES=60
 - ✅ Memory-bounded (old entries cleaned)
 
 **Effectiveness**:
+
 - Prevents mass password reset abuse
 - Limits email enumeration attempts
 - Does not prevent distributed attacks (use reverse proxy for that)
 
 **Limitations**:
+
 - IP-based (can be circumvented with proxies/VPNs)
 - Shared IP (NAT) may affect legitimate users
 - Recommend: Combine with reverse proxy rate limiting
@@ -368,18 +413,21 @@ RESET_RATE_LIMIT_WINDOW_MINUTES=60
 ### Transport Security
 
 **HTTPS** (via reverse proxy):
+
 - TLS 1.2 minimum (TLS 1.3 recommended)
 - Strong cipher suites only
 - HSTS headers (`max-age=31536000; includeSubDomains`)
 - Certificate from trusted CA (Let's Encrypt recommended)
 
 **LDAPS**:
+
 - TLS encryption for all LDAP traffic
 - Certificate validation (system CA bundle)
 - Custom CA support for self-signed certs
 - No fallback to unencrypted LDAP
 
 **SMTP TLS**:
+
 - STARTTLS for email delivery
 - Opportunistic TLS (fails if unavailable)
 - No plain-text email transmission
@@ -387,6 +435,7 @@ RESET_RATE_LIMIT_WINDOW_MINUTES=60
 ### Secrets Management
 
 **Environment Variables**:
+
 ```bash
 # Sensitive values never hardcoded
 LDAP_READONLY_PASSWORD=secret
@@ -395,20 +444,22 @@ SMTP_PASSWORD=secret
 ```
 
 **Best Practices**:
+
 - ✅ `.env.local` gitignored
 - ✅ Never commit secrets to version control
 - ✅ Rotate credentials regularly
 - ✅ Use secret managers in production (Vault, AWS Secrets Manager)
 
 **Docker Secrets** (Swarm/Kubernetes):
+
 ```yaml
-environment:
-  LDAP_READONLY_PASSWORD_FILE=/run/secrets/ldap_password
+environment: LDAP_READONLY_PASSWORD_FILE=/run/secrets/ldap_password
 secrets:
   - ldap_password
 ```
 
 **Logging Safety**:
+
 ```go
 // Passwords and tokens never logged
 log.Printf("Password change for user: %s", username) // ✅ Safe
@@ -418,6 +469,7 @@ log.Printf("Password: %s", password) // ❌ Never done
 ### Container Security
 
 **Dockerfile** (multi-stage build):
+
 ```dockerfile
 # Final stage: scratch (minimal attack surface)
 FROM scratch AS runner
@@ -430,6 +482,7 @@ USER 65534:65534
 ```
 
 **Properties**:
+
 - ✅ Minimal attack surface (only Go binary + CA certs)
 - ✅ Non-root execution (UID 65534 = nobody)
 - ✅ No shell (prevents shell injection)
@@ -437,6 +490,7 @@ USER 65534:65534
 - ✅ Immutable (read-only filesystem recommended)
 
 **Kubernetes Security Context**:
+
 ```yaml
 securityContext:
   runAsNonRoot: true
@@ -445,12 +499,13 @@ securityContext:
   allowPrivilegeEscalation: false
   capabilities:
     drop:
-    - ALL
+      - ALL
 ```
 
 ### HTTP Security Headers
 
 **Configured via reverse proxy**:
+
 ```nginx
 # Prevent clickjacking
 add_header X-Frame-Options "DENY" always;
@@ -469,6 +524,7 @@ add_header Referrer-Policy "strict-origin-when-cross-origin" always;
 ```
 
 **Content Security Policy** (optional):
+
 ```nginx
 # Restrict resource loading
 add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data:; font-src 'self'; connect-src 'self'; frame-ancestors 'none'" always;
@@ -483,6 +539,7 @@ add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style
 **Risk**: Users access resources or perform actions without authorization.
 
 **Mitigations**:
+
 - ✅ Password change requires current password (can't change others' passwords)
 - ✅ Password reset requires token from user's email
 - ✅ LDAP enforces access control policies
@@ -498,6 +555,7 @@ add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style
 **Risk**: Sensitive data exposed due to weak cryptography.
 
 **Mitigations**:
+
 - ✅ Passwords never stored (only transmitted to LDAP over TLS)
 - ✅ Reset tokens use `crypto/rand` (256-bit entropy)
 - ✅ HTTPS required for all web traffic
@@ -513,6 +571,7 @@ add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style
 **Risk**: Malicious input executed as code or commands.
 
 **Mitigations**:
+
 - ✅ LDAP queries use parameterized library (simple-ldap-go)
 - ✅ HTML templates auto-escape output (Go html/template)
 - ✅ Input validation on all user inputs
@@ -528,6 +587,7 @@ add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style
 **Risk**: Flawed design enables attacks.
 
 **Mitigations**:
+
 - ✅ Threat modeling performed
 - ✅ Security controls designed into architecture
 - ✅ Rate limiting prevents abuse
@@ -543,6 +603,7 @@ add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style
 **Risk**: Insecure default settings or incomplete configurations.
 
 **Mitigations**:
+
 - ✅ Secure defaults (LDAPS, rate limiting enabled)
 - ✅ Configuration validation on startup
 - ✅ No debug mode in production
@@ -550,6 +611,7 @@ add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style
 - ✅ Security headers configured
 
 **Recommendations**:
+
 - ⚠️ Ensure reverse proxy properly configured
 - ⚠️ Rotate secrets regularly
 - ⚠️ Monitor for configuration drift
@@ -563,12 +625,14 @@ add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style
 **Risk**: Using libraries with known vulnerabilities.
 
 **Mitigations**:
+
 - ✅ Minimal dependencies (only 3 direct Go deps)
 - ✅ Pinned Docker base images with SHA256
 - ✅ Regular dependency updates
 - ✅ Automated security scanning (Dependabot)
 
 **Dependencies**:
+
 ```go
 github.com/gofiber/fiber/v2 v2.52.5
 github.com/joho/godotenv v1.5.1
@@ -576,6 +640,7 @@ github.com/netresearch/simple-ldap-go v1.0.0
 ```
 
 **Recommendations**:
+
 - ⚠️ Monitor security advisories
 - ⚠️ Update dependencies monthly
 - ⚠️ Run `go mod tidy` and rebuild regularly
@@ -589,6 +654,7 @@ github.com/netresearch/simple-ldap-go v1.0.0
 **Risk**: Weak authentication or session management.
 
 **Mitigations**:
+
 - ✅ No session management (stateless application)
 - ✅ No cookies (no session hijacking risk)
 - ✅ LDAP handles authentication
@@ -604,6 +670,7 @@ github.com/netresearch/simple-ldap-go v1.0.0
 **Risk**: Unverified updates or deserialization attacks.
 
 **Mitigations**:
+
 - ✅ Docker images signed and published to GitHub Container Registry
 - ✅ No deserialization of untrusted data
 - ✅ No file uploads
@@ -618,6 +685,7 @@ github.com/netresearch/simple-ldap-go v1.0.0
 **Risk**: Attacks go undetected due to insufficient logging.
 
 **Current State**:
+
 - ✅ Password change attempts logged (username, IP)
 - ✅ Reset requests logged (email, IP)
 - ✅ LDAP errors logged
@@ -625,6 +693,7 @@ github.com/netresearch/simple-ldap-go v1.0.0
 - ⚠️ No alerting on suspicious patterns
 
 **Recommendations**:
+
 - Configure centralized logging (Loki, Elasticsearch)
 - Alert on high reset request volume
 - Alert on LDAP authentication failures
@@ -639,6 +708,7 @@ github.com/netresearch/simple-ldap-go v1.0.0
 **Risk**: Application makes unauthorized requests to internal resources.
 
 **Mitigations**:
+
 - ✅ No user-controlled URLs
 - ✅ LDAP server configured via environment (not user input)
 - ✅ SMTP server configured via environment
@@ -654,6 +724,7 @@ github.com/netresearch/simple-ldap-go v1.0.0
 ### Static Analysis
 
 **Go**:
+
 ```bash
 # Security linting
 go install github.com/securego/gosec/v2/cmd/gosec@latest
@@ -665,6 +736,7 @@ govulncheck ./...
 ```
 
 **TypeScript**:
+
 ```bash
 # Audit dependencies
 pnpm audit
@@ -676,6 +748,7 @@ pnpm audit --fix
 ### Dynamic Analysis
 
 **DAST Scanning**:
+
 ```bash
 # OWASP ZAP
 docker run -t zaproxy/zap-stable zap-baseline.py -t https://passwd.example.com
@@ -685,6 +758,7 @@ nikto -h https://passwd.example.com
 ```
 
 **Penetration Testing Checklist**:
+
 - [ ] SQL injection (N/A - no SQL)
 - [ ] LDAP injection (test with special chars)
 - [ ] XSS (test with `<script>alert(1)</script>`)
@@ -702,6 +776,7 @@ nikto -h https://passwd.example.com
 ### Vulnerability Scanning
 
 **Container Scanning**:
+
 ```bash
 # Trivy
 docker run aquasec/trivy image ghcr.io/netresearch/ldap-selfservice-password-changer:latest
@@ -711,6 +786,7 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 ```
 
 **Expected Results**:
+
 - Zero high/critical vulnerabilities in application code
 - Possible low-severity findings in base images (acceptable)
 
@@ -721,6 +797,7 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 ### Deployment Security
 
 **Pre-Deployment**:
+
 - [ ] All environment variables configured
 - [ ] Secrets not committed to version control
 - [ ] LDAPS enabled and tested
@@ -731,6 +808,7 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 - [ ] Certificates valid and not expiring soon
 
 **Infrastructure**:
+
 - [ ] HTTPS enforced via reverse proxy
 - [ ] Security headers configured
 - [ ] Firewall rules allow only necessary ports
@@ -741,6 +819,7 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 - [ ] Monitoring and alerting configured
 
 **Post-Deployment**:
+
 - [ ] Health checks passing
 - [ ] SSL Labs grade A or higher
 - [ ] Security headers verified (securityheaders.com)
@@ -753,18 +832,21 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 ### Maintenance Security
 
 **Monthly**:
+
 - [ ] Review access logs for anomalies
 - [ ] Check for dependency updates
 - [ ] Verify certificates not expiring soon
 - [ ] Review rate limit effectiveness
 
 **Quarterly**:
+
 - [ ] Rotate LDAP service account passwords
 - [ ] Rotate SMTP credentials
 - [ ] Review and update security configurations
 - [ ] Perform vulnerability scanning
 
 **Annually**:
+
 - [ ] Security audit / penetration test
 - [ ] Review threat model
 - [ ] Update incident response procedures
@@ -777,18 +859,21 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 ### Security Event Categories
 
 **High Severity**:
+
 - LDAP credential compromise
 - Container escape
 - Unauthorized password changes
 - Mass password reset abuse
 
 **Medium Severity**:
+
 - Rate limit bypass
 - Email enumeration
 - SMTP credential compromise
 - Certificate expiration
 
 **Low Severity**:
+
 - Failed login attempts
 - Invalid reset requests
 - Configuration errors
@@ -796,6 +881,7 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 ### Response Procedures
 
 **LDAP Credential Compromise**:
+
 1. Immediately rotate compromised credentials
 2. Review logs for unauthorized password changes
 3. Notify affected users
@@ -803,6 +889,7 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 5. Investigate root cause
 
 **Mass Password Reset Abuse**:
+
 1. Identify attacking IP addresses
 2. Block IPs at firewall/reverse proxy level
 3. Review rate limiting configuration
@@ -810,6 +897,7 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 5. Monitor for distributed attacks
 
 **Certificate Expiration**:
+
 1. Renew certificates immediately
 2. Deploy new certificates
 3. Verify HTTPS and LDAPS connectivity
@@ -822,11 +910,13 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 ### GDPR (EU)
 
 **Data Processed**:
+
 - User email addresses (for password reset)
 - Client IP addresses (for rate limiting)
 - Password change logs (username, timestamp, IP)
 
 **Compliance**:
+
 - ✅ No persistent storage of personal data
 - ✅ Data minimization (only necessary data collected)
 - ✅ No data sharing with third parties
@@ -838,6 +928,7 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 **Applicable If**: Application used for healthcare user accounts
 
 **Requirements**:
+
 - ✅ Access controls (LDAP enforced)
 - ✅ Audit controls (logging)
 - ✅ Integrity controls (validation)
@@ -851,6 +942,7 @@ grype ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 ### SOC 2
 
 **Control Objectives**:
+
 - ✅ CC6.1: Logical access controls implemented
 - ✅ CC6.6: Encryption in transit (HTTPS, LDAPS)
 - ✅ CC7.2: Vulnerability management (scanning, patching)
