@@ -4,11 +4,15 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"time"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/email"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpc"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/static"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/templates"
@@ -17,10 +21,47 @@ import (
 func main() {
 	opts := options.Parse()
 
-	rpcHandler, err := rpc.New(opts)
-	if err != nil {
-		slog.Error("initialization failed", "error", err)
-		os.Exit(1)
+	var rpcHandler *rpc.Handler
+	var err error
+
+	// Initialize password reset services if enabled
+	if opts.PasswordResetEnabled {
+		slog.Info("password reset feature enabled")
+
+		// Initialize token store
+		tokenStore := resettoken.NewStore()
+		tokenStore.StartCleanup(5 * time.Minute)
+
+		// Initialize email service
+		emailConfig := email.Config{
+			SMTPHost:     opts.SMTPHost,
+			SMTPPort:     int(opts.SMTPPort),
+			SMTPUsername: opts.SMTPUsername,
+			SMTPPassword: opts.SMTPPassword,
+			FromAddress:  opts.SMTPFromAddress,
+			BaseURL:      opts.AppBaseURL,
+		}
+		emailService := email.NewService(emailConfig)
+
+		// Initialize rate limiter
+		rateLimiter := ratelimit.NewLimiter(
+			int(opts.ResetRateLimitRequests),
+			time.Duration(opts.ResetRateLimitWindowMinutes)*time.Minute,
+		)
+
+		// Create handler with password reset services
+		rpcHandler, err = rpc.NewWithServices(opts, tokenStore, emailService, rateLimiter)
+		if err != nil {
+			slog.Error("initialization failed", "error", err)
+			os.Exit(1)
+		}
+	} else {
+		// Create handler without password reset services
+		rpcHandler, err = rpc.New(opts)
+		if err != nil {
+			slog.Error("initialization failed", "error", err)
+			os.Exit(1)
+		}
 	}
 
 	index, err := templates.RenderIndex(opts)
@@ -47,6 +88,31 @@ func main() {
 		c.Set("Content-Type", fiber.MIMETextHTMLCharsetUTF8)
 		return c.Send(index)
 	})
+
+	// Password reset pages (only if feature is enabled)
+	if opts.PasswordResetEnabled {
+		forgotPasswordPage, err := templates.RenderForgotPassword()
+		if err != nil {
+			slog.Error("failed to render forgot password page", "error", err)
+			os.Exit(1)
+		}
+
+		resetPasswordPage, err := templates.RenderResetPassword(opts)
+		if err != nil {
+			slog.Error("failed to render reset password page", "error", err)
+			os.Exit(1)
+		}
+
+		app.Get("/forgot-password", func(c *fiber.Ctx) error {
+			c.Set("Content-Type", fiber.MIMETextHTMLCharsetUTF8)
+			return c.Send(forgotPasswordPage)
+		})
+
+		app.Get("/reset-password", func(c *fiber.Ctx) error {
+			c.Set("Content-Type", fiber.MIMETextHTMLCharsetUTF8)
+			return c.Send(resetPasswordPage)
+		})
+	}
 
 	app.Post("/api/rpc", rpcHandler.Handle)
 
