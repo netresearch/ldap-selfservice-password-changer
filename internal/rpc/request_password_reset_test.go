@@ -7,6 +7,7 @@ import (
 
 	ldap "github.com/netresearch/simple-ldap-go"
 
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 )
@@ -66,6 +67,9 @@ func TestRequestPasswordResetValidEmail(t *testing.T) {
 		tokenStore:   tokenStore,
 		emailService: mockEmail,
 		rateLimiter:  limiter,
+		opts: &options.Opts{
+			ResetTokenExpiryMinutes: 15,
+		},
 	}
 
 	// Test valid email request
@@ -120,6 +124,9 @@ func TestRequestPasswordResetInvalidEmail(t *testing.T) {
 		tokenStore:   tokenStore,
 		emailService: mockEmail,
 		rateLimiter:  limiter,
+		opts: &options.Opts{
+			ResetTokenExpiryMinutes: 15,
+		},
 	}
 
 	tests := []struct {
@@ -166,6 +173,9 @@ func TestRequestPasswordResetRateLimit(t *testing.T) {
 		tokenStore:   tokenStore,
 		emailService: mockEmail,
 		rateLimiter:  limiter,
+		opts: &options.Opts{
+			ResetTokenExpiryMinutes: 15,
+		},
 	}
 
 	email := "ratelimit@example.com"
@@ -215,6 +225,9 @@ func TestRequestPasswordResetInvalidArgumentCount(t *testing.T) {
 		tokenStore:   tokenStore,
 		emailService: mockEmail,
 		rateLimiter:  limiter,
+		opts: &options.Opts{
+			ResetTokenExpiryMinutes: 15,
+		},
 	}
 
 	tests := []struct {
@@ -252,7 +265,9 @@ func TestRequestPasswordResetTokenExpiration(t *testing.T) {
 		tokenStore:   tokenStore,
 		emailService: mockEmail,
 		rateLimiter:  limiter,
-		// Would need to inject tokenExpiryMinutes config
+		opts: &options.Opts{
+			ResetTokenExpiryMinutes: 15,
+		},
 	}
 
 	params := []string{"test@example.com"}
@@ -292,6 +307,9 @@ func TestRequestPasswordResetEmailFailure(t *testing.T) {
 		tokenStore:   tokenStore,
 		emailService: mockEmail,
 		rateLimiter:  limiter,
+		opts: &options.Opts{
+			ResetTokenExpiryMinutes: 15,
+		},
 	}
 
 	params := []string{"test@example.com"}
