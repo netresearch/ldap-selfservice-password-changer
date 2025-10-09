@@ -41,7 +41,8 @@ export const init = (opts: Opts) => {
   const token = urlParams.get("token");
 
   if (!token) {
-    submitErrorContainer.innerText = "Invalid or missing reset token. Please request a new password reset link.";
+    submitErrorContainer.innerText =
+      "Unable to process your request. Please try again or request a new password reset link.";
     submitButton.disabled = true;
     return;
   }
