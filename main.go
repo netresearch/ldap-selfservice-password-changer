@@ -84,7 +84,7 @@ func main() {
 	app.Use(helmet.New(helmet.Config{
 		ContentSecurityPolicy: "default-src 'self'; " +
 			"script-src 'self'; " +
-			"style-src 'self' 'unsafe-inline'; " + // Tailwind requires inline styles
+			"style-src 'self'; " + // Tailwind styles served as external CSS
 			"img-src 'self' data:; " +
 			"font-src 'self'; " +
 			"connect-src 'self'; " +
