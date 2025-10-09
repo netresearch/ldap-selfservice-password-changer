@@ -740,13 +740,195 @@ export default defineConfig({
 - Rely on production LDAP for tests
 - Create brittle selectors (use data-purpose attributes)
 
+## Feature-Specific Testing
+
+### Density Toggle Manual Testing
+
+The adaptive density toggle feature requires comprehensive manual testing across different devices and system preferences.
+
+#### Test Environment Setup
+
+1. Navigate to application URL
+2. Open browser DevTools (F12)
+3. Have access to system display settings for preference testing
+
+#### Core Functionality Tests
+
+**Test 1: Button Cycling**
+
+Steps:
+
+1. Click density toggle button
+2. Verify icon changes from SparklesIcon (auto) → Squares2x2Icon (comfortable)
+3. Click again → SquaresPlusIcon (compact)
+4. Click again → SparklesIcon (auto)
+
+Expected: Icons cycle correctly, button stays at fixed position
+
+**Test 2: Label Visibility**
+
+Steps:
+
+1. Set density to comfortable mode
+2. Observe all form field labels visible
+3. Set density to compact mode
+4. Verify labels are visually hidden but present in DOM (sr-only)
+
+Expected: Comfortable shows labels, compact hides visually but keeps accessible
+
+**Test 3: Help Button Visibility**
+
+Steps:
+
+1. Set density to comfortable mode → help buttons visible
+2. Set density to compact mode → help buttons hidden
+
+Expected: Help buttons toggle with density mode
+
+#### Auto Mode Detection Tests
+
+**Test 4: Touch Device Detection**
+
+Steps:
+
+1. Set density to auto mode
+2. Open DevTools Device Toolbar (Ctrl+Shift+M)
+3. Select mobile device (e.g., iPhone 12)
+4. Reload page or toggle off/on auto mode
+
+Expected: Auto mode detects touch device and applies comfortable state
+
+**Test 5: High Contrast Detection**
+
+Steps:
+
+1. Enable high contrast mode in OS
+   - Windows: Settings → Accessibility → High Contrast
+   - macOS: System Settings → Accessibility → Display → Increase Contrast
+2. Reload page with density set to auto
+3. Verify comfortable mode applied
+
+Expected: Auto mode detects high contrast preference and applies comfortable state
+
+**Test 6: Desktop with Mouse**
+
+Steps:
+
+1. Set density to auto mode
+2. Use desktop browser with mouse (not touch)
+3. Disable high contrast mode in OS
+4. Reload page or toggle off/on auto mode
+
+Expected: Auto mode detects mouse input + normal contrast and applies compact state
+
+#### Reactive Behavior Tests
+
+**Test 7: Reactive Preference Monitoring**
+
+Steps:
+
+1. Set density to auto mode in desktop browser
+2. Open DevTools Device Toolbar (Ctrl+Shift+M)
+3. Toggle between desktop and mobile device without reloading
+4. Observe density state changes
+
+Expected: Switching to mobile changes to comfortable, switching back to desktop changes to compact (no page reload required)
+
+**Test 8: localStorage Persistence**
+
+Steps:
+
+1. Set density to comfortable mode
+2. Reload page (F5)
+3. Verify density remains comfortable
+4. Repeat for compact and auto modes
+
+Expected: Selected density mode persists across page reloads
+
+#### Accessibility Tests
+
+**Test 9: ARIA Labels**
+
+Steps:
+
+1. Cycle through all three density modes
+2. Check aria-label attribute on density button after each click
+
+Expected ARIA Labels:
+
+- Auto: "Density: Auto density (follows system preferences). Click to switch to Comfortable mode"
+- Comfortable: "Density: Comfortable mode (WCAG AAA, spacious layout). Click to switch to Compact mode"
+- Compact: "Density: Compact mode (WCAG AA, simplified layout). Click to switch to Auto density"
+
+**Test 10: Screen Reader Announcements**
+
+Steps:
+
+1. Use screen reader (NVDA/JAWS/VoiceOver)
+2. Navigate to density button
+3. Verify current mode and next action announced
+
+Expected: Screen reader announces current mode and what clicking will do
+
+#### System Preference Tests
+
+**Test 11: Reduced Motion Preference**
+
+Steps:
+
+1. Enable reduced motion in OS
+   - Windows: Settings → Accessibility → Visual effects → Animation effects (OFF)
+   - macOS: System Settings → Accessibility → Display → Reduce motion
+2. Reload page
+3. Interact with toggles and form elements
+
+Expected: All animations disabled (duration: 0.01ms), transitions instant
+
+**Test 12: Low Contrast Preference**
+
+Steps:
+
+1. Enable low contrast mode (if available in OS)
+2. Reload page
+3. Observe text and background colors
+
+Expected: Reduced contrast colors applied (lighter text, softer backgrounds)
+
+#### WCAG 2.2 Compliance Verification
+
+**Comfortable Mode (AAA)**
+
+- ✅ 1.4.6 Contrast (Enhanced): 7:1 contrast ratio for text
+- ✅ 2.5.5 Target Size (Enhanced): 44×44px minimum touch targets
+- ✅ 1.4.12 Text Spacing: Generous padding and line-height
+- ✅ 1.3.1 Info and Relationships: All labels visible
+
+**Compact Mode (AA)**
+
+- ✅ 1.4.3 Contrast (Minimum): 4.5:1 contrast ratio for text
+- ✅ 2.5.8 Target Size (Minimum): 36×36px minimum touch targets
+- ✅ 1.3.1 Info and Relationships: Labels accessible via sr-only
+- ✅ 4.1.2 Name, Role, Value: Proper ARIA labels
+
+**System Preference Support**
+
+- ✅ 1.4.6 Contrast (Enhanced): prefers-contrast:more supported
+- ✅ 2.3.3 Animation from Interactions: prefers-reduced-motion supported
+- ✅ 1.4.10 Reflow: Responsive design maintained
+
+#### Code References
+
+- TypeScript Source: `internal/web/static/js/app.ts:79-169`
+- CSS Variants: `internal/web/tailwind.css:26-71`
+- HTML Template: `internal/web/templates/index.html:354-376`
+
 ## Related Documentation
 
 - [API Reference](api-reference.md) - API contracts for integration tests
-- [Architecture Patterns](architecture-patterns.md) - Testability considerations
+- [Accessibility Guide](accessibility.md) - WCAG compliance details
 - [Development Guide](development-guide.md) - Test execution workflows
-- [Component Reference](component-reference.md) - Component interfaces for mocking
+- [Architecture](architecture.md) - System design and testability considerations
 
 ---
 
-_Generated by /sc:index on 2025-10-04_
+_Last updated: 2025-10-09_

@@ -34,8 +34,31 @@ Testing strategies and recommendations:
 - Unit testing (Go and TypeScript)
 - Integration testing
 - E2E testing with Playwright
+- Feature-specific testing (density toggle)
 - Test organization
 - Coverage analysis
+
+### [Onboarding Guide](onboarding.md)
+
+Progressive 5-day learning path for new developers:
+
+- Day-by-day onboarding checklist
+- Prerequisites and setup verification
+- Code structure exploration
+- First contribution guidance
+- Knowledge checkpoints
+- Role-specific learning paths
+
+### [Documentation Maintenance](maintenance.md)
+
+Documentation update workflows and maintenance procedures:
+
+- When to update documentation
+- Documentation update workflows
+- Automated regeneration process
+- Quality checklists
+- File-specific maintenance guidance
+- Maintenance schedules
 
 ### [Accessibility Guide](accessibility.md)
 
@@ -100,10 +123,11 @@ Design decisions and their rationale:
 
 ### Developers
 
-1. **New to the project?** Start with [Development Guide: Initial Setup](development-guide.md#initial-setup)
-2. **Understanding the code?** See [Code Structure Reference](code-structure.md)
-3. **Need API details?** Check [API Reference](api-reference.md)
-4. **Writing tests?** See [Testing Guide](testing-guide.md)
+1. **New to the project?** Follow the [Onboarding Guide](onboarding.md) 5-day learning path
+2. **Quick setup?** See [Development Guide: Initial Setup](development-guide.md#initial-setup)
+3. **Understanding the code?** Check [Code Structure Reference](code-structure.md)
+4. **Need API details?** Review [API Reference](api-reference.md)
+5. **Writing tests?** See [Testing Guide](testing-guide.md)
 
 ### DevOps/SRE
 
