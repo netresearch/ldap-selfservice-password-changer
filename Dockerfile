@@ -15,7 +15,7 @@ COPY internal/web/ ./internal/web/
 
 RUN pnpm build:assets
 
-FROM golang:1.25-alpine@sha256:b6ed3fd0452c0e9bcdef5597f29cc1418f61672e9d3a2f55bf02e7222c014abd AS backend-builder
+FROM golang:1.25-alpine@sha256:182059d7dae0e1dfe222037d14b586ebece3ebf9a873a0fe1cc32e53dbea04e0 AS backend-builder
 WORKDIR /build
 
 # Copy dependency files
