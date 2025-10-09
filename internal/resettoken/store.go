@@ -6,6 +6,10 @@ import (
 	"time"
 )
 
+// maxCapacity is the maximum number of tokens that can be stored simultaneously.
+// This prevents unbounded memory growth from DoS attacks.
+const maxCapacity = 10000
+
 // ResetToken represents a password reset token with associated metadata.
 type ResetToken struct {
 	Token            string    // The unique token string
@@ -31,7 +35,9 @@ func NewStore() *Store {
 }
 
 // Store adds a new token to the store.
-// Returns an error if a token with the same token string already exists.
+// Returns an error if a token with the same token string already exists or if capacity is reached.
+// If at capacity, attempts to cleanup expired tokens before failing.
+// NEVER evicts non-expired tokens (fail-closed behavior).
 func (s *Store) Store(token *ResetToken) error {
 	s.mu.Lock()
 	defer s.mu.Unlock()
@@ -39,6 +45,20 @@ func (s *Store) Store(token *ResetToken) error {
 	// Check for duplicate token
 	if _, exists := s.tokens[token.Token]; exists {
 		return fmt.Errorf("token already exists: %s", token.Token)
+	}
+
+	// Check capacity BEFORE storing
+	if len(s.tokens) >= maxCapacity {
+		// Try to cleanup expired tokens to make room
+		count := s.cleanupExpiredLocked()
+
+		// If still at capacity after cleanup, fail closed
+		if len(s.tokens) >= maxCapacity {
+			return fmt.Errorf("token store at capacity (%d tokens), please try again later", maxCapacity)
+		}
+
+		// Cleanup freed space, log for monitoring
+		_ = count
 	}
 
 	s.tokens[token.Token] = token
@@ -89,7 +109,12 @@ func (s *Store) Delete(tokenString string) error {
 func (s *Store) CleanupExpired() int {
 	s.mu.Lock()
 	defer s.mu.Unlock()
+	return s.cleanupExpiredLocked()
+}
 
+// cleanupExpiredLocked is the internal cleanup implementation.
+// MUST be called with s.mu held (Lock, not RLock).
+func (s *Store) cleanupExpiredLocked() int {
 	count := 0
 	for tokenString, token := range s.tokens {
 		if token.IsExpired() {
@@ -138,4 +163,12 @@ func (s *Store) Count() int {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
 	return len(s.tokens)
+}
+
+// IsFull returns true if the store is at maximum capacity.
+// Useful for monitoring and capacity alerts.
+func (s *Store) IsFull() bool {
+	s.mu.RLock()
+	defer s.mu.RUnlock()
+	return len(s.tokens) >= maxCapacity
 }

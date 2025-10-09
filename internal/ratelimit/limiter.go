@@ -5,30 +5,42 @@ import (
 	"time"
 )
 
+// maxIdentifiers is the default maximum number of identifiers that can be tracked simultaneously.
+// This prevents unbounded memory growth from DoS attacks.
+const maxIdentifiers = 10000
+
 // Entry represents rate limit tracking for a single identifier.
 type Entry struct {
 	timestamps []time.Time // Timestamps of recent requests
 }
 
-// Limiter implements a sliding window rate limiter.
+// Limiter implements a sliding window rate limiter with capacity limits.
 type Limiter struct {
-	mu          sync.RWMutex
-	entries     map[string]*Entry
-	maxRequests int           // Maximum requests allowed in window
-	window      time.Duration // Time window for rate limiting
+	mu            sync.RWMutex
+	entries       map[string]*Entry
+	maxRequests   int           // Maximum requests allowed in window
+	window        time.Duration // Time window for rate limiting
+	maxIdentifiers int           // Maximum identifiers to track (capacity limit)
 }
 
-// NewLimiter creates a new rate limiter with the specified limits.
+// NewLimiter creates a new rate limiter with the specified limits and default capacity.
 func NewLimiter(maxRequests int, window time.Duration) *Limiter {
+	return NewLimiterWithCapacity(maxRequests, window, maxIdentifiers)
+}
+
+// NewLimiterWithCapacity creates a new rate limiter with specified limits and capacity.
+func NewLimiterWithCapacity(maxRequests int, window time.Duration, capacity int) *Limiter {
 	return &Limiter{
-		entries:     make(map[string]*Entry),
-		maxRequests: maxRequests,
-		window:      window,
+		entries:        make(map[string]*Entry),
+		maxRequests:    maxRequests,
+		window:         window,
+		maxIdentifiers: capacity,
 	}
 }
 
 // AllowRequest checks if a request is allowed for the given identifier.
-// Returns true if allowed, false if rate limit exceeded.
+// Returns true if allowed, false if rate limit exceeded or capacity reached.
+// If at capacity, attempts to cleanup expired entries before failing (fail-closed).
 func (l *Limiter) AllowRequest(identifier string) bool {
 	l.mu.Lock()
 	defer l.mu.Unlock()
@@ -39,6 +51,17 @@ func (l *Limiter) AllowRequest(identifier string) bool {
 	// Get or create entry for this identifier
 	entry, exists := l.entries[identifier]
 	if !exists {
+		// Check capacity BEFORE creating new entry
+		if len(l.entries) >= l.maxIdentifiers {
+			// Try to cleanup expired entries to make room
+			l.cleanupExpiredLocked(now, cutoff)
+
+			// If still at capacity, fail closed
+			if len(l.entries) >= l.maxIdentifiers {
+				return false // System under heavy load
+			}
+		}
+
 		entry = &Entry{
 			timestamps: []time.Time{},
 		}
@@ -72,6 +95,12 @@ func (l *Limiter) CleanupExpired() int {
 
 	now := time.Now()
 	cutoff := now.Add(-l.window)
+	return l.cleanupExpiredLocked(now, cutoff)
+}
+
+// cleanupExpiredLocked is the internal cleanup implementation.
+// MUST be called with l.mu held (Lock, not RLock).
+func (l *Limiter) cleanupExpiredLocked(now, cutoff time.Time) int {
 	count := 0
 
 	for identifier, entry := range l.entries {
@@ -125,4 +154,12 @@ func (l *Limiter) Count() int {
 	l.mu.RLock()
 	defer l.mu.RUnlock()
 	return len(l.entries)
+}
+
+// IsFull returns true if the limiter is at maximum capacity.
+// Useful for monitoring and capacity alerts.
+func (l *Limiter) IsFull() bool {
+	l.mu.RLock()
+	defer l.mu.RUnlock()
+	return len(l.entries) >= l.maxIdentifiers
 }
