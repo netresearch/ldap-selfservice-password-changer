@@ -187,14 +187,20 @@ export const toggleValidator = (validate: (v: string) => string, enabled: boolea
 
 /**
  * Validates that a field contains a valid email address format.
- * Uses a simple regex pattern to check for basic email structure.
+ * Uses a comprehensive regex pattern following RFC 5322 guidelines.
+ * Validates:
+ * - Local part: alphanumeric, dots, hyphens, underscores, plus signs
+ * - Domain: alphanumeric, dots, hyphens
+ * - TLD: 2-63 characters (e.g., .com, .museum)
  * @param v - The email value to validate
  * @returns Error message if invalid, empty string if valid
  * @example
  * isValidEmail("invalid"); // Returns: "The input must be a valid email address"
  * isValidEmail("user@example.com"); // Returns: ""
+ * isValidEmail("user+tag@sub.example.co.uk"); // Returns: ""
  */
 export const isValidEmail = (v: string) => {
-  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  // RFC 5322 compliant email regex (simplified but comprehensive)
+  const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,63}$/;
   return !emailRegex.test(v) ? "The input must be a valid email address" : "";
 };

@@ -1,6 +1,7 @@
 package resettoken
 
 import (
+	"strconv"
 	"sync"
 	"testing"
 	"time"
@@ -330,7 +331,7 @@ func TestConcurrentReadWrite(t *testing.T) {
 
 // Helper function for generating unique tokens in tests
 func generateUniqueToken(id, seq int) string {
-	return string(rune(id)) + "-" + string(rune(seq)) + "-test-token"
+	return strconv.Itoa(id) + "-" + strconv.Itoa(seq) + "-test-token"
 }
 
 func BenchmarkStoreToken(b *testing.B) {
