@@ -41,6 +41,14 @@ func (h *Handler) requestPasswordReset(params []string) ([]string, error) {
 	// Generic success message (always returned to prevent enumeration)
 	genericSuccess := []string{"If an account exists, a reset email has been sent"}
 
+	// Validate email length (RFC 5321 maximum)
+	const MaxEmailLength = 254
+	if len(emailOrUsername) > MaxEmailLength {
+		// Return generic success to prevent enumeration
+		slog.Warn("password_reset_email_too_long", "length", len(emailOrUsername))
+		return genericSuccess, nil
+	}
+
 	// Check rate limit
 	if !h.rateLimiter.AllowRequest(emailOrUsername) {
 		// User is rate limited - return success but don't proceed

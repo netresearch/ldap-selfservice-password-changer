@@ -45,6 +45,11 @@ func (c *Handler) changePassword(params []string) ([]string, error) {
 		return nil, fmt.Errorf("the new password must be at least %d characters long", c.opts.MinLength)
 	}
 
+	const MaxPasswordLength = 128 // LDAP typical maximum
+	if len(newPassword) > MaxPasswordLength {
+		return nil, fmt.Errorf("the new password must not exceed %d characters", MaxPasswordLength)
+	}
+
 	if !validators.MinNumbersInString(newPassword, c.opts.MinNumbers) {
 		return nil, fmt.Errorf("the new password must contain at least %d %s", c.opts.MinNumbers, pluralize("number", c.opts.MinNumbers))
 	}
@@ -61,13 +66,13 @@ func (c *Handler) changePassword(params []string) ([]string, error) {
 		return nil, fmt.Errorf("the new password must contain at least %d lowercase %s", c.opts.MinLowercase, pluralize("letter", c.opts.MinLowercase))
 	}
 
-	if !c.opts.PasswordCanIncludeUsername && strings.Contains(sAMAccountName, newPassword) {
+	if !c.opts.PasswordCanIncludeUsername && strings.Contains(strings.ToLower(newPassword), strings.ToLower(sAMAccountName)) {
 		return nil, fmt.Errorf("the new password must not include the username")
 	}
 
 	if err := c.ldap.ChangePasswordForSAMAccountName(sAMAccountName, currentPassword, newPassword); err != nil {
 		slog.Error("password_change_failed", "username", sAMAccountName, "error", err)
-		return nil, err
+		return nil, fmt.Errorf("failed to change password, please verify your current password is correct and try again")
 	}
 
 	slog.Info("password_changed", "username", sAMAccountName)

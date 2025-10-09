@@ -9,6 +9,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
+	"github.com/gofiber/helmet/v2"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/email"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
@@ -77,6 +78,23 @@ func main() {
 
 	app.Use(compress.New(compress.Config{
 		Level: compress.LevelBestSpeed,
+	}))
+
+	// Security headers middleware
+	app.Use(helmet.New(helmet.Config{
+		ContentSecurityPolicy: "default-src 'self'; " +
+			"script-src 'self'; " +
+			"style-src 'self' 'unsafe-inline'; " + // Tailwind requires inline styles
+			"img-src 'self' data:; " +
+			"font-src 'self'; " +
+			"connect-src 'self'; " +
+			"frame-ancestors 'none'; " +
+			"base-uri 'self'; " +
+			"form-action 'self'",
+		XFrameOptions:      "DENY",
+		ContentTypeNosniff: "nosniff",
+		ReferrerPolicy:     "strict-origin-when-cross-origin",
+		PermissionPolicy:   "geolocation=(), microphone=(), camera=()",
 	}))
 
 	app.Use("/static", filesystem.New(filesystem.Config{

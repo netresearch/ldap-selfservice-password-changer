@@ -54,6 +54,11 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 		return nil, fmt.Errorf("the new password must be at least %d characters long", h.opts.MinLength)
 	}
 
+	const MaxPasswordLength = 128 // LDAP typical maximum
+	if len(newPassword) > MaxPasswordLength {
+		return nil, fmt.Errorf("the new password must not exceed %d characters", MaxPasswordLength)
+	}
+
 	if !validators.MinNumbersInString(newPassword, h.opts.MinNumbers) {
 		return nil, fmt.Errorf("the new password must contain at least %d %s", h.opts.MinNumbers, pluralize("number", h.opts.MinNumbers))
 	}
