@@ -1,6 +1,3 @@
-#!/usr/bin/env sh
-. "$(dirname -- "$0")/_/husky.sh"
-
 # Only run fast checks in pre-commit hook
 # Heavy tests run in CI
 
