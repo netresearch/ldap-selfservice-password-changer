@@ -31,7 +31,7 @@ Content-Type: application/json
 
 ### change-password
 
-Changes a user's password in the LDAP/ActiveDirectory server (requires current password).
+Changes a user's password in the LDAP/ActiveDirectory server.
 
 #### Request
 
@@ -111,160 +111,6 @@ Changes a user's password in the LDAP/ActiveDirectory server (requires current p
 ```
 
 **HTTP Status**: 400 Bad Request
-
----
-
-### request-password-reset
-
-Initiates password reset process by sending a secure token via email.
-
-**Security Note**: Always returns generic success message to prevent user enumeration, even if email doesn't exist.
-
-#### Request
-
-```json
-{
-  "method": "request-password-reset",
-  "params": [
-    "user@example.com" // User's email address
-  ]
-}
-```
-
-#### Successful Response
-
-```json
-{
-  "success": true,
-  "data": ["If an account exists, a reset email has been sent"]
-}
-```
-
-**HTTP Status**: 200 OK
-
-**Note**: Same response returned regardless of whether email exists in LDAP (security feature to prevent user enumeration).
-
-#### Error Responses
-
-##### Invalid Argument Count
-
-```json
-{
-  "success": false,
-  "data": ["invalid argument count"]
-}
-```
-
-**HTTP Status**: 500 Internal Server Error
-
-**Rate Limiting**: Silently enforced (3 requests/hour per email by default). Rate-limited requests still return success message.
-
-**Internal Processing**:
-
-1. Validate email format
-2. Check rate limit (returns success if exceeded)
-3. Query LDAP for user by email (FindUserByMail)
-4. Generate cryptographic token (32 bytes, crypto/rand)
-5. Store token with 15-minute expiration
-6. Send email with reset link
-7. Return generic success message
-
----
-
-### reset-password
-
-Completes password reset using a valid token from email.
-
-#### Request
-
-```json
-{
-  "method": "reset-password",
-  "params": [
-    "TOKEN_STRING_FROM_EMAIL", // Token from reset email
-    "NewPassword123!" // New password to set
-  ]
-}
-```
-
-#### Successful Response
-
-```json
-{
-  "success": true,
-  "data": ["Password reset successfully. You can now login."]
-}
-```
-
-**HTTP Status**: 200 OK
-
-#### Error Responses
-
-##### Invalid or Expired Token
-
-```json
-{
-  "success": false,
-  "data": ["Invalid or expired token"]
-}
-```
-
-**HTTP Status**: 500 Internal Server Error
-
-**Causes**:
-
-- Token doesn't exist in store
-- Token expired (>15 minutes old)
-- Token already used
-
-##### Password Policy Violations
-
-Same validation errors as `change-password` method:
-
-```json
-{
-  "success": false,
-  "data": ["the new password must be at least 8 characters long"]
-}
-```
-
-**HTTP Status**: 500 Internal Server Error
-
-##### LDAP Update Failure
-
-```json
-{
-  "success": false,
-  "data": ["Failed to reset password. Please contact your administrator if this problem persists."]
-}
-```
-
-**HTTP Status**: 500 Internal Server Error
-
-**Causes**:
-
-- LDAP connection failure
-- Insufficient permissions (service account lacks reset password permission)
-- User account issues
-
-**Internal Processing**:
-
-1. Validate token exists and not expired
-2. Validate token not already used
-3. Validate new password against policy rules
-4. Update password in LDAP (ChangePasswordForSAMAccountName with empty old password)
-5. Mark token as used
-6. Return success message
-
-**LDAP Permission Requirements**:
-
-- **Active Directory**: Service account (LDAP_RESET_USER or LDAP_READONLY_USER) needs "Reset password" permission
-- **OpenLDAP**: Service account needs write access to userPassword attribute
-- **Connection**: Must use LDAPS (ldaps://)
-- **Security Best Practice**: Use dedicated LDAP_RESET_USER with minimal permissions (only password reset)
-- **Backward Compatibility**: Falls back to LDAP_READONLY_USER if LDAP_RESET_USER not configured
-
----
 
 ## Implementation Details
 
@@ -403,28 +249,15 @@ return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
 
 ### Authentication
 
-- **change-password**: Current password required for authentication
-- **Password reset**: Token-based authentication (no password needed)
+- Current password required for all password change operations
 - LDAP server performs authentication (no password storage in application)
 - Password transmitted via HTTPS (enforced by LDAPS requirement)
 
 ### Authorization
 
-- **change-password**: Users can only change their own password
-- **Password reset**: Token grants temporary authorization to reset password
-- **LDAP Accounts**:
-  - LDAP_READONLY_USER: Read-only access for authentication
-  - LDAP_RESET_USER (optional): Write access ONLY for password reset (principle of least privilege)
+- Users can only change their own password
+- Readonly LDAP user has minimal permissions (read-only access)
 - No administrative privileges exposed via API
-
-### Password Reset Security
-
-- **Token Generation**: Cryptographically secure (crypto/rand, 32 bytes)
-- **Token Expiration**: 15 minutes (configurable)
-- **Single-Use Tokens**: Cannot be reused after password reset
-- **Rate Limiting**: 3 requests/hour per email (prevents abuse)
-- **User Enumeration Prevention**: Generic responses don't reveal if email exists
-- **LDAP Permissions**: Dedicated LDAP_RESET_USER recommended for security isolation (falls back to LDAP_READONLY_USER)
 
 ### Input Validation
 
@@ -515,63 +348,6 @@ curl -X POST http://localhost:3000/api/rpc \
 
 # Expected response:
 # {"success":false,"data":["method not found"]}
-
-# Request password reset
-curl -X POST http://localhost:3000/api/rpc \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "request-password-reset",
-    "params": ["user@example.com"]
-  }'
-
-# Expected response (same for valid or invalid email):
-# {"success":true,"data":["If an account exists, a reset email has been sent"]}
-
-# Reset password with valid token
-curl -X POST http://localhost:3000/api/rpc \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "reset-password",
-    "params": ["dGVzdHRva2VuMTIzNDU2Nzg5MGFiY2RlZmdoaWprbG1ub3BxcnN0dXZ3eHl6", "NewPass123!"]
-  }'
-
-# Expected response:
-# {"success":true,"data":["Password reset successfully. You can now login."]}
-
-# Reset password with invalid/expired token
-curl -X POST http://localhost:3000/api/rpc \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "reset-password",
-    "params": ["invalid_token", "NewPass123!"]
-  }'
-
-# Expected response:
-# {"success":false,"data":["Invalid or expired token"]}
-
-# Reset password with password policy violation
-curl -X POST http://localhost:3000/api/rpc \
-  -H "Content-Type: application/json" \
-  -d '{
-    "method": "reset-password",
-    "params": ["valid_token", "short"]
-  }'
-
-# Expected response:
-# {"success":false,"data":["the new password must be at least 8 characters long"]}
-
-# Test rate limiting (send 4 requests quickly)
-for i in {1..4}; do
-  curl -X POST http://localhost:3000/api/rpc \
-    -H "Content-Type: application/json" \
-    -d '{
-      "method": "request-password-reset",
-      "params": ["user@example.com"]
-    }'
-  echo ""
-done
-
-# Expected: First 3 requests succeed, 4th still returns success but no email sent
 ```
 
 ### Integration Testing
