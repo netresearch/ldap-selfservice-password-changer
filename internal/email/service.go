@@ -7,6 +7,9 @@ import (
 	"strings"
 )
 
+// emailRegex is compiled once for performance
+var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
+
 // Config holds the configuration for the email service.
 type Config struct {
 	SMTPHost     string // SMTP server hostname (e.g., smtp.gmail.com)
@@ -112,8 +115,7 @@ func validateEmailAddress(email string) bool {
 		return false
 	}
 
-	// Simple regex for email validation
+	// Use package-level compiled regex for performance
 	// Matches: user@example.com, user+tag@sub.example.com
-	emailRegex := regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 	return emailRegex.MatchString(email)
 }
