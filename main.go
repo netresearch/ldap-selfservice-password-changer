@@ -61,25 +61,37 @@ func main() {
 		}
 		emailService := email.NewService(emailConfig)
 
-		// Initialize rate limiter
+		// Initialize email-based rate limiter (per-user protection)
 		rateLimiter := ratelimit.NewLimiter(
 			int(opts.ResetRateLimitRequests),
 			time.Duration(opts.ResetRateLimitWindowMinutes)*time.Minute,
 		)
 
+		// Initialize IP-based rate limiter (DoS protection)
+		// Default: 10 requests per IP per 60 minutes, max 1000 IPs tracked
+		ipLimiter := ratelimit.NewIPLimiter()
+		ipLimiter.StartCleanup(5 * time.Minute)
+
 		// Create handler with password reset services
-		rpcHandler, err = rpc.NewWithServices(opts, tokenStore, emailService, rateLimiter)
+		rpcHandler, err = rpc.NewWithServices(opts, tokenStore, emailService, rateLimiter, ipLimiter)
 		if err != nil {
 			slog.Error("initialization failed", "error", err)
 			os.Exit(1)
 		}
 	} else {
 		// Create handler without password reset services
-		rpcHandler, err = rpc.New(opts)
+		// Still initialize IP limiter for change-password rate limiting
+		ipLimiter := ratelimit.NewIPLimiter()
+		ipLimiter.StartCleanup(5 * time.Minute)
+
+		baseHandler, err := rpc.New(opts)
 		if err != nil {
 			slog.Error("initialization failed", "error", err)
 			os.Exit(1)
 		}
+		// Add IP limiter to base handler
+		baseHandler.SetIPLimiter(ipLimiter)
+		rpcHandler = baseHandler
 	}
 
 	index, err := templates.RenderIndex(opts)
@@ -89,8 +101,11 @@ func main() {
 	}
 
 	app := fiber.New(fiber.Config{
-		AppName:   "netresearch/ldap-selfservice-password-changer",
-		BodyLimit: 4 * 1024,
+		AppName:      "netresearch/ldap-selfservice-password-changer",
+		BodyLimit:    4 * 1024,
+		ReadTimeout:  10 * time.Second,  // Maximum time to read request (prevents slowloris)
+		WriteTimeout: 10 * time.Second,  // Maximum time to write response
+		IdleTimeout:  120 * time.Second, // Maximum time to keep idle connections alive
 	})
 
 	app.Use(compress.New(compress.Config{

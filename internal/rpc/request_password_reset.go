@@ -28,9 +28,18 @@ type TokenStore interface {
 	Count() int
 }
 
-// requestPasswordReset handles password reset requests.
-// Always returns a generic success message to prevent user enumeration.
+// requestPasswordReset handles password reset requests without IP context.
+// This is maintained for backward compatibility with existing tests.
+// New code should use requestPasswordResetWithIP for IP-based rate limiting.
 func (h *Handler) requestPasswordReset(params []string) ([]string, error) {
+	// For backward compatibility, call the IP-aware version with a placeholder IP
+	// In production, this should not be called - Handle() uses requestPasswordResetWithIP
+	return h.requestPasswordResetWithIP(params, "0.0.0.0")
+}
+
+// requestPasswordResetWithIP handles password reset requests with IP-based rate limiting.
+// Always returns a generic success message to prevent user enumeration.
+func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) ([]string, error) {
 	// Validate parameter count
 	if len(params) != 1 {
 		return nil, ErrInvalidArgumentCount
@@ -49,7 +58,15 @@ func (h *Handler) requestPasswordReset(params []string) ([]string, error) {
 		return genericSuccess, nil
 	}
 
-	// Check rate limit
+	// FIRST: Check IP-based rate limit (stricter, catches flooding)
+	// This prevents attackers from using different emails to bypass rate limiting
+	if h.ipLimiter != nil && !h.ipLimiter.AllowRequest(clientIP) {
+		// IP is rate limited - return success but don't proceed
+		slog.Warn("password_reset_ip_rate_limited", "ip", clientIP)
+		return genericSuccess, nil
+	}
+
+	// SECOND: Check email-based rate limit (per-user protection)
 	if !h.rateLimiter.AllowRequest(emailOrUsername) {
 		// User is rate limited - return success but don't proceed
 		slog.Warn("password_reset_rate_limited", "email", emailOrUsername)

@@ -24,6 +24,12 @@ type Handler struct {
 	tokenStore   TokenStore
 	emailService EmailService
 	rateLimiter  RateLimiter
+	ipLimiter    IPLimiter // IP-based rate limiter for DoS protection
+}
+
+// IPLimiter interface for IP-based rate limiting
+type IPLimiter interface {
+	AllowRequest(ipAddress string) bool
 }
 
 func New(opts *options.Opts) (*Handler, error) {
@@ -38,8 +44,13 @@ func New(opts *options.Opts) (*Handler, error) {
 	}, nil
 }
 
+// SetIPLimiter sets the IP limiter for the handler (used for change-password rate limiting)
+func (h *Handler) SetIPLimiter(ipLimiter IPLimiter) {
+	h.ipLimiter = ipLimiter
+}
+
 // NewWithServices creates a handler with password reset services.
-func NewWithServices(opts *options.Opts, tokenStore TokenStore, emailService EmailService, rateLimiter RateLimiter) (*Handler, error) {
+func NewWithServices(opts *options.Opts, tokenStore TokenStore, emailService EmailService, rateLimiter RateLimiter, ipLimiter IPLimiter) (*Handler, error) {
 	ldapClient, err := ldap.New(opts.LDAP, opts.ReadonlyUser, opts.ReadonlyPassword)
 	if err != nil {
 		return nil, err
@@ -62,6 +73,7 @@ func NewWithServices(opts *options.Opts, tokenStore TokenStore, emailService Ema
 		tokenStore:   tokenStore,
 		emailService: emailService,
 		rateLimiter:  rateLimiter,
+		ipLimiter:    ipLimiter,
 	}, nil
 }
 
@@ -86,9 +98,23 @@ func (h *Handler) Handle(c *fiber.Ctx) error {
 		})
 	}
 
+	// Extract client IP for rate limiting
+	clientIP := extractClientIP(c)
+
 	switch body.Method {
 	case "change-password":
-		return wrapRPC(h.changePassword)
+		// Use dedicated method that includes IP-based rate limiting
+		data, err := h.changePasswordWithIP(body.Params, clientIP)
+		if err != nil {
+			return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
+				Success: false,
+				Data:    []string{err.Error()},
+			})
+		}
+		return c.JSON(JSONRPCResponse{
+			Success: true,
+			Data:    data,
+		})
 
 	case "request-password-reset":
 		// Check if password reset is enabled
@@ -98,7 +124,18 @@ func (h *Handler) Handle(c *fiber.Ctx) error {
 				Data:    []string{"password reset feature not enabled"},
 			})
 		}
-		return wrapRPC(h.requestPasswordReset)
+		// Use dedicated method that includes IP-based rate limiting
+		data, err := h.requestPasswordResetWithIP(body.Params, clientIP)
+		if err != nil {
+			return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
+				Success: false,
+				Data:    []string{err.Error()},
+			})
+		}
+		return c.JSON(JSONRPCResponse{
+			Success: true,
+			Data:    data,
+		})
 
 	case "reset-password":
 		// Check if password reset is enabled

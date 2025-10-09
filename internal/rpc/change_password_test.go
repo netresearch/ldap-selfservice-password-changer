@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	ldap "github.com/netresearch/simple-ldap-go"
+
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 )
 
@@ -197,4 +199,92 @@ func TestPasswordValidationEdgeCases(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestChangePasswordIPRateLimiting tests IP-based rate limiting on change-password endpoint
+func TestChangePasswordIPRateLimiting(t *testing.T) {
+	mockLDAP := &mockChangePasswordLDAP{
+		changePasswordError: nil,
+	}
+
+	opts := &options.Opts{
+		MinLength:                  8,
+		MinNumbers:                 1,
+		MinSymbols:                 1,
+		MinUppercase:               1,
+		MinLowercase:               1,
+		PasswordCanIncludeUsername: false,
+	}
+
+	// Create IP limiter with very low limit for testing
+	ipLimiter := &mockIPLimiter{
+		allowed: true,
+		count:   0,
+	}
+
+	handler := &Handler{
+		ldap:      mockLDAP,
+		opts:      opts,
+		ipLimiter: ipLimiter,
+	}
+
+	clientIP := "203.0.113.42"
+
+	// First 5 requests should succeed
+	for i := 1; i <= 5; i++ {
+		result, err := handler.changePasswordWithIP(
+			[]string{"testuser", "OldPass123!", "NewPass456!"},
+			clientIP,
+		)
+		if err != nil {
+			t.Fatalf("Request %d failed: %v", i, err)
+		}
+		if len(result) != 1 || result[0] != "password changed successfully" {
+			t.Errorf("Request %d: unexpected result: %v", i, result)
+		}
+		ipLimiter.count++
+	}
+
+	// 6th request should be rate limited
+	ipLimiter.allowed = false
+	result, err := handler.changePasswordWithIP(
+		[]string{"testuser", "OldPass123!", "NewPass456!"},
+		clientIP,
+	)
+
+	if err == nil {
+		t.Error("Expected rate limit error, got nil")
+	} else if !strings.Contains(err.Error(), "too many") {
+		t.Errorf("Expected rate limit error with 'too many', got: %v", err)
+	}
+	if result != nil {
+		t.Errorf("Expected nil result when rate limited, got: %v", result)
+	}
+}
+
+// mockChangePasswordLDAP mocks LDAP client for change password tests
+type mockChangePasswordLDAP struct {
+	changePasswordError error
+}
+
+func (m *mockChangePasswordLDAP) FindUserByMail(mail string) (*ldap.User, error) {
+	return &ldap.User{SAMAccountName: "testuser"}, nil
+}
+
+func (m *mockChangePasswordLDAP) ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword string) error {
+	return m.changePasswordError
+}
+
+func (m *mockChangePasswordLDAP) ResetPasswordForSAMAccountName(sAMAccountName, newPassword string) error {
+	return nil
+}
+
+// mockIPLimiter mocks IP rate limiter for testing
+type mockIPLimiter struct {
+	allowed bool
+	count   int
+}
+
+func (m *mockIPLimiter) AllowRequest(ipAddress string) bool {
+	return m.allowed
 }

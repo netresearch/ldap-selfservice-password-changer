@@ -329,3 +329,128 @@ func TestRequestPasswordResetEmailFailure(t *testing.T) {
 		t.Errorf("Token count = %d, want 1", tokenStore.Count())
 	}
 }
+
+func TestRequestPasswordResetIPRateLimitingIntegration(t *testing.T) {
+	tokenStore := resettoken.NewStore()
+	emailLimiter := ratelimit.NewLimiter(10, 60*time.Minute)
+	ipLimiter := ratelimit.NewIPLimiter() // 10 requests per IP per 60 minutes
+	mockEmail := &mockEmailService{}
+	mockLDAP := &mockLDAPClient{
+		users: map[string]*ldap.User{
+			"user1@example.com": {SAMAccountName: "user1"},
+			"user2@example.com": {SAMAccountName: "user2"},
+			"user3@example.com": {SAMAccountName: "user3"},
+			"user4@example.com": {SAMAccountName: "user4"},
+			"user5@example.com": {SAMAccountName: "user5"},
+			"user6@example.com": {SAMAccountName: "user6"},
+			"user7@example.com": {SAMAccountName: "user7"},
+			"user8@example.com": {SAMAccountName: "user8"},
+			"user9@example.com": {SAMAccountName: "user9"},
+			"user10@example.com": {SAMAccountName: "user10"},
+			"user11@example.com": {SAMAccountName: "user11"},
+		},
+	}
+
+	handler := &Handler{
+		ldap:         mockLDAP,
+		tokenStore:   tokenStore,
+		emailService: mockEmail,
+		rateLimiter:  emailLimiter,
+		ipLimiter:    ipLimiter,
+		opts: &options.Opts{
+			ResetTokenExpiryMinutes: 15,
+		},
+	}
+
+	clientIP := "203.0.113.42"
+
+	// Make 10 requests from same IP with different emails
+	// These should all succeed (within IP rate limit)
+	for i := 1; i <= 10; i++ {
+		email := fmt.Sprintf("user%d@example.com", i)
+		result, err := handler.requestPasswordResetWithIP([]string{email}, clientIP)
+		if err != nil {
+			t.Fatalf("Request %d failed: %v", i, err)
+		}
+		if len(result) != 1 {
+			t.Errorf("Request %d: expected 1 result, got %d", i, len(result))
+		}
+	}
+
+	// Verify all 10 tokens were created
+	if tokenStore.Count() != 10 {
+		t.Errorf("Token count = %d, want 10", tokenStore.Count())
+	}
+
+	// 11th request from same IP should be rate limited by IP limiter
+	result, err := handler.requestPasswordResetWithIP([]string{"user11@example.com"}, clientIP)
+	if err != nil {
+		t.Errorf("Rate limited request should not error, got: %v", err)
+	}
+
+	// Should still return generic success message (don't reveal rate limiting)
+	expectedMsg := "If an account exists, a reset email has been sent"
+	if len(result) != 1 || result[0] != expectedMsg {
+		t.Errorf("Rate limited request: got %v, want [%q]", result, expectedMsg)
+	}
+
+	// Token count should still be 10 (no new token created)
+	if tokenStore.Count() != 10 {
+		t.Errorf("After IP rate limit: token count = %d, want 10", tokenStore.Count())
+	}
+}
+
+func TestRequestPasswordResetIPRateLimitCheckedBeforeEmail(t *testing.T) {
+	tokenStore := resettoken.NewStore()
+	emailLimiter := ratelimit.NewLimiter(10, 60*time.Minute)
+	ipLimiter := ratelimit.NewIPLimiter()
+	mockEmail := &mockEmailService{}
+	mockLDAP := &mockLDAPClient{
+		users: map[string]*ldap.User{
+			"test@example.com": {SAMAccountName: "testuser"},
+		},
+	}
+
+	handler := &Handler{
+		ldap:         mockLDAP,
+		tokenStore:   tokenStore,
+		emailService: mockEmail,
+		rateLimiter:  emailLimiter,
+		ipLimiter:    ipLimiter,
+		opts: &options.Opts{
+			ResetTokenExpiryMinutes: 15,
+		},
+	}
+
+	clientIP := "203.0.113.42"
+
+	// Exhaust IP rate limit
+	for i := 1; i <= 10; i++ {
+		email := fmt.Sprintf("user%d@example.com", i)
+		mockLDAP.users[email] = &ldap.User{SAMAccountName: fmt.Sprintf("user%d", i)}
+		handler.requestPasswordResetWithIP([]string{email}, clientIP)
+	}
+
+	// Now try with a new email that is NOT in the email rate limiter
+	// IP rate limit should block BEFORE email rate limit is checked
+	newEmail := "completely-new-email@example.com"
+	mockLDAP.users[newEmail] = &ldap.User{SAMAccountName: "newuser"}
+
+	initialEmailLimiterCount := emailLimiter.Count()
+
+	result, err := handler.requestPasswordResetWithIP([]string{newEmail}, clientIP)
+	if err != nil {
+		t.Errorf("Should not error, got: %v", err)
+	}
+
+	// Should return success
+	if len(result) != 1 {
+		t.Errorf("Expected 1 result, got %d", len(result))
+	}
+
+	// Email limiter should NOT have been called (IP limiter blocked first)
+	// This verifies IP rate limit is checked BEFORE email rate limit
+	if emailLimiter.Count() != initialEmailLimiterCount {
+		t.Errorf("Email limiter was called despite IP rate limit being hit")
+	}
+}
