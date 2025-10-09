@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -21,6 +22,22 @@ import (
 
 func main() {
 	opts := options.Parse()
+
+	// Log LDAP connection security status
+	isEncrypted := strings.HasPrefix(opts.LDAP.Server, "ldaps://")
+	slog.Info("ldap_connection_configuration",
+		"server", opts.LDAP.Server,
+		"encrypted", isEncrypted,
+	)
+
+	// Warn if using unencrypted LDAP connection
+	if !isEncrypted {
+		slog.Warn("ldap_connection_not_encrypted",
+			"server", opts.LDAP.Server,
+			"risk", "passwords transmitted in cleartext over network",
+			"recommendation", "use ldaps:// for production deployments to encrypt credentials in transit",
+		)
+	}
 
 	var rpcHandler *rpc.Handler
 	var err error

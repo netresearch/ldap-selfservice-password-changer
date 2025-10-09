@@ -150,7 +150,43 @@ access to attrs=userPassword
     by * auth
 ```
 
-**Note:** Connection must use LDAPS (`ldaps://`) for all password operations.
+## Security Recommendations
+
+### LDAPS (LDAP over TLS)
+
+**Strongly Recommended for Production:** Use `ldaps://` instead of `ldap://` to encrypt credentials in transit.
+
+```bash
+# ✅ Recommended: Encrypted connection
+LDAP_SERVER=ldaps://dc1.example.com:636
+
+# ⚠️  Not recommended: Unencrypted connection (passwords visible on network)
+LDAP_SERVER=ldap://dc1.example.com:389
+```
+
+**When LDAPS is Required:**
+
+- Active Directory password changes (AD protocol requirement)
+- Production deployments accessible over untrusted networks
+- Compliance requirements (HIPAA, PCI-DSS, SOC 2)
+
+**When plain LDAP may be acceptable:**
+
+- Internal trusted networks with network-level encryption (VPN, WireGuard)
+- Development/testing environments
+- Legacy systems where LDAPS deployment is not feasible
+
+**GopherPass Behavior:**
+
+- Accepts both `ldap://` and `ldaps://` connections (non-blocking)
+- Logs warning at startup when using unencrypted connections
+- Provides visibility for security monitoring and compliance auditing
+
+**Setting up LDAPS:**
+
+- Ensure your LDAP/AD server has valid TLS certificates configured
+- Use port 636 for LDAPS (vs port 389 for plain LDAP)
+- Test connection: `openssl s_client -connect dc1.example.com:636`
 
 ## Documentation
 
