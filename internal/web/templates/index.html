@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="en" class="page-html">
   <head>
-    <title>Password Changer</title>
+    <title>GopherPass — Self-service password change & reset</title>
     {{ template "html-head" }} {{ template "theme-init-script" }} {{ template "density-init-script" }}
     <link rel="modulepreload" href="/static/js/app.js" crossorigin="anonymous" />
   </head>
@@ -23,10 +23,10 @@
           <!-- prettier-ignore -->
           {{ template "input" InputOpts "confirm_password" "Confirm New Password" "password" "new-password" "Re-enter your new password to confirm" }}
 
-          {{ template "form-submit" "Change Password" }}
+          {{ template "form-submit" "Update Password" }}
         </form>
 
-        {{ template "success-message" "Your password was changed successfully." }} {{ if .opts.PasswordResetEnabled }}
+        {{ template "success-message" "Your password has been updated." }} {{ if .opts.PasswordResetEnabled }}
         <div class="comfortable:mt-6 compact:mt-4">
           {{ template "button-secondary" (slice "/forgot-password" "Forgot Password?") }}
         </div>
