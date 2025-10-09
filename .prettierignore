@@ -2,3 +2,5 @@ internal/web/static/styles.css
 internal/web/static/js/*.js
 pnpm-lock.yaml
 renovate.json
+# Ignore HTML template files (Go templates with special syntax)
+internal/web/templates/**/*.html
