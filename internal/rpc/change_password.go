@@ -66,7 +66,7 @@ func (c *Handler) changePassword(params []string) ([]string, error) {
 		return nil, fmt.Errorf("the new password must contain at least %d lowercase %s", c.opts.MinLowercase, pluralize("letter", c.opts.MinLowercase))
 	}
 
-	if !c.opts.PasswordCanIncludeUsername && strings.Contains(strings.ToLower(newPassword), strings.ToLower(sAMAccountName)) {
+	if !c.opts.PasswordCanIncludeUsername && sAMAccountName != "" && strings.Contains(strings.ToLower(newPassword), strings.ToLower(sAMAccountName)) {
 		return nil, fmt.Errorf("the new password must not include the username")
 	}
 

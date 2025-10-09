@@ -75,7 +75,7 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 		return nil, fmt.Errorf("the new password must contain at least %d lowercase %s", h.opts.MinLowercase, pluralize("letter", h.opts.MinLowercase))
 	}
 
-	if !h.opts.PasswordCanIncludeUsername && strings.Contains(strings.ToLower(newPassword), strings.ToLower(token.Username)) {
+	if !h.opts.PasswordCanIncludeUsername && token.Username != "" && strings.Contains(strings.ToLower(newPassword), strings.ToLower(token.Username)) {
 		return nil, fmt.Errorf("the new password must not include the username")
 	}
 
