@@ -88,6 +88,35 @@ func makeSlice(args ...interface{}) []interface{} {
 	return args
 }
 
+// parseCommonTemplates parses all shared atom and molecule templates
+func parseCommonTemplates(tpl *template.Template) error {
+	templates := []string{
+		rawIcons,
+		rawButtonPrimary,
+		rawButtonSecondary,
+		rawLink,
+		rawButtonToggle,
+		rawInputField,
+		rawThemeInitScript,
+		rawDensityInitScript,
+		rawHtmlHead,
+		rawPageHeader,
+		rawPageFooter,
+		rawToggleButtons,
+		rawFormSubmit,
+		rawSuccessMessage,
+		rawPageTitle,
+	}
+
+	for _, tmpl := range templates {
+		if _, err := tpl.Parse(tmpl); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
 func RenderIndex(opts *options.Opts) ([]byte, error) {
 	funcs := template.FuncMap{
 		"InputOpts": MakeInputOpts,
@@ -96,57 +125,14 @@ func RenderIndex(opts *options.Opts) ([]byte, error) {
 
 	// Parse dependencies first, BEFORE parsing main template
 	tpl := template.New("index").Funcs(funcs)
-	var err error
 
-	// Parse atom and molecule templates
-	if _, err = tpl.Parse(rawIcons); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawButtonPrimary); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawButtonSecondary); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawLink); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawButtonToggle); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawInputField); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawThemeInitScript); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawDensityInitScript); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawHtmlHead); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawPageHeader); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawPageFooter); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawToggleButtons); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawFormSubmit); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawSuccessMessage); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawPageTitle); err != nil {
+	// Parse common atom and molecule templates
+	if err := parseCommonTemplates(tpl); err != nil {
 		return nil, err
 	}
 
 	// NOW parse the main template after all dependencies are defined
-	if _, err = tpl.Parse(rawIndex); err != nil {
+	if _, err := tpl.Parse(rawIndex); err != nil {
 		return nil, err
 	}
 
@@ -155,7 +141,7 @@ func RenderIndex(opts *options.Opts) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	if err = tpl.ExecuteTemplate(&buf, "index", data); err != nil {
+	if err := tpl.ExecuteTemplate(&buf, "index", data); err != nil {
 		return nil, err
 	}
 
@@ -170,62 +156,19 @@ func RenderForgotPassword() ([]byte, error) {
 
 	// Parse dependencies first, BEFORE parsing main template
 	tpl := template.New("forgot-password").Funcs(funcs)
-	var err error
 
-	// Parse atom and molecule templates
-	if _, err = tpl.Parse(rawIcons); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawButtonPrimary); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawButtonSecondary); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawLink); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawButtonToggle); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawInputField); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawThemeInitScript); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawDensityInitScript); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawHtmlHead); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawPageHeader); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawPageFooter); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawToggleButtons); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawFormSubmit); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawSuccessMessage); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawPageTitle); err != nil {
+	// Parse common atom and molecule templates
+	if err := parseCommonTemplates(tpl); err != nil {
 		return nil, err
 	}
 
 	// NOW parse the main template after all dependencies are defined
-	if _, err = tpl.Parse(rawForgotPassword); err != nil {
+	if _, err := tpl.Parse(rawForgotPassword); err != nil {
 		return nil, err
 	}
 
 	var buf bytes.Buffer
-	if err = tpl.ExecuteTemplate(&buf, "forgot-password", nil); err != nil {
+	if err := tpl.ExecuteTemplate(&buf, "forgot-password", nil); err != nil {
 		return nil, err
 	}
 
@@ -240,57 +183,14 @@ func RenderResetPassword(opts *options.Opts) ([]byte, error) {
 
 	// Parse dependencies first, BEFORE parsing main template
 	tpl := template.New("reset-password").Funcs(funcs)
-	var err error
 
-	// Parse atom and molecule templates
-	if _, err = tpl.Parse(rawIcons); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawButtonPrimary); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawButtonSecondary); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawLink); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawButtonToggle); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawInputField); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawThemeInitScript); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawDensityInitScript); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawHtmlHead); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawPageHeader); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawPageFooter); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawToggleButtons); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawFormSubmit); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawSuccessMessage); err != nil {
-		return nil, err
-	}
-	if _, err = tpl.Parse(rawPageTitle); err != nil {
+	// Parse common atom and molecule templates
+	if err := parseCommonTemplates(tpl); err != nil {
 		return nil, err
 	}
 
 	// NOW parse the main template after all dependencies are defined
-	if _, err = tpl.Parse(rawResetPassword); err != nil {
+	if _, err := tpl.Parse(rawResetPassword); err != nil {
 		return nil, err
 	}
 
@@ -299,7 +199,7 @@ func RenderResetPassword(opts *options.Opts) ([]byte, error) {
 	}
 
 	var buf bytes.Buffer
-	if err = tpl.ExecuteTemplate(&buf, "reset-password", data); err != nil {
+	if err := tpl.ExecuteTemplate(&buf, "reset-password", data); err != nil {
 		return nil, err
 	}
 
