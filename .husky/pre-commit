@@ -1,0 +1,45 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+# Only run fast checks in pre-commit hook
+# Heavy tests run in CI
+
+echo "Running pre-commit checks..."
+
+# Format check (fast)
+if command -v pnpm >/dev/null 2>&1; then
+  echo "→ Checking code formatting..."
+  pnpm prettier --check . || {
+    echo "❌ Formatting check failed. Run: pnpm prettier --write ."
+    exit 1
+  }
+fi
+
+# TypeScript check (fast)
+if [ -f package.json ] && command -v pnpm >/dev/null 2>&1; then
+  echo "→ Checking TypeScript types..."
+  pnpm js:build || {
+    echo "❌ TypeScript check failed"
+    exit 1
+  }
+fi
+
+# Go vet (fast)
+if [ -f go.mod ] && command -v go >/dev/null 2>&1; then
+  echo "→ Running go vet..."
+  go vet ./... || {
+    echo "❌ Go vet failed"
+    exit 1
+  }
+fi
+
+# Go tests (can be slow, but important)
+if [ -f go.mod ] && command -v go >/dev/null 2>&1; then
+  echo "→ Running Go tests..."
+  go test ./... || {
+    echo "❌ Go tests failed"
+    exit 1
+  }
+fi
+
+echo "✅ Pre-commit checks passed"
