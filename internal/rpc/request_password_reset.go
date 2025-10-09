@@ -74,7 +74,7 @@ func (h *Handler) requestPasswordReset(params []string) ([]string, error) {
 		Username:         username,
 		Email:            emailOrUsername,
 		CreatedAt:        now,
-		ExpiresAt:        now.Add(15 * time.Minute), // 15-minute expiration
+		ExpiresAt:        now.Add(time.Duration(h.opts.ResetTokenExpiryMinutes) * time.Minute),
 		Used:             false,
 		RequiresApproval: false, // Phase 1: no admin approval
 	}
