@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"fmt"
 	"sync"
 	"testing"
 	"time"
@@ -181,6 +182,161 @@ func TestCount(t *testing.T) {
 
 	if limiter.Count() != 2 {
 		t.Errorf("Count after 2 users = %d, want 2", limiter.Count())
+	}
+}
+
+func TestCapacityEnforcement(t *testing.T) {
+	// Create limiter with small capacity for testing
+	limiter := NewLimiterWithCapacity(3, 60*time.Minute, 100)
+
+	// Fill to capacity
+	for i := 0; i < 100; i++ {
+		identifier := fmt.Sprintf("user%d@example.com", i)
+		allowed := limiter.AllowRequest(identifier)
+		if !allowed {
+			t.Errorf("Request %d should be allowed when filling to capacity", i)
+		}
+	}
+
+	// Verify at capacity
+	if limiter.Count() != 100 {
+		t.Errorf("Count = %d, want 100", limiter.Count())
+	}
+
+	// Next request with new identifier should be denied
+	allowed := limiter.AllowRequest("new@example.com")
+	if allowed {
+		t.Error("Request should be denied when at capacity")
+	}
+
+	// Verify capacity not exceeded
+	if limiter.Count() > 100 {
+		t.Errorf("Count exceeded capacity: %d > 100", limiter.Count())
+	}
+}
+
+func TestCapacityCleanupMakesRoom(t *testing.T) {
+	// Create limiter with short window
+	limiter := NewLimiterWithCapacity(1, 50*time.Millisecond, 50)
+
+	// Fill to capacity with requests that will expire soon
+	for i := 0; i < 50; i++ {
+		identifier := fmt.Sprintf("user%d@example.com", i)
+		limiter.AllowRequest(identifier)
+	}
+
+	// Wait for entries to expire
+	time.Sleep(60 * time.Millisecond)
+
+	// New request should trigger cleanup and succeed
+	allowed := limiter.AllowRequest("new@example.com")
+	if !allowed {
+		t.Error("Request should be allowed after expired entries are cleaned up")
+	}
+
+	// Verify cleanup occurred
+	count := limiter.Count()
+	if count > 10 {
+		t.Errorf("Count after cleanup = %d, should be much smaller", count)
+	}
+}
+
+func TestCapacityFailClosedBehavior(t *testing.T) {
+	// Create limiter with small capacity
+	limiter := NewLimiterWithCapacity(3, 60*time.Minute, 10)
+
+	// Fill to capacity with valid rate limits
+	for i := 0; i < 10; i++ {
+		identifier := fmt.Sprintf("user%d@example.com", i)
+		limiter.AllowRequest(identifier)
+	}
+
+	// Try new identifier - should fail (no expired entries to clean)
+	allowed := limiter.AllowRequest("new@example.com")
+	if allowed {
+		t.Error("Request should be denied when at capacity with active limits")
+	}
+
+	// Verify no active limits were evicted
+	if limiter.Count() != 10 {
+		t.Errorf("Count = %d, want 10 (no eviction should occur)", limiter.Count())
+	}
+}
+
+func TestCapacityConcurrentAccess(t *testing.T) {
+	limiter := NewLimiterWithCapacity(3, 60*time.Minute, 100)
+
+	// Fill near capacity
+	for i := 0; i < 90; i++ {
+		identifier := fmt.Sprintf("user%d@example.com", i)
+		limiter.AllowRequest(identifier)
+	}
+
+	// Concurrent attempts to fill remaining capacity
+	var wg sync.WaitGroup
+	successCount := 0
+	var mu sync.Mutex
+	const goroutines = 50
+
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			identifier := fmt.Sprintf("concurrent%d@example.com", id)
+			allowed := limiter.AllowRequest(identifier)
+			if allowed {
+				mu.Lock()
+				successCount++
+				mu.Unlock()
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Verify capacity not exceeded
+	finalCount := limiter.Count()
+	if finalCount > 100 {
+		t.Errorf("Count exceeded capacity: %d > 100", finalCount)
+	}
+
+	// Verify some succeeded and some failed
+	if successCount == 0 {
+		t.Error("No concurrent requests succeeded")
+	}
+	if successCount == goroutines {
+		t.Error("All concurrent requests succeeded (capacity not enforced)")
+	}
+}
+
+func TestIsFull(t *testing.T) {
+	limiter := NewLimiterWithCapacity(3, 60*time.Minute, 10)
+
+	// Initially not full
+	if limiter.IsFull() {
+		t.Error("Empty limiter should not be full")
+	}
+
+	// Add entries
+	for i := 0; i < 5; i++ {
+		identifier := fmt.Sprintf("user%d@example.com", i)
+		limiter.AllowRequest(identifier)
+	}
+
+	// Still not full
+	if limiter.IsFull() {
+		t.Error("Half-full limiter should not be full")
+	}
+
+	// Fill to capacity
+	for i := 5; i < 10; i++ {
+		identifier := fmt.Sprintf("user%d@example.com", i)
+		limiter.AllowRequest(identifier)
+	}
+
+	// Now full
+	if !limiter.IsFull() {
+		t.Error("Limiter at capacity should be full")
 	}
 }
 

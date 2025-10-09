@@ -54,6 +54,11 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 		return nil, fmt.Errorf("the new password must be at least %d characters long", h.opts.MinLength)
 	}
 
+	const MaxPasswordLength = 128 // LDAP typical maximum
+	if len(newPassword) > MaxPasswordLength {
+		return nil, fmt.Errorf("the new password must not exceed %d characters", MaxPasswordLength)
+	}
+
 	if !validators.MinNumbersInString(newPassword, h.opts.MinNumbers) {
 		return nil, fmt.Errorf("the new password must contain at least %d %s", h.opts.MinNumbers, pluralize("number", h.opts.MinNumbers))
 	}
@@ -70,7 +75,7 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 		return nil, fmt.Errorf("the new password must contain at least %d lowercase %s", h.opts.MinLowercase, pluralize("letter", h.opts.MinLowercase))
 	}
 
-	if !h.opts.PasswordCanIncludeUsername && strings.Contains(strings.ToLower(newPassword), strings.ToLower(token.Username)) {
+	if !h.opts.PasswordCanIncludeUsername && token.Username != "" && strings.Contains(strings.ToLower(newPassword), strings.ToLower(token.Username)) {
 		return nil, fmt.Errorf("the new password must not include the username")
 	}
 

@@ -334,6 +334,266 @@ func generateUniqueToken(id, seq int) string {
 	return strconv.Itoa(id) + "-" + strconv.Itoa(seq) + "-test-token"
 }
 
+func TestCapacityEnforcement(t *testing.T) {
+	store := NewStore()
+
+	// Fill store to capacity (10,000 tokens)
+	for i := 0; i < maxCapacity; i++ {
+		token := &ResetToken{
+			Token:     generateUniqueToken(0, i),
+			Username:  "user",
+			Email:     "user@example.com",
+			CreatedAt: time.Now(),
+			ExpiresAt: time.Now().Add(15 * time.Minute),
+		}
+		err := store.Store(token)
+		if err != nil {
+			t.Fatalf("Store() failed at token %d: %v", i, err)
+		}
+	}
+
+	// Verify store is at capacity
+	if store.Count() != maxCapacity {
+		t.Errorf("Store count = %d, want %d", store.Count(), maxCapacity)
+	}
+
+	// Next store should fail with capacity error
+	token := &ResetToken{
+		Token:     "over-capacity-token",
+		Username:  "user",
+		Email:     "user@example.com",
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+	}
+	err := store.Store(token)
+	if err == nil {
+		t.Error("Store() should fail when at capacity")
+	}
+	if err != nil && !contains(err.Error(), "at capacity") {
+		t.Errorf("Error should mention capacity, got: %v", err)
+	}
+}
+
+func TestCapacityCleanupMakesRoom(t *testing.T) {
+	store := NewStore()
+
+	// Fill store with mix of expired and valid tokens
+	expiredCount := 100
+	validCount := maxCapacity - expiredCount
+
+	// Add expired tokens
+	for i := 0; i < expiredCount; i++ {
+		token := &ResetToken{
+			Token:     generateUniqueToken(1, i),
+			Username:  "expired",
+			Email:     "expired@example.com",
+			CreatedAt: time.Now().Add(-20 * time.Minute),
+			ExpiresAt: time.Now().Add(-5 * time.Minute), // Expired
+		}
+		store.Store(token)
+	}
+
+	// Add valid tokens to reach capacity
+	for i := 0; i < validCount; i++ {
+		token := &ResetToken{
+			Token:     generateUniqueToken(2, i),
+			Username:  "valid",
+			Email:     "valid@example.com",
+			CreatedAt: time.Now(),
+			ExpiresAt: time.Now().Add(15 * time.Minute),
+		}
+		store.Store(token)
+	}
+
+	// Verify at capacity
+	if store.Count() != maxCapacity {
+		t.Errorf("Store count = %d, want %d", store.Count(), maxCapacity)
+	}
+
+	// Try to store new token - should trigger cleanup and succeed
+	newToken := &ResetToken{
+		Token:     "new-after-cleanup",
+		Username:  "newuser",
+		Email:     "new@example.com",
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+	}
+	err := store.Store(newToken)
+	if err != nil {
+		t.Errorf("Store() should succeed after cleanup: %v", err)
+	}
+
+	// Verify expired tokens were removed
+	count := store.Count()
+	if count > maxCapacity {
+		t.Errorf("Store count after cleanup = %d, should be <= %d", count, maxCapacity)
+	}
+
+	// Verify new token was stored
+	retrieved, err := store.Get("new-after-cleanup")
+	if err != nil {
+		t.Error("New token should be stored after cleanup")
+	}
+	if retrieved == nil || retrieved.Username != "newuser" {
+		t.Error("Retrieved token doesn't match stored token")
+	}
+}
+
+func TestCapacityFailClosedBehavior(t *testing.T) {
+	store := NewStore()
+
+	// Fill store with all valid tokens (no expired tokens to cleanup)
+	for i := 0; i < maxCapacity; i++ {
+		token := &ResetToken{
+			Token:     generateUniqueToken(0, i),
+			Username:  "user",
+			Email:     "user@example.com",
+			CreatedAt: time.Now(),
+			ExpiresAt: time.Now().Add(15 * time.Minute),
+		}
+		store.Store(token)
+	}
+
+	// Try to store new token - should fail because cleanup won't free space
+	newToken := &ResetToken{
+		Token:     "fail-closed-token",
+		Username:  "newuser",
+		Email:     "new@example.com",
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+	}
+	err := store.Store(newToken)
+	if err == nil {
+		t.Error("Store() should fail when at capacity with no expired tokens")
+	}
+
+	// Verify no valid tokens were evicted
+	if store.Count() != maxCapacity {
+		t.Errorf("Store count = %d, want %d (no eviction should occur)", store.Count(), maxCapacity)
+	}
+
+	// Verify new token was NOT stored
+	_, err = store.Get("fail-closed-token")
+	if err == nil {
+		t.Error("Token should not be stored when capacity is full")
+	}
+}
+
+func TestCapacityConcurrentAccessAtCapacity(t *testing.T) {
+	store := NewStore()
+
+	// Fill store to near capacity
+	for i := 0; i < maxCapacity-100; i++ {
+		token := &ResetToken{
+			Token:     generateUniqueToken(0, i),
+			Username:  "user",
+			Email:     "user@example.com",
+			CreatedAt: time.Now(),
+			ExpiresAt: time.Now().Add(15 * time.Minute),
+		}
+		store.Store(token)
+	}
+
+	// Concurrent attempts to fill remaining capacity
+	var wg sync.WaitGroup
+	successCount := 0
+	var mu sync.Mutex
+	const goroutines = 200
+
+	for i := 0; i < goroutines; i++ {
+		wg.Add(1)
+		go func(id int) {
+			defer wg.Done()
+			token := &ResetToken{
+				Token:     generateUniqueToken(id+1, 0),
+				Username:  "concurrent",
+				Email:     "concurrent@example.com",
+				CreatedAt: time.Now(),
+				ExpiresAt: time.Now().Add(15 * time.Minute),
+			}
+			err := store.Store(token)
+			if err == nil {
+				mu.Lock()
+				successCount++
+				mu.Unlock()
+			}
+		}(i)
+	}
+
+	wg.Wait()
+
+	// Verify store didn't exceed capacity
+	finalCount := store.Count()
+	if finalCount > maxCapacity {
+		t.Errorf("Store exceeded capacity: %d > %d", finalCount, maxCapacity)
+	}
+
+	// Verify some requests succeeded and some failed (capacity enforced)
+	if successCount == 0 {
+		t.Error("No concurrent requests succeeded")
+	}
+	if successCount == goroutines {
+		t.Error("All concurrent requests succeeded (capacity not enforced)")
+	}
+}
+
+func TestIsFull(t *testing.T) {
+	store := NewStore()
+
+	// Initially not full
+	if store.IsFull() {
+		t.Error("Empty store should not be full")
+	}
+
+	// Add tokens
+	for i := 0; i < maxCapacity/2; i++ {
+		token := &ResetToken{
+			Token:     generateUniqueToken(0, i),
+			Username:  "user",
+			Email:     "user@example.com",
+			CreatedAt: time.Now(),
+			ExpiresAt: time.Now().Add(15 * time.Minute),
+		}
+		store.Store(token)
+	}
+
+	// Still not full
+	if store.IsFull() {
+		t.Error("Half-full store should not be full")
+	}
+
+	// Fill to capacity
+	for i := maxCapacity / 2; i < maxCapacity; i++ {
+		token := &ResetToken{
+			Token:     generateUniqueToken(0, i),
+			Username:  "user",
+			Email:     "user@example.com",
+			CreatedAt: time.Now(),
+			ExpiresAt: time.Now().Add(15 * time.Minute),
+		}
+		store.Store(token)
+	}
+
+	// Now full
+	if !store.IsFull() {
+		t.Error("Store at capacity should be full")
+	}
+}
+
+// Helper function for string contains check
+func contains(s, substr string) bool {
+	return len(s) >= len(substr) && (s == substr || len(s) > len(substr) && containsHelper(s, substr))
+}
+
+func containsHelper(s, substr string) bool {
+	for i := 0; i <= len(s)-len(substr); i++ {
+		if s[i:i+len(substr)] == substr {
+			return true
+		}
+	}
+	return false
+}
+
 func BenchmarkStoreToken(b *testing.B) {
 	store := NewStore()
 	tokens := make([]*ResetToken, b.N)

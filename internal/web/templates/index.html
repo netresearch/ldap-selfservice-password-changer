@@ -36,17 +36,14 @@
       {{ template "page-footer" }} {{ template "toggle-buttons" }}
     </div>
 
-    <script type="module" defer>
-      import { init } from "/static/js/app.js";
-
-      init({
-        minLength: +"{{ .opts.MinLength }}",
-        minNumbers: +"{{ .opts.MinNumbers }}",
-        minSymbols: +"{{ .opts.MinSymbols }}",
-        minUppercase: +"{{ .opts.MinUppercase }}",
-        minLowercase: +"{{ .opts.MinLowercase }}",
-        passwordCanIncludeUsername: "{{ .opts.PasswordCanIncludeUsername }}" === "true"
-      });
+    <!-- Configuration via data attributes for CSP compliance -->
+    <script type="module" src="/static/js/app-init.js" defer
+            data-min-length="{{ .opts.MinLength }}"
+            data-min-numbers="{{ .opts.MinNumbers }}"
+            data-min-symbols="{{ .opts.MinSymbols }}"
+            data-min-uppercase="{{ .opts.MinUppercase }}"
+            data-min-lowercase="{{ .opts.MinLowercase }}"
+            data-password-can-include-username="{{ .opts.PasswordCanIncludeUsername }}">
     </script>
   </body>
 </html>

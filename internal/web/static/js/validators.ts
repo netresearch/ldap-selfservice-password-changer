@@ -167,7 +167,9 @@ export const mustNotIncludeUsername = (fieldName: string) => (v: string) => {
   const passwordInput = form.querySelector<HTMLInputElement>(`#username input`);
   if (!passwordInput) throw new Error("Could not find username input element");
 
-  return v.includes(passwordInput.value) ? `${fieldName} must not include the username` : "";
+  return v.toLowerCase().includes(passwordInput.value.toLowerCase())
+    ? `${fieldName} must not include the username`
+    : "";
 };
 
 /**
