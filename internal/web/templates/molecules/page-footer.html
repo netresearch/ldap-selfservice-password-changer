@@ -1,7 +1,15 @@
 {{ define "page-footer" }}
-<footer role="contentinfo">
-  <p class="text-center text-xs text-gray-500 dark:text-gray-400">
-    Built by {{ template "link" (slice "https://www.netresearch.de/" "Netresearch DTT GmbH") }} — open source, written in Go
+<footer role="contentinfo" class="mt-auto pt-8 border-t border-gray-200 dark:border-gray-700">
+  <p class="flex items-center justify-center gap-1 comfortable:text-sm compact:text-xs text-gray-500 dark:text-gray-400">
+    <span>Built by {{ template "link" (slice "https://www.netresearch.de/" "Netresearch DTT GmbH") }} —</span>
+    <a
+      href="https://github.com/netresearch/ldap-selfservice-password-changer"
+      class="inline-flex items-center gap-1 underline hover:text-gray-700 dark:hover:text-gray-300 transition-colors"
+      aria-label="View GopherPass source code on GitHub"
+    >
+      {{ template "GitHubIcon" }}
+      <span>GopherPass on GitHub</span>
+    </a>
   </p>
 </footer>
 {{ end }}
