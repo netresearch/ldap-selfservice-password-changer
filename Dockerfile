@@ -1,4 +1,4 @@
-FROM --platform=amd64 node:24@sha256:377f1c17906eb5a145c34000247faa486bece16386b77eedd5a236335025c2ef AS frontend-builder
+FROM node:24@sha256:377f1c17906eb5a145c34000247faa486bece16386b77eedd5a236335025c2ef AS frontend-builder
 WORKDIR /build
 
 # Use Corepack instead of npm global install for better performance
