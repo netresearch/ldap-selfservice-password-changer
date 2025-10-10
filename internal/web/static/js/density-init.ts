@@ -4,7 +4,7 @@
  */
 
 export function initDensity(): void {
-  const storedDensityMode = localStorage.getItem("densityMode") || "auto";
+  const storedDensityMode = localStorage.getItem("densityMode") ?? "auto";
 
   // Determine actual density to apply
   const determineDensity = (): string => {
@@ -27,11 +27,11 @@ export function initDensity(): void {
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", () => {
       const pageCard = document.querySelector<HTMLDivElement>("div[data-density]");
-      if (pageCard && pageCard.dataset) pageCard.dataset["density"] = actualDensity;
+      if (pageCard?.dataset) pageCard.dataset["density"] = actualDensity;
     });
   } else {
     const pageCard = document.querySelector<HTMLDivElement>("div[data-density]");
-    if (pageCard && pageCard.dataset) pageCard.dataset["density"] = actualDensity;
+    if (pageCard?.dataset) pageCard.dataset["density"] = actualDensity;
   }
 }
 

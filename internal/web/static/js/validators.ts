@@ -53,7 +53,9 @@ export const mustNotBeEmpty = (fieldName: string) => (v: string) =>
  * validator("12345678"); // Returns: ""
  */
 export const mustBeLongerThan = (minLength: number, fieldName: string) => (v: string) =>
-  v.length < minLength ? `${fieldName} must be at least ${minLength} ${pluralize("character", minLength)} long` : "";
+  v.length < minLength
+    ? `${fieldName} must be at least ${minLength.toString()} ${pluralize("character", minLength)} long`
+    : "";
 
 /**
  * Validates that a field contains minimum required numeric digits.
@@ -67,7 +69,7 @@ export const mustBeLongerThan = (minLength: number, fieldName: string) => (v: st
  */
 export const mustIncludeNumbers = (amount: number, fieldName: string) => (v: string) =>
   v.split("").filter((c) => !isNaN(+c)).length < amount
-    ? `${fieldName} must include at least ${amount} ${pluralize("number", amount)}`
+    ? `${fieldName} must include at least ${amount.toString()} ${pluralize("number", amount)}`
     : "";
 
 /**
@@ -83,7 +85,7 @@ export const mustIncludeNumbers = (amount: number, fieldName: string) => (v: str
  */
 export const mustIncludeSymbols = (amount: number, fieldName: string) => (v: string) =>
   v.split("").filter((c) => specialCharacters.includes(c)).length < amount
-    ? `${fieldName} must include at least ${amount} special ${pluralize("character", amount)} (such as !, @, #, $, %)`
+    ? `${fieldName} must include at least ${amount.toString()} special ${pluralize("character", amount)} (such as !, @, #, $, %)`
     : "";
 
 /**
@@ -98,7 +100,7 @@ export const mustIncludeSymbols = (amount: number, fieldName: string) => (v: str
  */
 export const mustIncludeUppercase = (amount: number, fieldName: string) => (v: string) =>
   v.split("").filter((c) => c === c.toUpperCase() && c !== c.toLowerCase()).length < amount
-    ? `${fieldName} must include at least ${amount} uppercase ${pluralize("character", amount)}`
+    ? `${fieldName} must include at least ${amount.toString()} uppercase ${pluralize("character", amount)}`
     : "";
 
 /**
@@ -113,7 +115,7 @@ export const mustIncludeUppercase = (amount: number, fieldName: string) => (v: s
  */
 export const mustIncludeLowercase = (amount: number, fieldName: string) => (v: string) =>
   v.split("").filter((c) => c === c.toLowerCase() && c !== c.toUpperCase()).length < amount
-    ? `${fieldName} must include at least ${amount} lowercase ${pluralize("character", amount)}`
+    ? `${fieldName} must include at least ${amount.toString()} lowercase ${pluralize("character", amount)}`
     : "";
 
 /**

@@ -6,3 +6,8 @@ internal/web/static/styles.css
 claudedocs/
 vendor/
 ldap-selfservice-password-changer
+
+# Test coverage
+coverage.out
+coverage.html
+*.coverprofile

@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   plugins: {
     "postcss-nested": {}, // Expand CSS nesting syntax before optimization
     autoprefixer: {},

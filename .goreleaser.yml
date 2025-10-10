@@ -1,0 +1,209 @@
+# GoReleaser configuration for GopherPass
+# https://goreleaser.com
+
+version: 2
+
+# Project metadata
+project_name: ldap-selfservice-password-changer
+
+# Build configuration
+builds:
+  - id: ldap-selfservice-password-changer
+    binary: ldap-selfservice-password-changer
+    main: .
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+      - arm
+    goarm:
+      - "7"
+    ignore:
+      # Windows on ARM not commonly needed
+      - goos: windows
+        goarch: arm
+      - goos: windows
+        goarch: arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+      - -X main.builtBy=goreleaser
+    flags:
+      - -trimpath
+
+# Archive configuration
+archives:
+  - id: default
+    format: tar.gz
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- title .Os }}_
+      {{- if eq .Arch "amd64" }}x86_64
+      {{- else if eq .Arch "386" }}i386
+      {{- else }}{{ .Arch }}{{ end }}
+      {{- if .Arm }}v{{ .Arm }}{{ end }}
+    format_overrides:
+      - goos: windows
+        format: zip
+    files:
+      - README.md
+      - LICENSE
+      - CHANGELOG.md
+      - docs/**/*
+
+# Checksum generation
+checksum:
+  name_template: "checksums.txt"
+  algorithm: sha256
+
+# Snapshot configuration for local/test builds
+snapshot:
+  version_template: "{{ incpatch .Version }}-next"
+
+# Changelog generation from conventional commits
+changelog:
+  use: github
+  sort: asc
+  abbrev: 7
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - "^ci:"
+      - "^style:"
+      - "^refactor:"
+      - "Merge pull request"
+      - "Merge branch"
+  groups:
+    - title: "Security"
+      regexp: '^.*?sec(urity)?(\(.+\))??!?:.+$'
+      order: 0
+    - title: "Features"
+      regexp: '^.*?feat(\(.+\))??!?:.+$'
+      order: 1
+    - title: "Bug Fixes"
+      regexp: '^.*?fix(\(.+\))??!?:.+$'
+      order: 2
+    - title: "Performance"
+      regexp: '^.*?perf(\(.+\))??!?:.+$'
+      order: 3
+    - title: "Other Changes"
+      order: 999
+
+# GitHub release configuration
+release:
+  github:
+    owner: netresearch
+    name: ldap-selfservice-password-changer
+  draft: false
+  prerelease: auto
+  mode: replace
+  name_template: "{{.ProjectName}} {{.Version}}"
+  header: |
+    ## GopherPass {{.Version}}
+
+    Self-service password change & reset for LDAP directories.
+
+    **Full Changelog**: https://github.com/netresearch/ldap-selfservice-password-changer/compare/{{ .PreviousTag }}...{{ .Tag }}
+  footer: |
+    ---
+
+    ### Installation
+
+    **Binary Installation:**
+    ```bash
+    # Linux (x86_64)
+    wget https://github.com/netresearch/ldap-selfservice-password-changer/releases/download/{{ .Tag }}/ldap-selfservice-password-changer_{{ .Version }}_Linux_x86_64.tar.gz
+    tar -xzf ldap-selfservice-password-changer_{{ .Version }}_Linux_x86_64.tar.gz
+    sudo mv ldap-selfservice-password-changer /usr/local/bin/
+
+    # macOS (Apple Silicon)
+    wget https://github.com/netresearch/ldap-selfservice-password-changer/releases/download/{{ .Tag }}/ldap-selfservice-password-changer_{{ .Version }}_Darwin_arm64.tar.gz
+    tar -xzf ldap-selfservice-password-changer_{{ .Version }}_Darwin_arm64.tar.gz
+    sudo mv ldap-selfservice-password-changer /usr/local/bin/
+    ```
+
+    **Docker:**
+    ```bash
+    docker pull ghcr.io/netresearch/ldap-selfservice-password-changer:{{ .Tag }}
+    ```
+
+    **Verify Checksums:**
+    ```bash
+    sha256sum -c checksums.txt
+    ```
+
+# Sign release artifacts (optional - requires GPG key)
+# signs:
+#   - artifacts: checksum
+#     cmd: gpg
+#     args:
+#       - "--batch"
+#       - "-u"
+#       - "{{ .Env.GPG_FINGERPRINT }}"
+#       - "--output"
+#       - "${signature}"
+#       - "--detach-sign"
+#       - "${artifact}"
+
+# Docker image configuration (complements existing docker.yml workflow)
+# Disabled since docker.yml already handles multi-platform builds
+# dockers:
+#   - image_templates:
+#       - "ghcr.io/netresearch/ldap-selfservice-password-changer:{{ .Tag }}"
+#       - "ghcr.io/netresearch/ldap-selfservice-password-changer:v{{ .Major }}"
+#       - "ghcr.io/netresearch/ldap-selfservice-password-changer:latest"
+#     dockerfile: Dockerfile
+#     use: buildx
+#     build_flag_templates:
+#       - "--pull"
+#       - "--label=org.opencontainers.image.created={{.Date}}"
+#       - "--label=org.opencontainers.image.title={{.ProjectName}}"
+#       - "--label=org.opencontainers.image.revision={{.FullCommit}}"
+#       - "--label=org.opencontainers.image.version={{.Version}}"
+#       - "--platform=linux/amd64"
+
+# Homebrew tap (optional - for easy installation on macOS)
+# brews:
+#   - repository:
+#       owner: netresearch
+#       name: homebrew-tap
+#     folder: Formula
+#     homepage: https://github.com/netresearch/ldap-selfservice-password-changer
+#     description: Self-service password change & reset for LDAP directories
+#     license: MIT
+#     test: |
+#       system "#{bin}/ldap-selfservice-password-changer", "--version"
+#     install: |
+#       bin.install "ldap-selfservice-password-changer"
+
+# AUR package (optional - for Arch Linux)
+# aurs:
+#   - name: ldap-selfservice-password-changer-bin
+#     homepage: https://github.com/netresearch/ldap-selfservice-password-changer
+#     description: Self-service password change & reset for LDAP directories
+#     maintainers:
+#       - 'Your Name <your.email@example.com>'
+#     license: MIT
+#     private_key: '{{ .Env.AUR_KEY }}'
+#     git_url: 'ssh://aur@aur.archlinux.org/ldap-selfservice-password-changer-bin.git'
+#     package: |-
+#       install -Dm755 "./ldap-selfservice-password-changer" "${pkgdir}/usr/bin/ldap-selfservice-password-changer"
+#       install -Dm644 "./LICENSE" "${pkgdir}/usr/share/licenses/ldap-selfservice-password-changer/LICENSE"
+
+# Announce releases (optional - requires configuration)
+# announce:
+#   slack:
+#     enabled: true
+#     message_template: 'GopherPass {{ .Tag }} is out! Check it out: {{ .ReleaseURL }}'
+#     channel: '#releases'
+#     username: 'GoReleaser'
