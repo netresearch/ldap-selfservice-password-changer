@@ -13,7 +13,6 @@ output:
     - format: colored-line-number
   print-issued-lines: true
   print-linter-name: true
-  uniq-by-line: true
   sort-results: true
 
 linters:
@@ -37,7 +36,7 @@ linters:
     - errname # Check error naming conventions
     - errorlint # Find code that will cause problems with error wrapping
     - exhaustive # Check exhaustiveness of enum switch statements
-    - exportloopref # Check for pointers to enclosing loop variables
+    - copyloopvar # Check for pointers to enclosing loop variables (replaces exportloopref)
     - forbidigo # Forbid specific identifiers
     - gci # Control Go package import order
     - gocheckcompilerdirectives # Check Go compiler directive comments
@@ -50,7 +49,6 @@ linters:
     - gofmt # Check code is gofmt-ed
     - gofumpt # Stricter gofmt
     - goimports # Check imports are goimports-ed
-    - gomnd # Detect magic numbers
     - gomoddirectives # Manage replace/retract directives in go.mod
     - gomodguard # Control allowed modules
     - goprintffuncname # Check printf-like function names
@@ -79,9 +77,8 @@ linters:
     - sloglint # Ensure consistent code style when using log/slog
     - sqlclosecheck # Check sql.Rows and sql.Stmt are closed
     - stylecheck # Stylecheck (ST*)
-    - tenv # Detect using os.Setenv instead of t.Setenv
+    - usetesting # Detect using os.Setenv instead of t.Setenv (replaces tenv)
     - testableexamples # Check examples are testable
-    - testifylint # Check testify usage
     - testpackage # Require separate _test package
     - thelper # Detect test helpers without t.Helper()
     - tparallel # Detect inappropriate usage of t.Parallel()
@@ -97,23 +94,21 @@ linters:
     - depguard # Not needed for this project
     - dogsled # Blank identifiers sometimes necessary
     - err113 # Too strict for this project
-    - execinquery # No longer relevant for modern Go versions
     - exhaustruct # Too strict for this project
     - forcetypeassert # Sometimes type assertions are safe
     - funlen # Function length checks too opinionated
     - gochecknoglobals # Globals sometimes necessary
     - gocognit # Cognitive complexity too opinionated
     - godox # Allow TODO/FIXME comments
-    - goerr113 # Too strict error wrapping requirements
     - grouper # Import grouping is handled by goimports
     - importas # Not needed for this project
     - inamedparam # Named parameters are fine
     - interfacebloat # Interface size not a concern
     - ireturn # Returning interfaces is acceptable
     - maintidx # Maintainability index too opinionated
+    - mnd # Magic number detection too opinionated (replaces gomnd)
     - nestif # Nesting depth checks too opinionated
     - nlreturn # Blank line requirements too strict
-    - nosnakecase # Snake case sometimes appropriate
     - paralleltest # Not all tests should be parallel
     - prealloc # Premature optimization
     - tagalign # Tag alignment not critical
@@ -210,6 +205,7 @@ linters-settings:
 issues:
   max-issues-per-linter: 0
   max-same-issues: 0
+  uniq-by-line: true
 
   exclude-rules:
     # Exclude some linters from running on tests files
@@ -219,6 +215,11 @@ issues:
         - gosec
         - goconst
         - gomnd
+
+    # Allow white-box testing in internal test files
+    - path: _internal_test\.go
+      linters:
+        - testpackage
 
     # Exclude magic numbers in main.go (ports, timeouts, etc.)
     - path: main\.go

@@ -1,13 +1,10 @@
 package rpc
 
 import (
-	"fmt"
+	"errors"
 	"log/slog"
-	"strings"
 
 	ldap "github.com/netresearch/simple-ldap-go"
-
-	"github.com/netresearch/ldap-selfservice-password-changer/internal/validators"
 )
 
 // resetPassword handles completing a password reset with a valid token.
@@ -22,7 +19,7 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 
 	// Validate new password is not empty
 	if newPassword == "" {
-		return nil, fmt.Errorf("the new password can't be empty")
+		return nil, errors.New("the new password can't be empty")
 	}
 
 	// Get token from store
@@ -34,54 +31,29 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 			prefix = tokenString[:8]
 		}
 		slog.Warn("password_reset_invalid_token", "token_prefix", prefix)
-		return nil, fmt.Errorf("Invalid or expired token")
+		return nil, errors.New("invalid or expired token")
 	}
 
 	// Check if token is expired
 	if token.IsExpired() {
 		slog.Warn("password_reset_expired_token", "username", token.Username)
-		return nil, fmt.Errorf("Invalid or expired token")
+		return nil, errors.New("invalid or expired token")
 	}
 
 	// Check if token is already used
 	if token.Used {
 		slog.Warn("password_reset_reused_token", "username", token.Username)
-		return nil, fmt.Errorf("Invalid or expired token")
+		return nil, errors.New("invalid or expired token")
 	}
 
-	// Validate password against policy (same as change-password)
-	if len(newPassword) < int(h.opts.MinLength) {
-		return nil, fmt.Errorf("the new password must be at least %d characters long", h.opts.MinLength)
-	}
-
-	const MaxPasswordLength = 128 // LDAP typical maximum
-	if len(newPassword) > MaxPasswordLength {
-		return nil, fmt.Errorf("the new password must not exceed %d characters", MaxPasswordLength)
-	}
-
-	if !validators.MinNumbersInString(newPassword, h.opts.MinNumbers) {
-		return nil, fmt.Errorf("the new password must contain at least %d %s", h.opts.MinNumbers, pluralize("number", h.opts.MinNumbers))
-	}
-
-	if !validators.MinSymbolsInString(newPassword, h.opts.MinSymbols) {
-		return nil, fmt.Errorf("the new password must contain at least %d %s", h.opts.MinSymbols, pluralize("symbol", h.opts.MinSymbols))
-	}
-
-	if !validators.MinUppercaseLettersInString(newPassword, h.opts.MinUppercase) {
-		return nil, fmt.Errorf("the new password must contain at least %d uppercase %s", h.opts.MinUppercase, pluralize("letter", h.opts.MinUppercase))
-	}
-
-	if !validators.MinLowercaseLettersInString(newPassword, h.opts.MinLowercase) {
-		return nil, fmt.Errorf("the new password must contain at least %d lowercase %s", h.opts.MinLowercase, pluralize("letter", h.opts.MinLowercase))
-	}
-
-	if !h.opts.PasswordCanIncludeUsername && token.Username != "" && strings.Contains(strings.ToLower(newPassword), strings.ToLower(token.Username)) {
-		return nil, fmt.Errorf("the new password must not include the username")
+	// Validate password against policy requirements.
+	if err := ValidateNewPassword(newPassword, token.Username, h.opts); err != nil {
+		return nil, err
 	}
 
 	// Validate username is present in token
 	if token.Username == "" {
-		return nil, fmt.Errorf("Invalid or expired token")
+		return nil, errors.New("invalid or expired token")
 	}
 
 	// Lazy-initialize reset LDAP client if needed
@@ -91,12 +63,12 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 			h.resetLDAP, err = ldap.New(h.opts.LDAP, h.opts.ResetUser, h.opts.ResetPassword)
 			if err != nil {
 				slog.Error("password_reset_ldap_init_failed", "username", token.Username, "error", err)
-				return nil, fmt.Errorf("Failed to initialize password reset connection. Please contact your administrator.")
+				return nil, errors.New("failed to initialize password reset connection; please contact your administrator")
 			}
 		} else {
 			// Should never happen due to handler initialization logic
 			slog.Error("password_reset_not_configured", "username", token.Username)
-			return nil, fmt.Errorf("Password reset not properly configured. Please contact your administrator.")
+			return nil, errors.New("password reset not properly configured; please contact your administrator")
 		}
 	}
 
@@ -116,7 +88,7 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 	if err != nil {
 		// Generic error to user, detailed error in logs
 		slog.Error("password_reset_failed", "username", token.Username, "error", err)
-		return nil, fmt.Errorf("Failed to reset password. Please contact your administrator if this problem persists.")
+		return nil, errors.New("failed to reset password; please contact your administrator if this problem persists")
 	}
 
 	// Mark token as used

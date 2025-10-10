@@ -1,16 +1,18 @@
 package rpc
 
 import (
+	"errors"
 	"testing"
 	"time"
 
 	ldap "github.com/netresearch/simple-ldap-go"
+	"github.com/stretchr/testify/require"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 )
 
-// Mock LDAP client for testing
+// Mock LDAP client for testing.
 type mockResetLDAPClient struct {
 	changePasswordError error
 	resetPasswordError  error
@@ -57,15 +59,13 @@ func TestResetPasswordValidToken(t *testing.T) {
 		ExpiresAt: time.Now().Add(15 * time.Minute),
 		Used:      false,
 	}
-	tokenStore.Store(token)
+	err := tokenStore.Store(token)
+	require.NoError(t, err)
 
 	// Test password reset with valid token and password
 	params := []string{"valid-token-123", "NewPass123!"}
 	result, err := handler.resetPassword(params)
-
-	if err != nil {
-		t.Fatalf("resetPassword() unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	if len(result) != 1 {
 		t.Errorf("Expected 1 result, got %d", len(result))
@@ -77,7 +77,8 @@ func TestResetPasswordValidToken(t *testing.T) {
 	}
 
 	// Verify token is marked as used
-	updatedToken, _ := tokenStore.Get("valid-token-123")
+	updatedToken, err := tokenStore.Get("valid-token-123")
+	require.NoError(t, err)
 	if !updatedToken.Used {
 		t.Error("Token should be marked as used")
 	}
@@ -102,7 +103,7 @@ func TestResetPasswordInvalidToken(t *testing.T) {
 		t.Error("Expected error for invalid token")
 	}
 
-	expectedErr := "Invalid or expired token"
+	expectedErr := "invalid or expired token"
 	if err.Error() != expectedErr {
 		t.Errorf("Error = %q, want %q", err.Error(), expectedErr)
 	}
@@ -129,17 +130,18 @@ func TestResetPasswordExpiredToken(t *testing.T) {
 		ExpiresAt: time.Now().Add(-5 * time.Minute), // Expired 5 minutes ago
 		Used:      false,
 	}
-	tokenStore.Store(token)
+	err := tokenStore.Store(token)
+	require.NoError(t, err)
 
 	params := []string{"expired-token", "NewPass123!"}
-	_, err := handler.resetPassword(params)
+	_, err = handler.resetPassword(params)
 
 	if err == nil {
 		t.Error("Expected error for expired token")
 	}
 
-	if err.Error() != "Invalid or expired token" {
-		t.Errorf("Error = %q, want 'Invalid or expired token'", err.Error())
+	if err.Error() != "invalid or expired token" {
+		t.Errorf("Error = %q, want 'invalid or expired token'", err.Error())
 	}
 }
 
@@ -164,17 +166,18 @@ func TestResetPasswordUsedToken(t *testing.T) {
 		ExpiresAt: time.Now().Add(15 * time.Minute),
 		Used:      true, // Already used
 	}
-	tokenStore.Store(token)
+	err := tokenStore.Store(token)
+	require.NoError(t, err)
 
 	params := []string{"used-token", "NewPass123!"}
-	_, err := handler.resetPassword(params)
+	_, err = handler.resetPassword(params)
 
 	if err == nil {
 		t.Error("Expected error for used token")
 	}
 
-	if err.Error() != "Invalid or expired token" {
-		t.Errorf("Error = %q, want 'Invalid or expired token'", err.Error())
+	if err.Error() != "invalid or expired token" {
+		t.Errorf("Error = %q, want 'invalid or expired token'", err.Error())
 	}
 }
 
@@ -205,7 +208,8 @@ func TestResetPasswordPolicyViolation(t *testing.T) {
 		ExpiresAt: time.Now().Add(15 * time.Minute),
 		Used:      false,
 	}
-	tokenStore.Store(token)
+	err := tokenStore.Store(token)
+	require.NoError(t, err)
 
 	tests := []struct {
 		name     string
@@ -259,7 +263,7 @@ func TestResetPasswordInvalidArgumentCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := handler.resetPassword(tt.params)
-			if err != ErrInvalidArgumentCount {
+			if !errors.Is(err, ErrInvalidArgumentCount) {
 				t.Errorf("Expected ErrInvalidArgumentCount, got: %v", err)
 			}
 		})
@@ -287,10 +291,11 @@ func TestResetPasswordEmptyPassword(t *testing.T) {
 		ExpiresAt: time.Now().Add(15 * time.Minute),
 		Used:      false,
 	}
-	tokenStore.Store(token)
+	err := tokenStore.Store(token)
+	require.NoError(t, err)
 
 	params := []string{"test-token", ""}
-	_, err := handler.resetPassword(params)
+	_, err = handler.resetPassword(params)
 
 	if err == nil {
 		t.Error("Expected error for empty password")
@@ -330,11 +335,12 @@ func TestResetPasswordUsernameInPassword(t *testing.T) {
 		ExpiresAt: time.Now().Add(15 * time.Minute),
 		Used:      false,
 	}
-	tokenStore.Store(token)
+	err := tokenStore.Store(token)
+	require.NoError(t, err)
 
 	// Password contains username
 	params := []string{"test-token", "Johnjohn123!"}
-	_, err := handler.resetPassword(params)
+	_, err = handler.resetPassword(params)
 
 	if err == nil {
 		t.Error("Expected error for password containing username")

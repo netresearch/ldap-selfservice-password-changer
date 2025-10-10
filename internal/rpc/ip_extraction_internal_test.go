@@ -8,14 +8,14 @@ import (
 	"github.com/valyala/fasthttp"
 )
 
-// TestExtractClientIP tests IP extraction from various headers and direct connection
+// TestExtractClientIP tests IP extraction from various headers and direct connection.
 func TestExtractClientIP(t *testing.T) {
 	tests := []struct {
-		name           string
-		remoteAddr     string
-		xForwardedFor  string
-		xRealIP        string
-		expectedIP     string
+		name          string
+		remoteAddr    string
+		xForwardedFor string
+		xRealIP       string
+		expectedIP    string
 	}{
 		{
 			name:       "direct connection",
@@ -109,7 +109,7 @@ func TestExtractClientIP(t *testing.T) {
 	}
 }
 
-// TestExtractClientIPMalformed tests handling of malformed IP addresses
+// TestExtractClientIPMalformed tests handling of malformed IP addresses.
 func TestExtractClientIPMalformed(t *testing.T) {
 	tests := []struct {
 		name          string

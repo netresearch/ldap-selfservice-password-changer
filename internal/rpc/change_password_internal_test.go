@@ -9,8 +9,8 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 )
 
-// TestPasswordCanIncludeUsername tests the username inclusion validation logic
-// with various case combinations to ensure case-insensitive checking works correctly
+// TestPasswordCanIncludeUsername tests the username inclusion validation logic.
+// with various case combinations to ensure case-insensitive checking works correctly.
 func TestPasswordCanIncludeUsername(t *testing.T) {
 	tests := []struct {
 		name                       string
@@ -24,7 +24,7 @@ func TestPasswordCanIncludeUsername(t *testing.T) {
 		{
 			name:                       "reject exact match same case (disallowed)",
 			username:                   "admin",
-			password:                   "admin123!",
+			password:                   "Admin123!",
 			passwordCanIncludeUsername: false,
 			shouldFail:                 true,
 			expectedError:              "the new password must not include the username",
@@ -40,7 +40,7 @@ func TestPasswordCanIncludeUsername(t *testing.T) {
 		{
 			name:                       "reject uppercase username in password (disallowed)",
 			username:                   "admin",
-			password:                   "ADMIN123!",
+			password:                   "ADMIN123pass!",
 			passwordCanIncludeUsername: false,
 			shouldFail:                 true,
 			expectedError:              "the new password must not include the username",
@@ -71,7 +71,7 @@ func TestPasswordCanIncludeUsername(t *testing.T) {
 		{
 			name:                       "accept partial match not containing full username (disallowed)",
 			username:                   "administrator",
-			password:                   "admin123!",
+			password:                   "Admin123!",
 			passwordCanIncludeUsername: false,
 			shouldFail:                 false,
 		},
@@ -80,7 +80,7 @@ func TestPasswordCanIncludeUsername(t *testing.T) {
 		{
 			name:                       "allow username in password same case (allowed)",
 			username:                   "admin",
-			password:                   "admin123!",
+			password:                   "Admin123!",
 			passwordCanIncludeUsername: true,
 			shouldFail:                 false,
 		},
@@ -112,27 +112,27 @@ func TestPasswordCanIncludeUsername(t *testing.T) {
 				PasswordCanIncludeUsername: tt.passwordCanIncludeUsername,
 			}
 
-			// Test the validation logic directly
-			// We can't call changePassword without LDAP mock, so we test the logic
-			shouldReject := !opts.PasswordCanIncludeUsername && tt.username != "" &&
-				strings.Contains(strings.ToLower(tt.password), strings.ToLower(tt.username))
+			// Test the validation logic using ValidateNewPassword
+			err := ValidateNewPassword(tt.password, tt.username, opts)
 
 			if tt.shouldFail {
-				if !shouldReject {
+				if err == nil {
 					t.Errorf("Expected password %q to be rejected when username is %q and PasswordCanIncludeUsername=%v",
 						tt.password, tt.username, tt.passwordCanIncludeUsername)
 				}
-			} else {
-				if shouldReject {
-					t.Errorf("Expected password %q to be accepted when username is %q and PasswordCanIncludeUsername=%v",
-						tt.password, tt.username, tt.passwordCanIncludeUsername)
+				if err != nil && !strings.Contains(err.Error(), "username") {
+					t.Errorf("Expected error to mention username, got: %v", err)
 				}
+			} else if err != nil {
+				t.Errorf(
+					"Expected password %q to be accepted when username is %q and PasswordCanIncludeUsername=%v, got error: %v",
+					tt.password, tt.username, tt.passwordCanIncludeUsername, err)
 			}
 		})
 	}
 }
 
-// TestPasswordValidationEdgeCases tests edge cases for password validation
+// TestPasswordValidationEdgeCases tests edge cases for password validation.
 func TestPasswordValidationEdgeCases(t *testing.T) {
 	tests := []struct {
 		name                       string
@@ -187,21 +187,26 @@ func TestPasswordValidationEdgeCases(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			opts := &options.Opts{
+				MinLength:                  8,
+				MinNumbers:                 1,
+				MinSymbols:                 1,
+				MinUppercase:               1,
+				MinLowercase:               1,
 				PasswordCanIncludeUsername: tt.passwordCanIncludeUsername,
 			}
 
-			shouldReject := !opts.PasswordCanIncludeUsername && tt.username != "" &&
-				strings.Contains(strings.ToLower(tt.password), strings.ToLower(tt.username))
+			err := ValidateNewPassword(tt.password, tt.username, opts)
+			shouldReject := err != nil && strings.Contains(err.Error(), "username")
 
 			if shouldReject != tt.shouldReject {
-				t.Errorf("%s: Expected shouldReject=%v, got shouldReject=%v for password=%q username=%q",
-					tt.description, tt.shouldReject, shouldReject, tt.password, tt.username)
+				t.Errorf("%s: Expected shouldReject=%v, got shouldReject=%v (error: %v) for password=%q username=%q",
+					tt.description, tt.shouldReject, shouldReject, err, tt.password, tt.username)
 			}
 		})
 	}
 }
 
-// TestChangePasswordIPRateLimiting tests IP-based rate limiting on change-password endpoint
+// TestChangePasswordIPRateLimiting tests IP-based rate limiting on change-password endpoint.
 func TestChangePasswordIPRateLimiting(t *testing.T) {
 	mockLDAP := &mockChangePasswordLDAP{
 		changePasswordError: nil,
@@ -262,7 +267,7 @@ func TestChangePasswordIPRateLimiting(t *testing.T) {
 	}
 }
 
-// mockChangePasswordLDAP mocks LDAP client for change password tests
+// mockChangePasswordLDAP mocks LDAP client for change password tests.
 type mockChangePasswordLDAP struct {
 	changePasswordError error
 }
@@ -271,7 +276,9 @@ func (m *mockChangePasswordLDAP) FindUserByMail(mail string) (*ldap.User, error)
 	return &ldap.User{SAMAccountName: "testuser"}, nil
 }
 
-func (m *mockChangePasswordLDAP) ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword string) error {
+func (m *mockChangePasswordLDAP) ChangePasswordForSAMAccountName(
+	sAMAccountName, oldPassword, newPassword string,
+) error {
 	return m.changePasswordError
 }
 
@@ -279,7 +286,7 @@ func (m *mockChangePasswordLDAP) ResetPasswordForSAMAccountName(sAMAccountName, 
 	return nil
 }
 
-// mockIPLimiter mocks IP rate limiter for testing
+// mockIPLimiter mocks IP rate limiter for testing.
 type mockIPLimiter struct {
 	allowed bool
 	count   int

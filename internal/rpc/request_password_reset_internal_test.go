@@ -1,18 +1,20 @@
 package rpc
 
 import (
+	"errors"
 	"fmt"
 	"testing"
 	"time"
 
 	ldap "github.com/netresearch/simple-ldap-go"
+	"github.com/stretchr/testify/require"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 )
 
-// Mock email service for testing
+// Mock email service for testing.
 type mockEmailService struct {
 	lastTo    string
 	lastToken string
@@ -25,7 +27,7 @@ func (m *mockEmailService) SendResetEmail(to, token string) error {
 	return m.sendError
 }
 
-// Mock LDAP client for testing
+// Mock LDAP client for testing.
 type mockLDAPClient struct {
 	findUserByMailError error
 	users               map[string]*ldap.User
@@ -38,7 +40,7 @@ func (m *mockLDAPClient) FindUserByMail(mail string) (*ldap.User, error) {
 	if user, ok := m.users[mail]; ok {
 		return user, nil
 	}
-	return nil, fmt.Errorf("user not found")
+	return nil, errors.New("user not found")
 }
 
 func (m *mockLDAPClient) ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword string) error {
@@ -75,10 +77,7 @@ func TestRequestPasswordResetValidEmail(t *testing.T) {
 	// Test valid email request
 	params := []string{"test@example.com"}
 	result, err := handler.requestPasswordReset(params)
-
-	if err != nil {
-		t.Fatalf("requestPasswordReset() unexpected error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Should return generic success message
 	if len(result) != 1 {
@@ -102,9 +101,7 @@ func TestRequestPasswordResetValidEmail(t *testing.T) {
 
 	// Verify token exists in store
 	token, err := tokenStore.Get(mockEmail.lastToken)
-	if err != nil {
-		t.Errorf("Token not found in store: %v", err)
-	}
+	require.NoError(t, err)
 
 	if token.Email != "test@example.com" {
 		t.Errorf("Token email = %q, want test@example.com", token.Email)
@@ -143,7 +140,6 @@ func TestRequestPasswordResetInvalidEmail(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			params := []string{tt.email}
 			result, err := handler.requestPasswordReset(params)
-
 			// Should still return generic success (don't reveal invalid email)
 			if err != nil {
 				t.Errorf("Should not error on invalid email, got: %v", err)
@@ -181,18 +177,15 @@ func TestRequestPasswordResetRateLimit(t *testing.T) {
 	email := "ratelimit@example.com"
 
 	// First 2 requests should succeed
-	for i := 0; i < 2; i++ {
+	for i := range 2 {
 		params := []string{email}
 		_, err := handler.requestPasswordReset(params)
-		if err != nil {
-			t.Fatalf("Request %d failed: %v", i+1, err)
-		}
+		require.NoError(t, err, "Request %d failed", i+1)
 	}
 
 	// 3rd request should be rate limited but still return success
 	params := []string{email}
 	result, err := handler.requestPasswordReset(params)
-
 	if err != nil {
 		t.Errorf("Rate limited request should not error, got: %v", err)
 	}
@@ -241,7 +234,7 @@ func TestRequestPasswordResetInvalidArgumentCount(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			_, err := handler.requestPasswordReset(tt.params)
-			if err != ErrInvalidArgumentCount {
+			if !errors.Is(err, ErrInvalidArgumentCount) {
 				t.Errorf("Expected ErrInvalidArgumentCount, got: %v", err)
 			}
 		})
@@ -272,12 +265,11 @@ func TestRequestPasswordResetTokenExpiration(t *testing.T) {
 
 	params := []string{"test@example.com"}
 	_, err := handler.requestPasswordReset(params)
-	if err != nil {
-		t.Fatalf("requestPasswordReset() error: %v", err)
-	}
+	require.NoError(t, err)
 
 	// Verify token has expiration set (15 minutes from now)
-	token, _ := tokenStore.Get(mockEmail.lastToken)
+	token, err := tokenStore.Get(mockEmail.lastToken)
+	require.NoError(t, err)
 
 	expiryDuration := token.ExpiresAt.Sub(token.CreatedAt)
 	expectedDuration := 15 * time.Minute
@@ -292,7 +284,7 @@ func TestRequestPasswordResetEmailFailure(t *testing.T) {
 	tokenStore := resettoken.NewStore()
 	limiter := ratelimit.NewLimiter(3, 60*time.Minute)
 	mockEmail := &mockEmailService{
-		sendError: fmt.Errorf("SMTP connection failed"),
+		sendError: errors.New("SMTP connection failed"),
 	}
 	mockLDAP := &mockLDAPClient{
 		users: map[string]*ldap.User{
@@ -314,7 +306,6 @@ func TestRequestPasswordResetEmailFailure(t *testing.T) {
 
 	params := []string{"test@example.com"}
 	result, err := handler.requestPasswordReset(params)
-
 	// Should still return success (don't reveal SMTP failure to user)
 	if err != nil {
 		t.Errorf("Should not error on email failure, got: %v", err)
@@ -337,15 +328,15 @@ func TestRequestPasswordResetIPRateLimitingIntegration(t *testing.T) {
 	mockEmail := &mockEmailService{}
 	mockLDAP := &mockLDAPClient{
 		users: map[string]*ldap.User{
-			"user1@example.com": {SAMAccountName: "user1"},
-			"user2@example.com": {SAMAccountName: "user2"},
-			"user3@example.com": {SAMAccountName: "user3"},
-			"user4@example.com": {SAMAccountName: "user4"},
-			"user5@example.com": {SAMAccountName: "user5"},
-			"user6@example.com": {SAMAccountName: "user6"},
-			"user7@example.com": {SAMAccountName: "user7"},
-			"user8@example.com": {SAMAccountName: "user8"},
-			"user9@example.com": {SAMAccountName: "user9"},
+			"user1@example.com":  {SAMAccountName: "user1"},
+			"user2@example.com":  {SAMAccountName: "user2"},
+			"user3@example.com":  {SAMAccountName: "user3"},
+			"user4@example.com":  {SAMAccountName: "user4"},
+			"user5@example.com":  {SAMAccountName: "user5"},
+			"user6@example.com":  {SAMAccountName: "user6"},
+			"user7@example.com":  {SAMAccountName: "user7"},
+			"user8@example.com":  {SAMAccountName: "user8"},
+			"user9@example.com":  {SAMAccountName: "user9"},
 			"user10@example.com": {SAMAccountName: "user10"},
 			"user11@example.com": {SAMAccountName: "user11"},
 		},
@@ -369,9 +360,7 @@ func TestRequestPasswordResetIPRateLimitingIntegration(t *testing.T) {
 	for i := 1; i <= 10; i++ {
 		email := fmt.Sprintf("user%d@example.com", i)
 		result, err := handler.requestPasswordResetWithIP([]string{email}, clientIP)
-		if err != nil {
-			t.Fatalf("Request %d failed: %v", i, err)
-		}
+		require.NoError(t, err, "Request %d failed", i)
 		if len(result) != 1 {
 			t.Errorf("Request %d: expected 1 result, got %d", i, len(result))
 		}
@@ -428,7 +417,9 @@ func TestRequestPasswordResetIPRateLimitCheckedBeforeEmail(t *testing.T) {
 	for i := 1; i <= 10; i++ {
 		email := fmt.Sprintf("user%d@example.com", i)
 		mockLDAP.users[email] = &ldap.User{SAMAccountName: fmt.Sprintf("user%d", i)}
-		handler.requestPasswordResetWithIP([]string{email}, clientIP)
+		if _, err := handler.requestPasswordResetWithIP([]string{email}, clientIP); err != nil {
+			t.Fatalf("Failed to request password reset: %v", err)
+		}
 	}
 
 	// Now try with a new email that is NOT in the email rate limiter

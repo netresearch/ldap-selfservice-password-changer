@@ -1,16 +1,18 @@
 package rpc
 
 import (
+	"fmt"
 	"net/http"
 
 	"github.com/gofiber/fiber/v2"
-	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	ldap "github.com/netresearch/simple-ldap-go"
+
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 )
 
 type Func = func(params []string) ([]string, error)
 
-// LDAPClient interface for LDAP operations (enables testing)
+// LDAPClient interface for LDAP operations (enables testing).
 type LDAPClient interface {
 	FindUserByMail(mail string) (*ldap.User, error)
 	ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword string) error
@@ -27,7 +29,7 @@ type Handler struct {
 	ipLimiter    IPLimiter // IP-based rate limiter for DoS protection
 }
 
-// IPLimiter interface for IP-based rate limiting
+// IPLimiter interface for IP-based rate limiting.
 type IPLimiter interface {
 	AllowRequest(ipAddress string) bool
 }
@@ -35,7 +37,7 @@ type IPLimiter interface {
 func New(opts *options.Opts) (*Handler, error) {
 	ldap, err := ldap.New(opts.LDAP, opts.ReadonlyUser, opts.ReadonlyPassword)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize LDAP connection: %w", err)
 	}
 
 	return &Handler{
@@ -44,16 +46,22 @@ func New(opts *options.Opts) (*Handler, error) {
 	}, nil
 }
 
-// SetIPLimiter sets the IP limiter for the handler (used for change-password rate limiting)
+// SetIPLimiter sets the IP limiter for the handler (used for change-password rate limiting).
 func (h *Handler) SetIPLimiter(ipLimiter IPLimiter) {
 	h.ipLimiter = ipLimiter
 }
 
 // NewWithServices creates a handler with password reset services.
-func NewWithServices(opts *options.Opts, tokenStore TokenStore, emailService EmailService, rateLimiter RateLimiter, ipLimiter IPLimiter) (*Handler, error) {
+func NewWithServices(
+	opts *options.Opts,
+	tokenStore TokenStore,
+	emailService EmailService,
+	rateLimiter RateLimiter,
+	ipLimiter IPLimiter,
+) (*Handler, error) {
 	ldapClient, err := ldap.New(opts.LDAP, opts.ReadonlyUser, opts.ReadonlyPassword)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to initialize LDAP connection: %w", err)
 	}
 
 	// Reset LDAP client will be lazy-initialized on first password reset request
@@ -77,25 +85,11 @@ func NewWithServices(opts *options.Opts, tokenStore TokenStore, emailService Ema
 	}, nil
 }
 
+//nolint:stylecheck // ST1016: c matches fiber conventions, other methods use h
 func (h *Handler) Handle(c *fiber.Ctx) error {
 	var body JSONRPC
 	if err := c.BodyParser(&body); err != nil {
-		return err
-	}
-
-	wrapRPC := func(fn Func) error {
-		data, err := fn(body.Params)
-		if err != nil {
-			return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
-				Success: false,
-				Data:    []string{err.Error()},
-			})
-		}
-
-		return c.JSON(JSONRPCResponse{
-			Success: true,
-			Data:    data,
-		})
+		return fmt.Errorf("failed to parse request body: %w", err)
 	}
 
 	// Extract client IP for rate limiting
@@ -103,54 +97,67 @@ func (h *Handler) Handle(c *fiber.Ctx) error {
 
 	switch body.Method {
 	case "change-password":
-		// Use dedicated method that includes IP-based rate limiting
-		data, err := h.changePasswordWithIP(body.Params, clientIP)
-		if err != nil {
-			return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
-				Success: false,
-				Data:    []string{err.Error()},
-			})
-		}
-		return c.JSON(JSONRPCResponse{
-			Success: true,
-			Data:    data,
-		})
-
+		return h.handleChangePassword(c, body.Params, clientIP)
 	case "request-password-reset":
-		// Check if password reset is enabled
-		if h.tokenStore == nil {
-			return c.Status(http.StatusBadRequest).JSON(JSONRPCResponse{
-				Success: false,
-				Data:    []string{"password reset feature not enabled"},
-			})
-		}
-		// Use dedicated method that includes IP-based rate limiting
-		data, err := h.requestPasswordResetWithIP(body.Params, clientIP)
-		if err != nil {
-			return c.Status(http.StatusInternalServerError).JSON(JSONRPCResponse{
-				Success: false,
-				Data:    []string{err.Error()},
-			})
-		}
-		return c.JSON(JSONRPCResponse{
-			Success: true,
-			Data:    data,
-		})
-
+		return h.handleRequestPasswordReset(c, body.Params, clientIP)
 	case "reset-password":
-		// Check if password reset is enabled
-		if h.tokenStore == nil {
-			return c.Status(http.StatusBadRequest).JSON(JSONRPCResponse{
-				Success: false,
-				Data:    []string{"password reset feature not enabled"},
-			})
-		}
-		return wrapRPC(h.resetPassword)
-
+		return h.handleResetPassword(c, body.Params)
 	default:
-		return c.Status(http.StatusBadRequest).JSON(JSONRPCResponse{
-			Success: false,
-			Data:    []string{"method not found"},
-		})
+		return sendErrorResponse(c, http.StatusBadRequest, "method not found")
 	}
+}
+
+// handleChangePassword processes change-password requests with IP-based rate limiting.
+func (h *Handler) handleChangePassword(c *fiber.Ctx, params []string, clientIP string) error {
+	data, err := h.changePasswordWithIP(params, clientIP)
+	if err != nil {
+		return sendErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	return sendSuccessResponse(c, data)
+}
+
+// handleRequestPasswordReset processes request-password-reset requests with IP-based rate limiting.
+func (h *Handler) handleRequestPasswordReset(c *fiber.Ctx, params []string, clientIP string) error {
+	if h.tokenStore == nil {
+		return sendErrorResponse(c, http.StatusBadRequest, "password reset feature not enabled")
+	}
+	data, err := h.requestPasswordResetWithIP(params, clientIP)
+	if err != nil {
+		return sendErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	return sendSuccessResponse(c, data)
+}
+
+// handleResetPassword processes reset-password requests.
+func (h *Handler) handleResetPassword(c *fiber.Ctx, params []string) error {
+	if h.tokenStore == nil {
+		return sendErrorResponse(c, http.StatusBadRequest, "password reset feature not enabled")
+	}
+	data, err := h.resetPassword(params)
+	if err != nil {
+		return sendErrorResponse(c, http.StatusInternalServerError, err.Error())
+	}
+	return sendSuccessResponse(c, data)
+}
+
+// sendSuccessResponse sends a successful JSON-RPC response.
+func sendSuccessResponse(c *fiber.Ctx, data []string) error {
+	if jsonErr := c.JSON(JSONRPCResponse{
+		Success: true,
+		Data:    data,
+	}); jsonErr != nil {
+		return fmt.Errorf("failed to send success response: %w", jsonErr)
+	}
+	return nil
+}
+
+// sendErrorResponse sends an error JSON-RPC response.
+func sendErrorResponse(c *fiber.Ctx, statusCode int, message string) error {
+	if jsonErr := c.Status(statusCode).JSON(JSONRPCResponse{
+		Success: false,
+		Data:    []string{message},
+	}); jsonErr != nil {
+		return fmt.Errorf("failed to send error response: %w", jsonErr)
+	}
+	return nil
 }
