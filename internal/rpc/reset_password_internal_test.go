@@ -12,7 +12,6 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 )
 
-//nolint:gosec // G101: Not a credential, just an error message string for tests
 const errInvalidOrExpiredToken = "invalid or expired token"
 
 // Mock LDAP client for testing.

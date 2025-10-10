@@ -85,7 +85,7 @@ func envBoolOrDefault(name string, d bool) bool {
 func Parse() *Opts {
 	// Load .env files if they exist (native runs)
 	// When running in Docker Compose, env vars are already injected via env_file
-	// Error is intentionally ignored - .env files are optional in containerized environments
+	//nolint:errcheck // .env files are optional in containerized environments
 	_ = godotenv.Load(".env.local", ".env")
 
 	var (

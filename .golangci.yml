@@ -107,75 +107,91 @@ linters:
     - wsl # Whitespace rules too strict
     - zerologlint # Project uses slog not zerolog
 
-linters-settings:
-  errcheck:
-    check-type-assertions: true
-    check-blank: true
-    exclude-functions:
-      - (io.Closer).Close
-      - (*os.File).Close
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
 
-  govet:
-    enable-all: true
-    disable:
-      - fieldalignment # Struct field alignment not critical
-      - shadow # Shadow checking too strict
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # Struct field alignment not critical
+        - shadow # Shadow checking too strict
 
-  gocyclo:
-    min-complexity: 15
+    gocyclo:
+      min-complexity: 15
 
-  dupl:
-    threshold: 100
+    dupl:
+      threshold: 100
 
-  goconst:
-    min-len: 3
-    min-occurrences: 3
-    ignore-tests: true
+    goconst:
+      min-len: 3
+      min-occurrences: 3
 
-  lll:
-    line-length: 120
-    tab-width: 1
+    lll:
+      line-length: 120
+      tab-width: 1
 
-  misspell:
-    locale: US
-    ignore-words:
-      - ldap
-      - samaccountname
+    misspell:
+      locale: US
 
-  nakedret:
-    max-func-lines: 30
+    nakedret:
+      max-func-lines: 30
 
-  gosec:
-    severity: medium
-    confidence: medium
-    excludes:
-      - G104 # Errors unhandled (covered by errcheck)
-    config:
-      G306: "0644" # Expect FileMode 0644 for config files
+    gosec:
+      severity: medium
+      confidence: medium
+      excludes:
+        - G104 # Errors unhandled (covered by errcheck)
+      config:
+        G306: "0644" # Expect FileMode 0644 for config files
 
-  revive:
+    revive:
+      rules:
+        - name: exported
+          disabled: false
+        - name: package-comments
+          disabled: false
+        - name: var-naming
+          disabled: false
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+        - opinionated
+      disabled-checks:
+        - whyNoLint # Allow missing explanations for nolint directives
+
+  exclusions:
     rules:
-      - name: exported
-        disabled: false
-      - name: package-comments
-        disabled: false
-      - name: var-naming
-        disabled: false
+      # Exclude some linters from running on tests files
+      - path: '_test\.go'
+        linters:
+          - dupl
+          - gosec
+          - goconst
+          - mnd
 
-  gocritic:
-    enabled-tags:
-      - diagnostic
-      - style
-      - performance
-      - experimental
-      - opinionated
-    disabled-checks:
-      - whyNoLint # Allow missing explanations for nolint directives
+      # Allow white-box testing in internal test files
+      - path: '_internal_test\.go'
+        linters:
+          - testpackage
 
-  gomnd:
-    ignored-functions:
-      - time.Duration
-      - strconv.Parse*
+      # Exclude magic numbers in main.go (ports, timeouts, etc.)
+      - path: 'main\.go'
+        linters:
+          - mnd
+
+      # Allow globals in options package
+      - path: "internal/options/"
+        linters:
+          - gochecknoglobals
 
 formatters:
   enable:
@@ -196,36 +212,3 @@ issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   uniq-by-line: true
-
-  exclude-rules:
-    # Exclude some linters from running on tests files
-    - path: _test\.go
-      linters:
-        - dupl
-        - gosec
-        - goconst
-        - gomnd
-
-    # Allow white-box testing in internal test files
-    - path: _internal_test\.go
-      linters:
-        - testpackage
-
-    # Exclude magic numbers in main.go (ports, timeouts, etc.)
-    - path: main\.go
-      linters:
-        - gomnd
-
-    # Allow globals in options package
-    - path: internal/options/
-      linters:
-        - gochecknoglobals
-
-  exclude-dirs:
-    - vendor
-    - node_modules
-    - internal/web/static
-
-  exclude-files:
-    - ".*\\.pb\\.go$"
-    - ".*_gen\\.go$"

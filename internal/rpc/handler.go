@@ -38,13 +38,13 @@ type IPLimiter interface {
 
 // New creates a basic Handler for password change operations without password reset services.
 func New(opts *options.Opts) (*Handler, error) {
-	ldap, err := ldap.New(opts.LDAP, opts.ReadonlyUser, opts.ReadonlyPassword)
+	ldapClient, err := ldap.New(opts.LDAP, opts.ReadonlyUser, opts.ReadonlyPassword)
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize LDAP connection: %w", err)
 	}
 
 	return &Handler{
-		ldap: ldap,
+		ldap: ldapClient,
 		opts: opts,
 	}, nil
 }
