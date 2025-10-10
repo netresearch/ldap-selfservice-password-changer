@@ -43,11 +43,11 @@ func (m *mockLDAPClient) FindUserByMail(mail string) (*ldap.User, error) {
 	return nil, errors.New("user not found")
 }
 
-func (m *mockLDAPClient) ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword string) error {
+func (m *mockLDAPClient) ChangePasswordForSAMAccountName(_, _, _ string) error {
 	return nil
 }
 
-func (m *mockLDAPClient) ResetPasswordForSAMAccountName(sAMAccountName, newPassword string) error {
+func (m *mockLDAPClient) ResetPasswordForSAMAccountName(_, _ string) error {
 	return nil
 }
 

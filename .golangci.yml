@@ -1,6 +1,8 @@
 # golangci-lint configuration
 # https://golangci-lint.run/usage/configuration/
 
+version: "2"
+
 run:
   timeout: 5m
   tests: true
@@ -12,10 +14,9 @@ linters:
   enable:
     # Enabled by default
     - errcheck # Check for unchecked errors
-    - gosimple # Simplify code
     - govet # Standard Go vet
     - ineffassign # Detect ineffectual assignments
-    - staticcheck # Staticcheck (SA*)
+    - staticcheck # Staticcheck (SA*) - includes gosimple and stylecheck in v2
     - unused # Check for unused constants, variables, functions and types
 
     # Additional enabled linters
@@ -31,7 +32,6 @@ linters:
     - exhaustive # Check exhaustiveness of enum switch statements
     - copyloopvar # Check for pointers to enclosing loop variables (replaces exportloopref)
     - forbidigo # Forbid specific identifiers
-    - gci # Control Go package import order
     - gocheckcompilerdirectives # Check Go compiler directive comments
     - gochecknoinits # Check no init functions
     - gochecksumtype # Check exhaustiveness on sum types
@@ -39,9 +39,6 @@ linters:
     - gocritic # Comprehensive Go checker
     - gocyclo # Compute cyclomatic complexities
     - godot # Check comment sentences end with period
-    - gofmt # Check code is gofmt-ed
-    - gofumpt # Stricter gofmt
-    - goimports # Check imports are goimports-ed
     - gomoddirectives # Manage replace/retract directives in go.mod
     - gomodguard # Control allowed modules
     - goprintffuncname # Check printf-like function names
@@ -69,7 +66,6 @@ linters:
     - rowserrcheck # Check errors from sql.Rows
     - sloglint # Ensure consistent code style when using log/slog
     - sqlclosecheck # Check sql.Rows and sql.Stmt are closed
-    - stylecheck # Stylecheck (ST*)
     - usetesting # Detect using os.Setenv instead of t.Setenv (replaces tenv)
     - testableexamples # Check examples are testable
     - testpackage # Require separate _test package
@@ -166,11 +162,6 @@ linters-settings:
       - name: var-naming
         disabled: false
 
-  stylecheck:
-    checks:
-      - all
-      - -ST1003 # Underscores in names (LDAP constants use underscores)
-
   gocritic:
     enabled-tags:
       - diagnostic
@@ -181,19 +172,25 @@ linters-settings:
     disabled-checks:
       - whyNoLint # Allow missing explanations for nolint directives
 
-  gofumpt:
-    extra-rules: true
-
-  gci:
-    sections:
-      - standard
-      - default
-      - prefix(github.com/netresearch/ldap-selfservice-password-changer)
-
   gomnd:
     ignored-functions:
       - time.Duration
       - strconv.Parse*
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+    - gci
+  settings:
+    gofumpt:
+      extra-rules: true
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/netresearch/ldap-selfservice-password-changer)
 
 issues:
   max-issues-per-linter: 0

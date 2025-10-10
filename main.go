@@ -1,3 +1,5 @@
+// GopherPass LDAP Self-Service Password Changer provides a web interface
+// for users to change and reset their LDAP passwords.
 package main
 
 import (

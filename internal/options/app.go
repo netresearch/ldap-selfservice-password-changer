@@ -1,3 +1,4 @@
+// Package options handles application configuration and command-line flag parsing.
 package options
 
 import (
@@ -10,6 +11,7 @@ import (
 	ldap "github.com/netresearch/simple-ldap-go"
 )
 
+// Opts holds application configuration from environment variables and command-line flags.
 type Opts struct {
 	Port             string
 	LDAP             ldap.Config
@@ -79,11 +81,12 @@ func envBoolOrDefault(name string, d bool) bool {
 	return v2
 }
 
+// Parse parses command-line flags and environment variables into configuration options.
 func Parse() *Opts {
 	// Load .env files if they exist (native runs)
 	// When running in Docker Compose, env vars are already injected via env_file
 	// Error is intentionally ignored - .env files are optional in containerized environments
-	_ = godotenv.Load(".env.local", ".env") //nolint:errcheck // .env files are optional
+	_ = godotenv.Load(".env.local", ".env")
 
 	var (
 		fPort       = flag.String("port", envStringOrDefault("PORT", "3000"), "Port to listen on.")

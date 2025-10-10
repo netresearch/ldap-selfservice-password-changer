@@ -10,6 +10,7 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 )
 
+// Func is a type alias for RPC handler functions that process string parameters and return results or errors.
 type Func = func(params []string) ([]string, error)
 
 // LDAPClient interface for LDAP operations (enables testing).
@@ -19,6 +20,7 @@ type LDAPClient interface {
 	ResetPasswordForSAMAccountName(sAMAccountName, newPassword string) error
 }
 
+// Handler processes JSON-RPC 2.0 requests for password management operations.
 type Handler struct {
 	ldap         LDAPClient
 	resetLDAP    LDAPClient // Optional dedicated client for password reset operations (lazy-initialized)
@@ -34,6 +36,7 @@ type IPLimiter interface {
 	AllowRequest(ipAddress string) bool
 }
 
+// New creates a basic Handler for password change operations without password reset services.
 func New(opts *options.Opts) (*Handler, error) {
 	ldap, err := ldap.New(opts.LDAP, opts.ReadonlyUser, opts.ReadonlyPassword)
 	if err != nil {
@@ -85,6 +88,8 @@ func NewWithServices(
 	}, nil
 }
 
+// Handle processes incoming JSON-RPC 2.0 requests and routes them to appropriate handlers.
+//
 //nolint:stylecheck // ST1016: c matches fiber conventions, other methods use h
 func (h *Handler) Handle(c *fiber.Ctx) error {
 	var body JSONRPC

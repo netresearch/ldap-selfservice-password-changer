@@ -1,3 +1,4 @@
+// Package email provides SMTP email functionality for sending password reset tokens.
 package email
 
 import (

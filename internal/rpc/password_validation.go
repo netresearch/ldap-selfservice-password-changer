@@ -9,6 +9,7 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/validators"
 )
 
+// MaxPasswordLength defines the maximum allowed password length for LDAP systems.
 const MaxPasswordLength = 128 // LDAP typical maximum.
 
 func pluralize(word string, amount uint) string {

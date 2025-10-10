@@ -301,7 +301,7 @@ func TestConcurrentReadWrite(t *testing.T) {
 	for i := range 50 {
 		// Readers
 		wg.Add(1)
-		go func(id int) { //nolint:unparam // id used for function signature consistency
+		go func(_ int) {
 			defer wg.Done()
 			for j := range 100 {
 				if _, err := store.Get(generateUniqueToken(0, j)); err != nil {

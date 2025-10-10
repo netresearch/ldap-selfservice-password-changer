@@ -9,6 +9,8 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 )
 
+const testClientIP = "203.0.113.42"
+
 // TestPasswordCanIncludeUsername tests the username inclusion validation logic.
 // with various case combinations to ensure case-insensitive checking works correctly.
 func TestPasswordCanIncludeUsername(t *testing.T) {
@@ -233,7 +235,7 @@ func TestChangePasswordIPRateLimiting(t *testing.T) {
 		ipLimiter: ipLimiter,
 	}
 
-	clientIP := "203.0.113.42"
+	clientIP := testClientIP
 
 	// First 5 requests should succeed
 	for i := 1; i <= 5; i++ {
@@ -272,17 +274,15 @@ type mockChangePasswordLDAP struct {
 	changePasswordError error
 }
 
-func (m *mockChangePasswordLDAP) FindUserByMail(mail string) (*ldap.User, error) {
+func (m *mockChangePasswordLDAP) FindUserByMail(_ string) (*ldap.User, error) {
 	return &ldap.User{SAMAccountName: "testuser"}, nil
 }
 
-func (m *mockChangePasswordLDAP) ChangePasswordForSAMAccountName(
-	sAMAccountName, oldPassword, newPassword string,
-) error {
+func (m *mockChangePasswordLDAP) ChangePasswordForSAMAccountName(_, _, _ string) error {
 	return m.changePasswordError
 }
 
-func (m *mockChangePasswordLDAP) ResetPasswordForSAMAccountName(sAMAccountName, newPassword string) error {
+func (m *mockChangePasswordLDAP) ResetPasswordForSAMAccountName(_, _ string) error {
 	return nil
 }
 
@@ -292,6 +292,6 @@ type mockIPLimiter struct {
 	count   int
 }
 
-func (m *mockIPLimiter) AllowRequest(ipAddress string) bool {
+func (m *mockIPLimiter) AllowRequest(_ string) bool {
 	return m.allowed
 }

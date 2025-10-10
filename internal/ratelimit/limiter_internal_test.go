@@ -7,6 +7,8 @@ import (
 	"time"
 )
 
+const testUserEmail = "user@example.com"
+
 func TestNewLimiter(t *testing.T) {
 	limiter := NewLimiter(3, 60*time.Minute)
 	if limiter == nil {
@@ -23,7 +25,7 @@ func TestNewLimiter(t *testing.T) {
 
 func TestAllowRequest(t *testing.T) {
 	limiter := NewLimiter(3, 60*time.Minute)
-	identifier := "user@example.com"
+	identifier := testUserEmail
 
 	// First 3 requests should be allowed
 	for i := 1; i <= 3; i++ {
@@ -57,7 +59,7 @@ func TestAllowRequestDifferentUsers(t *testing.T) {
 
 func TestSlidingWindow(t *testing.T) {
 	limiter := NewLimiter(2, 100*time.Millisecond)
-	identifier := "user@example.com"
+	identifier := testUserEmail
 
 	// Make 2 requests (limit reached)
 	limiter.AllowRequest(identifier)

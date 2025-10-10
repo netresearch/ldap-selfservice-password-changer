@@ -12,21 +12,24 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 )
 
+//nolint:gosec // G101: Not a credential, just an error message string for tests
+const errInvalidOrExpiredToken = "invalid or expired token"
+
 // Mock LDAP client for testing.
 type mockResetLDAPClient struct {
 	changePasswordError error
 	resetPasswordError  error
 }
 
-func (m *mockResetLDAPClient) FindUserByMail(mail string) (*ldap.User, error) {
+func (m *mockResetLDAPClient) FindUserByMail(_ string) (*ldap.User, error) {
 	return &ldap.User{SAMAccountName: "testuser"}, nil
 }
 
-func (m *mockResetLDAPClient) ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword string) error {
+func (m *mockResetLDAPClient) ChangePasswordForSAMAccountName(_, _, _ string) error {
 	return m.changePasswordError
 }
 
-func (m *mockResetLDAPClient) ResetPasswordForSAMAccountName(sAMAccountName, newPassword string) error {
+func (m *mockResetLDAPClient) ResetPasswordForSAMAccountName(_, _ string) error {
 	return m.resetPasswordError
 }
 
@@ -103,7 +106,7 @@ func TestResetPasswordInvalidToken(t *testing.T) {
 		t.Error("Expected error for invalid token")
 	}
 
-	expectedErr := "invalid or expired token"
+	expectedErr := errInvalidOrExpiredToken
 	if err.Error() != expectedErr {
 		t.Errorf("Error = %q, want %q", err.Error(), expectedErr)
 	}
@@ -140,8 +143,8 @@ func TestResetPasswordExpiredToken(t *testing.T) {
 		t.Error("Expected error for expired token")
 	}
 
-	if err.Error() != "invalid or expired token" {
-		t.Errorf("Error = %q, want 'invalid or expired token'", err.Error())
+	if err.Error() != errInvalidOrExpiredToken {
+		t.Errorf("Error = %q, want %q", err.Error(), errInvalidOrExpiredToken)
 	}
 }
 
@@ -176,8 +179,8 @@ func TestResetPasswordUsedToken(t *testing.T) {
 		t.Error("Expected error for used token")
 	}
 
-	if err.Error() != "invalid or expired token" {
-		t.Errorf("Error = %q, want 'invalid or expired token'", err.Error())
+	if err.Error() != errInvalidOrExpiredToken {
+		t.Errorf("Error = %q, want %q", err.Error(), errInvalidOrExpiredToken)
 	}
 }
 

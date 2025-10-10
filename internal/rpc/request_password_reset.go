@@ -131,5 +131,5 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 	return genericSuccess, nil
 }
 
-// Placeholder error for testing.
+// ErrSMTPFailure is a placeholder error for SMTP failures in testing scenarios.
 var ErrSMTPFailure = errors.New("SMTP failure")
