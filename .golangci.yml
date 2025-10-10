@@ -1,0 +1,214 @@
+# golangci-lint configuration
+# https://golangci-lint.run/usage/configuration/
+
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+  modules-download-mode: readonly
+  allow-parallel-runners: true
+  go: "1.25"
+
+linters:
+  enable:
+    # Enabled by default
+    - errcheck # Check for unchecked errors
+    - govet # Standard Go vet
+    - ineffassign # Detect ineffectual assignments
+    - staticcheck # Staticcheck (SA*) - includes gosimple and stylecheck in v2
+    - unused # Check for unused constants, variables, functions and types
+
+    # Additional enabled linters
+    - asasalint # Check for pass []any as any in variadic func(...any)
+    - asciicheck # Check for non-ASCII identifiers
+    - bidichk # Check for dangerous unicode character sequences
+    - bodyclose # Check HTTP response body is closed
+    - contextcheck # Check context.Context is passed correctly
+    - dupl # Detect code duplication
+    - durationcheck # Check for common mistakes with time.Duration
+    - errname # Check error naming conventions
+    - errorlint # Find code that will cause problems with error wrapping
+    - exhaustive # Check exhaustiveness of enum switch statements
+    - copyloopvar # Check for pointers to enclosing loop variables (replaces exportloopref)
+    - forbidigo # Forbid specific identifiers
+    - gocheckcompilerdirectives # Check Go compiler directive comments
+    - gochecknoinits # Check no init functions
+    - gochecksumtype # Check exhaustiveness on sum types
+    - goconst # Find repeated strings that could be constants
+    - gocritic # Comprehensive Go checker
+    - gocyclo # Compute cyclomatic complexities
+    - godot # Check comment sentences end with period
+    - gomoddirectives # Manage replace/retract directives in go.mod
+    - gomodguard # Control allowed modules
+    - goprintffuncname # Check printf-like function names
+    - gosec # Security problems (G*)
+    - intrange # Find places where for loops could use Go 1.22+ integer range
+    - lll # Report long lines
+    - loggercheck # Check logger arguments
+    - makezero # Find slice declarations with non-zero initial length
+    - mirror # Detect wrong mirror usage
+    - misspell # Find commonly misspelled words
+    - musttag # Enforce field tags
+    - nakedret # Find naked returns in long functions
+    - nilerr # Find code returning nil even if error is checked
+    - nilnil # Check no simultaneous nil returns
+    - noctx # Find HTTP requests without context
+    - nolintlint # Ill-formed or ineffective nolint directives
+    - nonamedreturns # Reports named returns
+    - nosprintfhostport # Check no sprintf with host:port
+    - perfsprint # Check for performance issues with fmt.Sprintf
+    - predeclared # Find code that shadows predeclared identifiers
+    - promlinter # Check Prometheus metrics naming
+    - protogetter # Check for direct access to protobuf fields
+    - reassign # Check package-level variables are not reassigned
+    - revive # Fast linter with extensible rules
+    - rowserrcheck # Check errors from sql.Rows
+    - sloglint # Ensure consistent code style when using log/slog
+    - sqlclosecheck # Check sql.Rows and sql.Stmt are closed
+    - usetesting # Detect using os.Setenv instead of t.Setenv (replaces tenv)
+    - testableexamples # Check examples are testable
+    - testpackage # Require separate _test package
+    - thelper # Detect test helpers without t.Helper()
+    - tparallel # Detect inappropriate usage of t.Parallel()
+    - unconvert # Unnecessary type conversions
+    - unparam # Report unused function parameters
+    - usestdlibvars # Detect possibility to use variables/constants from stdlib
+    - wastedassign # Find wasted assignment statements
+    - whitespace # Detect leading/trailing whitespace
+    - wrapcheck # Check errors from external packages are wrapped
+
+  disable:
+    - cyclop # Too strict cyclomatic complexity
+    - depguard # Not needed for this project
+    - dogsled # Blank identifiers sometimes necessary
+    - err113 # Too strict for this project
+    - exhaustruct # Too strict for this project
+    - forcetypeassert # Sometimes type assertions are safe
+    - funlen # Function length checks too opinionated
+    - gochecknoglobals # Globals sometimes necessary
+    - gocognit # Cognitive complexity too opinionated
+    - godox # Allow TODO/FIXME comments
+    - grouper # Import grouping is handled by goimports
+    - importas # Not needed for this project
+    - inamedparam # Named parameters are fine
+    - interfacebloat # Interface size not a concern
+    - ireturn # Returning interfaces is acceptable
+    - maintidx # Maintainability index too opinionated
+    - mnd # Magic number detection too opinionated (replaces gomnd)
+    - nestif # Nesting depth checks too opinionated
+    - nlreturn # Blank line requirements too strict
+    - paralleltest # Not all tests should be parallel
+    - prealloc # Premature optimization
+    - tagalign # Tag alignment not critical
+    - tagliatelle # Tag naming not critical
+    - testifylint # Some patterns are acceptable
+    - varnamelen # Variable name length too opinionated
+    - wsl # Whitespace rules too strict
+    - zerologlint # Project uses slog not zerolog
+
+  settings:
+    errcheck:
+      check-type-assertions: true
+      check-blank: true
+      exclude-functions:
+        - (io.Closer).Close
+        - (*os.File).Close
+
+    govet:
+      enable-all: true
+      disable:
+        - fieldalignment # Struct field alignment not critical
+        - shadow # Shadow checking too strict
+
+    gocyclo:
+      min-complexity: 15
+
+    dupl:
+      threshold: 100
+
+    goconst:
+      min-len: 3
+      min-occurrences: 3
+
+    lll:
+      line-length: 120
+      tab-width: 1
+
+    misspell:
+      locale: US
+
+    nakedret:
+      max-func-lines: 30
+
+    gosec:
+      severity: medium
+      confidence: medium
+      excludes:
+        - G104 # Errors unhandled (covered by errcheck)
+      config:
+        G306: "0644" # Expect FileMode 0644 for config files
+
+    revive:
+      rules:
+        - name: exported
+          disabled: false
+        - name: package-comments
+          disabled: false
+        - name: var-naming
+          disabled: false
+
+    gocritic:
+      enabled-tags:
+        - diagnostic
+        - style
+        - performance
+        - experimental
+        - opinionated
+      disabled-checks:
+        - whyNoLint # Allow missing explanations for nolint directives
+
+  exclusions:
+    rules:
+      # Exclude some linters from running on tests files
+      - path: '_test\.go'
+        linters:
+          - dupl
+          - gosec
+          - goconst
+          - mnd
+
+      # Allow white-box testing in internal test files
+      - path: '_internal_test\.go'
+        linters:
+          - testpackage
+
+      # Exclude magic numbers in main.go (ports, timeouts, etc.)
+      - path: 'main\.go'
+        linters:
+          - mnd
+
+      # Allow globals in options package
+      - path: "internal/options/"
+        linters:
+          - gochecknoglobals
+
+formatters:
+  enable:
+    - gofmt
+    - gofumpt
+    - goimports
+    - gci
+  settings:
+    gofumpt:
+      extra-rules: true
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/netresearch/ldap-selfservice-password-changer)
+
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: true

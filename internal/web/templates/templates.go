@@ -1,8 +1,10 @@
+// Package templates provides HTML template rendering for web pages.
 package templates
 
 import (
 	"bytes"
 	_ "embed"
+	"fmt"
 	"html/template"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
@@ -42,7 +44,7 @@ var rawThemeInitScript string
 var rawDensityInitScript string
 
 //go:embed molecules/html-head.html
-var rawHtmlHead string
+var rawHTMLHead string
 
 //go:embed molecules/page-header.html
 var rawPageHeader string
@@ -62,6 +64,7 @@ var rawSuccessMessage string
 //go:embed molecules/page-title.html
 var rawPageTitle string
 
+// InputOpts holds configuration for rendering HTML input fields with validation and accessibility attributes.
 type InputOpts struct {
 	Name         string
 	Placeholder  string
@@ -70,15 +73,16 @@ type InputOpts struct {
 	Help         string
 }
 
-func MakeInputOpts(name, placeholder, type_, autocomplete, help string) InputOpts {
-	if type_ != "password" && type_ != "text" {
+// MakeInputOpts creates an InputOpts configuration for rendering form input fields.
+func MakeInputOpts(name, placeholder, inputType, autocomplete, help string) InputOpts {
+	if inputType != "password" && inputType != "text" {
 		panic("InputOpts type must be either `password` or `text`")
 	}
 
 	return InputOpts{
 		name,
 		placeholder,
-		type_,
+		inputType,
 		autocomplete,
 		help,
 	}
@@ -88,7 +92,7 @@ func makeSlice(args ...interface{}) []interface{} {
 	return args
 }
 
-// parseCommonTemplates parses all shared atom and molecule templates
+// parseCommonTemplates parses all shared atom and molecule templates.
 func parseCommonTemplates(tpl *template.Template) error {
 	templates := []string{
 		rawIcons,
@@ -99,7 +103,7 @@ func parseCommonTemplates(tpl *template.Template) error {
 		rawInputField,
 		rawThemeInitScript,
 		rawDensityInitScript,
-		rawHtmlHead,
+		rawHTMLHead,
 		rawPageHeader,
 		rawPageFooter,
 		rawToggleButtons,
@@ -110,98 +114,58 @@ func parseCommonTemplates(tpl *template.Template) error {
 
 	for _, tmpl := range templates {
 		if _, err := tpl.Parse(tmpl); err != nil {
-			return err
+			return fmt.Errorf("failed to parse common template: %w", err)
 		}
 	}
 
 	return nil
 }
 
+// renderTemplate renders a template with common setup logic.
+func renderTemplate(templateName, rawTemplate string, data any) ([]byte, error) {
+	funcs := template.FuncMap{
+		"InputOpts": MakeInputOpts,
+		"slice":     makeSlice,
+	}
+
+	// Parse dependencies first, BEFORE parsing main template
+	tpl := template.New(templateName).Funcs(funcs)
+
+	// Parse common atom and molecule templates
+	if err := parseCommonTemplates(tpl); err != nil {
+		return nil, err
+	}
+
+	// NOW parse the main template after all dependencies are defined
+	if _, err := tpl.Parse(rawTemplate); err != nil {
+		return nil, fmt.Errorf("failed to parse %s template: %w", templateName, err)
+	}
+
+	var buf bytes.Buffer
+	if err := tpl.ExecuteTemplate(&buf, templateName, data); err != nil {
+		return nil, fmt.Errorf("failed to execute %s template: %w", templateName, err)
+	}
+
+	return buf.Bytes(), nil
+}
+
+// RenderIndex renders the main password change page with the provided configuration options.
 func RenderIndex(opts *options.Opts) ([]byte, error) {
-	funcs := template.FuncMap{
-		"InputOpts": MakeInputOpts,
-		"slice":     makeSlice,
-	}
-
-	// Parse dependencies first, BEFORE parsing main template
-	tpl := template.New("index").Funcs(funcs)
-
-	// Parse common atom and molecule templates
-	if err := parseCommonTemplates(tpl); err != nil {
-		return nil, err
-	}
-
-	// NOW parse the main template after all dependencies are defined
-	if _, err := tpl.Parse(rawIndex); err != nil {
-		return nil, err
-	}
-
 	data := map[string]any{
 		"opts": opts,
 	}
-
-	var buf bytes.Buffer
-	if err := tpl.ExecuteTemplate(&buf, "index", data); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	return renderTemplate("index", rawIndex, data)
 }
 
+// RenderForgotPassword renders the password reset request page.
 func RenderForgotPassword() ([]byte, error) {
-	funcs := template.FuncMap{
-		"InputOpts": MakeInputOpts,
-		"slice":     makeSlice,
-	}
-
-	// Parse dependencies first, BEFORE parsing main template
-	tpl := template.New("forgot-password").Funcs(funcs)
-
-	// Parse common atom and molecule templates
-	if err := parseCommonTemplates(tpl); err != nil {
-		return nil, err
-	}
-
-	// NOW parse the main template after all dependencies are defined
-	if _, err := tpl.Parse(rawForgotPassword); err != nil {
-		return nil, err
-	}
-
-	var buf bytes.Buffer
-	if err := tpl.ExecuteTemplate(&buf, "forgot-password", nil); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	return renderTemplate("forgot-password", rawForgotPassword, nil)
 }
 
+// RenderResetPassword renders the password reset completion page with the provided configuration options.
 func RenderResetPassword(opts *options.Opts) ([]byte, error) {
-	funcs := template.FuncMap{
-		"InputOpts": MakeInputOpts,
-		"slice":     makeSlice,
-	}
-
-	// Parse dependencies first, BEFORE parsing main template
-	tpl := template.New("reset-password").Funcs(funcs)
-
-	// Parse common atom and molecule templates
-	if err := parseCommonTemplates(tpl); err != nil {
-		return nil, err
-	}
-
-	// NOW parse the main template after all dependencies are defined
-	if _, err := tpl.Parse(rawResetPassword); err != nil {
-		return nil, err
-	}
-
 	data := map[string]any{
 		"opts": opts,
 	}
-
-	var buf bytes.Buffer
-	if err := tpl.ExecuteTemplate(&buf, "reset-password", data); err != nil {
-		return nil, err
-	}
-
-	return buf.Bytes(), nil
+	return renderTemplate("reset-password", rawResetPassword, data)
 }

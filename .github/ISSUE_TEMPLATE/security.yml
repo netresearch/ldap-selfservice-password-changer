@@ -1,0 +1,126 @@
+name: Security Vulnerability Report
+description: Report a security vulnerability (use private reporting for sensitive issues)
+title: "[Security]: "
+labels: ["security", "needs-triage"]
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## 🔒 Security Vulnerability Reporting
+
+        **⚠️ IMPORTANT: For sensitive security vulnerabilities, please use GitHub's [Private Security Advisory](https://github.com/netresearch/ldap-selfservice-password-changer/security/advisories/new) feature instead of creating a public issue.**
+
+        Use this public issue template only for:
+        - Security enhancements or hardening suggestions
+        - Non-exploitable security concerns
+        - Security documentation improvements
+        - Questions about security features
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: How severe is this security concern?
+      options:
+        - Low - Security enhancement suggestion
+        - Medium - Potential security weakness
+        - High - Exploitable vulnerability (consider private reporting)
+        - Critical - Actively exploited (use private reporting!)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: category
+    attributes:
+      label: Security Category
+      description: What type of security issue is this?
+      options:
+        - Authentication
+        - Authorization
+        - Input Validation
+        - Cryptography
+        - Session Management
+        - LDAP Injection
+        - Cross-Site Scripting (XSS)
+        - Cross-Site Request Forgery (CSRF)
+        - Information Disclosure
+        - Denial of Service
+        - Configuration Security
+        - Dependency Vulnerability
+        - Other
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Security Issue Description
+      description: Describe the security concern (be mindful of sensitive details in public issues)
+      placeholder: Describe the security issue or enhancement suggestion...
+    validations:
+      required: true
+
+  - type: textarea
+    id: impact
+    attributes:
+      label: Potential Impact
+      description: What could an attacker achieve or what security improvement would this provide?
+      placeholder: Describe the potential impact...
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to Reproduce (if applicable)
+      description: How can this issue be reproduced? (Do not include exploit details in public issues!)
+      placeholder: |
+        1. Configure the system with...
+        2. Access the endpoint...
+        3. Observe the behavior...
+
+  - type: input
+    id: version
+    attributes:
+      label: Affected Version(s)
+      description: Which version(s) are affected?
+      placeholder: e.g., v1.0.13, all versions
+
+  - type: textarea
+    id: mitigation
+    attributes:
+      label: Suggested Mitigation
+      description: If you have suggestions for fixing this issue, share them here
+      placeholder: Describe potential fixes or workarounds...
+
+  - type: textarea
+    id: references
+    attributes:
+      label: References
+      description: Any relevant CVEs, security advisories, or documentation
+      placeholder: |
+        - OWASP: https://...
+        - CWE: https://...
+        - Related CVE: ...
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Context
+      description: Any other relevant information
+      placeholder: Additional details...
+
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Pre-submission Checklist
+      description: Please confirm the following
+      options:
+        - label: I have considered whether this should be reported privately via GitHub Security Advisories
+          required: true
+        - label: I have not included exploit code or detailed attack vectors in this public issue
+          required: true
+        - label: I have searched for existing security issues and this is not a duplicate
+          required: true
+        - label: I am willing to work with maintainers on responsible disclosure
+          required: false

@@ -1,24 +1,24 @@
 package rpc
 
 import (
-	"fmt"
+	"errors"
 	"log/slog"
 	"time"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 )
 
-// EmailService interface for sending password reset emails
+// EmailService interface for sending password reset emails.
 type EmailService interface {
 	SendResetEmail(to, token string) error
 }
 
-// RateLimiter interface for rate limiting password reset requests
+// RateLimiter interface for rate limiting password reset requests.
 type RateLimiter interface {
 	AllowRequest(identifier string) bool
 }
 
-// TokenStore interface for managing reset tokens
+// TokenStore interface for managing reset tokens.
 type TokenStore interface {
 	Store(token *resettoken.ResetToken) error
 	Get(tokenString string) (*resettoken.ResetToken, error)
@@ -86,7 +86,7 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 	user, err := h.ldap.FindUserByMail(emailOrUsername)
 	if err != nil {
 		// User not found or LDAP error - return generic success (don't reveal)
-		slog.Info("password_reset_user_not_found", "email", emailOrUsername)
+		slog.Info("password_reset_user_not_found", "email", emailOrUsername, "error", err)
 		return genericSuccess, nil
 	}
 
@@ -94,12 +94,16 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 
 	// Create token metadata
 	now := time.Now()
+	// Safe conversion: ResetTokenExpiryMinutes is uint, typically small value (15-60)
+	// Convert to time.Duration for expiration calculation
+	//nolint:gosec // G115: config value, small range
+	expiryDuration := time.Duration(h.opts.ResetTokenExpiryMinutes) * time.Minute
 	token := &resettoken.ResetToken{
 		Token:            tokenString,
 		Username:         username,
 		Email:            emailOrUsername,
 		CreatedAt:        now,
-		ExpiresAt:        now.Add(time.Duration(h.opts.ResetTokenExpiryMinutes) * time.Minute),
+		ExpiresAt:        now.Add(expiryDuration),
 		Used:             false,
 		RequiresApproval: false, // Phase 1: no admin approval
 	}
@@ -127,5 +131,5 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 	return genericSuccess, nil
 }
 
-// Placeholder error for testing
-var ErrSMTPFailure = fmt.Errorf("SMTP failure")
+// ErrSMTPFailure is a placeholder error for SMTP failures in testing scenarios.
+var ErrSMTPFailure = errors.New("SMTP failure")

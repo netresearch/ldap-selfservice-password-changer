@@ -1,0 +1,47 @@
+# Codecov configuration
+# https://docs.codecov.com/docs/codecov-yaml
+
+coverage:
+  status:
+    project:
+      default:
+        target: 70% # Minimum coverage threshold
+        threshold: 2% # Allow 2% drop from target
+        if_ci_failed: error # Fail if CI fails
+    patch:
+      default:
+        target: 70% # New code should maintain 70% coverage
+        threshold: 2%
+        if_ci_failed: error
+
+  precision: 2
+  round: down
+  range: "60...90" # Green at 90%, red at 60%
+
+comment:
+  layout: "reach,diff,flags,tree,footer"
+  behavior: default
+  require_changes: false
+  require_base: false
+  require_head: true
+
+ignore:
+  - "**/*_test.go" # Ignore test files
+  - "**/test/**"
+  - "**/tests/**"
+  - "**/testdata/**"
+  - "internal/web/static/**" # Ignore generated frontend assets
+  - "docs/**"
+  - "claudedocs/**"
+  - "*.md"
+  - "vendor/**"
+
+flags:
+  backend:
+    paths:
+      - "**/*.go"
+    carryforward: true
+  unittests:
+    paths:
+      - "**/*.go"
+    carryforward: true

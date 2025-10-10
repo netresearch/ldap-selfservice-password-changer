@@ -1,6 +1,6 @@
 // @ts-check
-const Uglify = require("uglify-js");
-const FS = require("node:fs");
+import Uglify from "uglify-js";
+import FS from "node:fs";
 
 const base = "./internal/web/static/js/";
 

@@ -246,6 +246,110 @@ gofmt -w .
 
 **Note**: Go formatting is standard `gofmt`, Prettier handles templates only.
 
+### Code Quality & Linting
+
+The project uses comprehensive linting and code quality tools for both Go and TypeScript/JavaScript.
+
+#### Go Linting (golangci-lint)
+
+**Install golangci-lint** (optional for local development):
+
+```bash
+# macOS
+brew install golangci-lint
+
+# Linux
+curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(go env GOPATH)/bin
+
+# Or use CI only (golangci-lint runs automatically in GitHub Actions)
+```
+
+**Run linting**:
+
+```bash
+# Full lint with all checks
+golangci-lint run
+
+# Fast lint (skips some slower analyzers)
+golangci-lint run --fast
+
+# Fix auto-fixable issues
+golangci-lint run --fix
+```
+
+**Configuration**: `.golangci.yml` - 60+ enabled linters including:
+
+- **Security**: gosec (G\* checks)
+- **Bugs**: staticcheck (SA\* checks), ineffassign, unused
+- **Style**: revive, stylecheck
+- **Performance**: perfsprint, prealloc
+- **Complexity**: gocyclo (max 15), dupl
+
+**Pre-commit**: Runs automatically via Husky (`.husky/pre-commit`)
+
+#### TypeScript/JavaScript Linting (ESLint)
+
+**Run linting**:
+
+```bash
+# Check for issues
+pnpm lint
+
+# Auto-fix issues
+pnpm lint:fix
+```
+
+**Configuration**: `eslint.config.js` - Modern flat config with:
+
+- **TypeScript**: Strict type-checked rules
+- **Style**: Consistent code patterns
+- **Security**: No unsafe operations
+- **Best practices**: Nullish coalescing, optional chaining
+
+**Known Issues**: ~60 existing linting issues identified for gradual cleanup
+
+**Pre-commit**: Runs automatically via Husky (warnings only for now)
+
+#### Code Coverage
+
+**Run tests with coverage**:
+
+```bash
+# Generate coverage report
+go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
+
+# View coverage in browser
+go tool cover -html=coverage.out
+```
+
+**CI Integration**: Coverage automatically uploaded to Codecov on PRs
+
+**Target**: 70% minimum coverage threshold
+
+#### Pre-commit Hooks
+
+The project uses Husky for automatic quality checks before commits:
+
+**What runs automatically**:
+
+1. ✅ Prettier formatting check
+2. ✅ TypeScript type checking
+3. ⚠️ ESLint (warning mode)
+4. ⚠️ golangci-lint --fast (warning mode)
+5. ✅ Go tests
+
+**Bypassing checks** (emergency only):
+
+```bash
+git commit --no-verify -m "emergency fix"
+```
+
+**Updating hooks**:
+
+```bash
+pnpm prepare  # Reinstalls Husky hooks
+```
+
 ## Project Structure
 
 ```

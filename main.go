@@ -1,3 +1,5 @@
+// GopherPass LDAP Self-Service Password Changer provides a web interface
+// for users to change and reset their LDAP passwords.
 package main
 
 import (
@@ -11,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/compress"
 	"github.com/gofiber/fiber/v2/middleware/filesystem"
 	"github.com/gofiber/helmet/v2"
+
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/email"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
@@ -51,21 +54,26 @@ func main() {
 		tokenStore.StartCleanup(5 * time.Minute)
 
 		// Initialize email service
+		// Safe conversion: SMTPPort is uint, typically 25/587/465 (well within int range)
+		smtpPort := int(opts.SMTPPort) //nolint:gosec // G115: SMTP port, safe range 0-65535
 		emailConfig := email.Config{
 			SMTPHost:     opts.SMTPHost,
-			SMTPPort:     int(opts.SMTPPort),
+			SMTPPort:     smtpPort,
 			SMTPUsername: opts.SMTPUsername,
 			SMTPPassword: opts.SMTPPassword,
 			FromAddress:  opts.SMTPFromAddress,
 			BaseURL:      opts.AppBaseURL,
 		}
-		emailService := email.NewService(emailConfig)
+		emailService := email.NewService(&emailConfig)
 
 		// Initialize email-based rate limiter (per-user protection)
-		rateLimiter := ratelimit.NewLimiter(
-			int(opts.ResetRateLimitRequests),
-			time.Duration(opts.ResetRateLimitWindowMinutes)*time.Minute,
-		)
+		// Safe conversion: ResetRateLimitRequests is uint, typically small value (3-10)
+		//nolint:gosec // G115: config value, safe range
+		resetRequests := int(opts.ResetRateLimitRequests)
+		// Safe conversion: ResetRateLimitWindowMinutes is uint, typically 60-120
+		//nolint:gosec // G115: config value, safe range
+		resetWindowDuration := time.Duration(opts.ResetRateLimitWindowMinutes) * time.Minute
+		rateLimiter := ratelimit.NewLimiter(resetRequests, resetWindowDuration)
 
 		// Initialize IP-based rate limiter (DoS protection)
 		// Default: 10 requests per IP per 60 minutes, max 1000 IPs tracked

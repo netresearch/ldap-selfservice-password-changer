@@ -16,10 +16,10 @@ type Entry struct {
 
 // Limiter implements a sliding window rate limiter with capacity limits.
 type Limiter struct {
-	mu            sync.RWMutex
-	entries       map[string]*Entry
-	maxRequests   int           // Maximum requests allowed in window
-	window        time.Duration // Time window for rate limiting
+	mu             sync.RWMutex
+	entries        map[string]*Entry
+	maxRequests    int           // Maximum requests allowed in window
+	window         time.Duration // Time window for rate limiting
 	maxIdentifiers int           // Maximum identifiers to track (capacity limit)
 }
 
@@ -54,7 +54,7 @@ func (l *Limiter) AllowRequest(identifier string) bool {
 		// Check capacity BEFORE creating new entry
 		if len(l.entries) >= l.maxIdentifiers {
 			// Try to cleanup expired entries to make room
-			l.cleanupExpiredLocked(now, cutoff)
+			l.cleanupExpiredLocked(cutoff)
 
 			// If still at capacity, fail closed
 			if len(l.entries) >= l.maxIdentifiers {
@@ -95,12 +95,12 @@ func (l *Limiter) CleanupExpired() int {
 
 	now := time.Now()
 	cutoff := now.Add(-l.window)
-	return l.cleanupExpiredLocked(now, cutoff)
+	return l.cleanupExpiredLocked(cutoff)
 }
 
 // cleanupExpiredLocked is the internal cleanup implementation.
 // MUST be called with l.mu held (Lock, not RLock).
-func (l *Limiter) cleanupExpiredLocked(now, cutoff time.Time) int {
+func (l *Limiter) cleanupExpiredLocked(cutoff time.Time) int {
 	count := 0
 
 	for identifier, entry := range l.entries {

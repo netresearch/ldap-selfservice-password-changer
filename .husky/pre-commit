@@ -21,13 +21,36 @@ if [ -f package.json ] && command -v pnpm >/dev/null 2>&1; then
   }
 fi
 
-# Go vet (fast)
-if [ -f go.mod ] && command -v go >/dev/null 2>&1; then
-  echo "→ Running go vet..."
-  go vet ./... || {
-    echo "❌ Go vet failed"
-    exit 1
+# ESLint check
+if [ -f package.json ] && command -v pnpm >/dev/null 2>&1; then
+  echo "→ Running ESLint..."
+  pnpm lint || {
+    echo "⚠️  ESLint found issues. Fix them before pushing!"
+    echo "Run: pnpm lint:fix"
+    # Don't exit 1 yet - ESLint has many existing issues
+    # Remove this comment once issues are fixed
   }
+fi
+
+# golangci-lint (fast preset)
+if [ -f go.mod ] && command -v golangci-lint >/dev/null 2>&1; then
+  echo "→ Running golangci-lint (fast)..."
+  golangci-lint run --fast --timeout=2m || {
+    echo "⚠️  golangci-lint found issues"
+    echo "Run: golangci-lint run"
+    # Warning only for now
+  }
+fi
+
+# Go vet (fast - backup if golangci-lint not installed)
+if [ -f go.mod ] && command -v go >/dev/null 2>&1; then
+  if ! command -v golangci-lint >/dev/null 2>&1; then
+    echo "→ Running go vet..."
+    go vet ./... || {
+      echo "❌ Go vet failed"
+      exit 1
+    }
+  fi
 fi
 
 # Go tests (can be slow, but important)

@@ -1,0 +1,11 @@
+blank_issues_enabled: true
+contact_links:
+  - name: 💬 Discussions
+    url: https://github.com/netresearch/ldap-selfservice-password-changer/discussions
+    about: Ask questions, share ideas, and discuss with the community
+  - name: 📖 Documentation
+    url: https://github.com/netresearch/ldap-selfservice-password-changer/tree/main/docs
+    about: Read the documentation for setup guides and configuration help
+  - name: 🔒 Private Security Advisory
+    url: https://github.com/netresearch/ldap-selfservice-password-changer/security/advisories/new
+    about: Report sensitive security vulnerabilities privately (recommended for exploitable issues)

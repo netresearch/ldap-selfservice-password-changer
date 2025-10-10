@@ -1,3 +1,4 @@
+// Package email provides SMTP email functionality for sending password reset tokens.
 package email
 
 import (
@@ -7,7 +8,7 @@ import (
 	"strings"
 )
 
-// emailRegex is compiled once for performance
+// emailRegex is compiled once for performance.
 var emailRegex = regexp.MustCompile(`^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$`)
 
 // Config holds the configuration for the email service.
@@ -26,16 +27,16 @@ type Service struct {
 }
 
 // NewService creates a new email service with the given configuration.
-func NewService(config Config) *Service {
+func NewService(config *Config) *Service {
 	return &Service{
-		config: config,
+		config: *config,
 	}
 }
 
 // SendResetEmail sends a password reset email with a token link.
 func (s *Service) SendResetEmail(to, token string) error {
 	// Validate email address
-	if !validateEmailAddress(to) {
+	if !ValidateEmailAddress(to) {
 		return fmt.Errorf("invalid email address: %s", to)
 	}
 
@@ -89,13 +90,15 @@ func (s *Service) buildResetEmailBody(token string) string {
 
 	body := `Hi,
 
-We received a request to reset the password for your account. If you made this request, click the link below to continue:
+We received a request to reset the password for your account.
+If you made this request, click the link below to continue:
 
 ` + resetLink + `
 
 This link will expire in 15 minutes.
 
-If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
+If you didn't request a password reset, you can safely ignore this email.
+Your password will not be changed.
 
 --
 LDAP Selfservice Password Changer`
@@ -109,8 +112,9 @@ func (s *Service) buildResetLink(token string) string {
 	return fmt.Sprintf("%s/reset-password?token=%s", baseURL, token)
 }
 
-// validateEmailAddress performs basic email validation.
-func validateEmailAddress(email string) bool {
+// ValidateEmailAddress performs basic email validation.
+// This function is exported to allow external validation of email addresses.
+func ValidateEmailAddress(email string) bool {
 	if email == "" {
 		return false
 	}

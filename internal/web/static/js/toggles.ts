@@ -16,7 +16,7 @@ export const initThemeToggle = () => {
 
   if (themeToggle && themeLightIcon && themeDarkIcon && themeAutoIcon) {
     // Initialize button state from localStorage
-    const storedTheme = (localStorage.getItem("theme") || "auto") as ThemeMode;
+    const storedTheme = (localStorage.getItem("theme") ?? "auto") as ThemeMode;
 
     const applyTheme = (theme: ThemeMode) => {
       themeToggle.dataset["theme"] = theme;
@@ -58,7 +58,7 @@ export const initThemeToggle = () => {
 
     // Cycle through states: auto -> light -> dark -> auto
     themeToggle.addEventListener("click", () => {
-      const currentTheme = (themeToggle.dataset["theme"] || "auto") as ThemeMode;
+      const currentTheme = (themeToggle.dataset["theme"] ?? "auto") as ThemeMode;
       const nextTheme: ThemeMode = currentTheme === "auto" ? "light" : currentTheme === "light" ? "dark" : "auto";
       applyTheme(nextTheme);
     });
@@ -128,7 +128,7 @@ export const initDensityToggle = () => {
     };
 
     // Initialize on page load
-    const storedMode = (localStorage.getItem("densityMode") || "auto") as DensityMode;
+    const storedMode = (localStorage.getItem("densityMode") ?? "auto") as DensityMode;
     applyDensity(storedMode);
 
     // Set up reactive monitoring for system preference changes
@@ -145,15 +145,15 @@ export const initDensityToggle = () => {
       };
 
       // Listen for system preference changes (supported in modern browsers)
-      touchQuery.addEventListener?.("change", updateIfAuto);
-      contrastQuery.addEventListener?.("change", updateIfAuto);
+      touchQuery.addEventListener("change", updateIfAuto);
+      contrastQuery.addEventListener("change", updateIfAuto);
     };
 
     setupPreferenceMonitoring();
 
     // Button click handler - cycle through states
     densityToggle.addEventListener("click", () => {
-      const currentMode = (densityToggle.dataset["densityMode"] || "auto") as DensityMode;
+      const currentMode = (densityToggle.dataset["densityMode"] ?? "auto") as DensityMode;
 
       // Cycle: auto → comfortable → compact → auto
       const nextMode: DensityMode =

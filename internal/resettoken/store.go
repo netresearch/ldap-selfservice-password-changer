@@ -1,3 +1,4 @@
+// Package resettoken manages password reset tokens with expiration and validation.
 package resettoken
 
 import (

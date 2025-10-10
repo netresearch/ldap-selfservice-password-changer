@@ -60,13 +60,13 @@ export const init = () => {
 
       const errors = validators
         .map((validate) => validate(value))
-        .reduce((acc, v) => {
+        .reduce<string[]>((acc, v) => {
           if (v.length > 0) acc.push(v);
 
           return acc;
-        }, [] as string[]);
+        }, []);
 
-      console.log(`Validated "${name}": ${errors.length} error(s)`);
+      console.warn(`Validated "${name}": ${errors.length.toString()} error(s)`);
 
       setErrors(errors);
 
@@ -104,11 +104,10 @@ export const init = () => {
 
     const [email] = fields.map((f) => f.getValue());
 
-    const hasErrors = fields.map(({ validate }) => validate()).some((e) => e === true);
+    const hasErrors = fields.map(({ validate }) => validate()).some((e) => e);
     submitButton.disabled = hasErrors;
     if (hasErrors) return;
 
-    console.log("Requesting password reset...");
     toggleFields(false);
 
     try {
@@ -129,15 +128,15 @@ export const init = () => {
         let err = body;
 
         try {
-          const parsed = JSON.parse(body);
+          const parsed = JSON.parse(body) as { data?: string[] };
 
-          err = parsed.data[0];
-        } catch (e) {}
+          err = parsed.data?.[0] ?? body;
+        } catch (_e) {
+          // Ignore JSON parsing errors, use body as-is
+        }
 
         throw new Error(`An error occurred: ${err}`);
       }
-
-      console.log("Password reset requested successfully");
 
       form.style.display = "none";
       successContainer.style.display = "block";
@@ -155,7 +154,7 @@ export const init = () => {
   form.onchange = (e) => {
     e.stopPropagation();
 
-    const hasErrors = fields.map(({ validate }) => validate()).some((e) => e === true);
+    const hasErrors = fields.map(({ validate }) => validate()).some((e) => e);
     submitButton.disabled = hasErrors;
   };
 };

@@ -1,3 +1,4 @@
+// Package ratelimit implements rate limiting functionality with sliding window algorithm.
 package ratelimit
 
 import "time"
