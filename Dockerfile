@@ -1,5 +1,8 @@
-FROM --platform=amd64 node:24@sha256:377f1c17906eb5a145c34000247faa486bece16386b77eedd5a236335025c2ef AS frontend-builder
+FROM node:24 AS frontend-builder
 WORKDIR /build
+
+# Disable Husky git hooks in Docker build (no .git directory in build context)
+ENV HUSKY=0
 
 # Use Corepack instead of npm global install for better performance
 RUN corepack enable
@@ -15,7 +18,7 @@ COPY internal/web/ ./internal/web/
 
 RUN pnpm build:assets
 
-FROM golang:1.25-alpine@sha256:06cdd34bd531b810650e47762c01e025eb9b1c7eadd191553b91c9f2d549fae8 AS backend-builder
+FROM golang:1.25-alpine AS backend-builder
 WORKDIR /build
 
 # Copy dependency files
