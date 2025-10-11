@@ -3,7 +3,7 @@
  * Extracted from inline script for CSP compliance
  */
 
-export function initTheme(): void {
+function initTheme(): void {
   // Initialize theme before page renders to prevent flash
   const storedTheme = localStorage.getItem("theme");
   const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;

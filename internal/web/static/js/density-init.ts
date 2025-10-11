@@ -3,7 +3,7 @@
  * Extracted from inline script for CSP compliance
  */
 
-export function initDensity(): void {
+function initDensity(): void {
   const storedDensityMode = localStorage.getItem("densityMode") ?? "auto";
 
   // Determine actual density to apply
