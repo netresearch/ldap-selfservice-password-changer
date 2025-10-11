@@ -1,11 +1,14 @@
 FROM node:24@sha256:377f1c17906eb5a145c34000247faa486bece16386b77eedd5a236335025c2ef AS frontend-builder
 WORKDIR /build
 
+# Disable Husky git hooks in Docker build (no .git directory in build context)
+ENV HUSKY=0
+
 # Use Corepack instead of npm global install for better performance
 RUN corepack enable
 
 # Copy dependency files first for better layer caching
-COPY package.json pnpm-lock.yaml ./
+COPY package.json pnpm-lock.yaml .npmrc ./
 RUN pnpm install --frozen-lockfile
 
 # Copy only necessary files for frontend build
