@@ -8,7 +8,7 @@ ENV HUSKY=0
 RUN corepack enable
 
 # Copy dependency files first for better layer caching
-COPY package.json pnpm-lock.yaml .npmrc ./
+COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Copy only necessary files for frontend build
