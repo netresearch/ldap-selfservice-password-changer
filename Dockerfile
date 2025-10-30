@@ -1,11 +1,11 @@
-FROM node:24 AS frontend-builder
+FROM node:25 AS frontend-builder
 WORKDIR /build
 
 # Disable Husky git hooks in Docker build (no .git directory in build context)
 ENV HUSKY=0
 
-# Use Corepack instead of npm global install for better performance
-RUN corepack enable
+# Install pnpm globally via npm (Node 25 doesn't include corepack by default yet)
+RUN npm install -g pnpm@10.20.0
 
 # Copy dependency files first for better layer caching
 COPY package.json pnpm-lock.yaml ./
