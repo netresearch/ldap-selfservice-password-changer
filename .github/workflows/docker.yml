@@ -71,7 +71,7 @@ jobs:
           scanners: "vuln,config,secret"
 
       - name: Upload Trivy results to GitHub Security
-        uses: github/codeql-action/upload-sarif@014f16e7ab1402f30e7c3329d33797e7948572db # v4.31.3
+        uses: github/codeql-action/upload-sarif@fdbfb4d2750291e159f0156def62b853c2798ca2 # v4.31.5
         if: always()
         with:
           sarif_file: "trivy-results.sarif"
