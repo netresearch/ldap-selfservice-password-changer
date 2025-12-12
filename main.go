@@ -70,7 +70,8 @@ func main() {
 		// Safe conversion: ResetRateLimitRequests is uint, typically small value (3-10)
 		resetRequests := int(opts.ResetRateLimitRequests) //nolint:gosec // G115: small config value, safe for int
 		// Safe conversion: ResetRateLimitWindowMinutes is uint, typically 60-120
-		resetWindowDuration := time.Duration(opts.ResetRateLimitWindowMinutes) * time.Minute //nolint:gosec // G115: small config value, safe for int64
+		//nolint:gosec // G115: small config value, safe for int64
+		resetWindowDuration := time.Duration(opts.ResetRateLimitWindowMinutes) * time.Minute
 		rateLimiter := ratelimit.NewLimiter(resetRequests, resetWindowDuration)
 
 		// Initialize IP-based rate limiter (DoS protection)
