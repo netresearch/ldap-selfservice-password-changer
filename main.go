@@ -55,7 +55,7 @@ func main() {
 
 		// Initialize email service
 		// Safe conversion: SMTPPort is uint, typically 25/587/465 (well within int range)
-		smtpPort := int(opts.SMTPPort)
+		smtpPort := int(opts.SMTPPort) //nolint:gosec // G115: SMTPPort is 0-65535, safe for int
 		emailConfig := email.Config{
 			SMTPHost:     opts.SMTPHost,
 			SMTPPort:     smtpPort,
@@ -68,8 +68,9 @@ func main() {
 
 		// Initialize email-based rate limiter (per-user protection)
 		// Safe conversion: ResetRateLimitRequests is uint, typically small value (3-10)
-		resetRequests := int(opts.ResetRateLimitRequests)
+		resetRequests := int(opts.ResetRateLimitRequests) //nolint:gosec // G115: small config value, safe for int
 		// Safe conversion: ResetRateLimitWindowMinutes is uint, typically 60-120
+		//nolint:gosec // G115: small config value, safe for int64
 		resetWindowDuration := time.Duration(opts.ResetRateLimitWindowMinutes) * time.Minute
 		rateLimiter := ratelimit.NewLimiter(resetRequests, resetWindowDuration)
 
