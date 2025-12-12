@@ -96,7 +96,7 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 	now := time.Now()
 	// Safe conversion: ResetTokenExpiryMinutes is uint, typically small value (15-60)
 	// Convert to time.Duration for expiration calculation
-	expiryDuration := time.Duration(h.opts.ResetTokenExpiryMinutes) * time.Minute
+	expiryDuration := time.Duration(h.opts.ResetTokenExpiryMinutes) * time.Minute //nolint:gosec // G115: small config value, safe for int64
 	token := &resettoken.ResetToken{
 		Token:            tokenString,
 		Username:         username,
