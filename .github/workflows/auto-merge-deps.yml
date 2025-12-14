@@ -25,4 +25,4 @@ jobs:
           PR_URL: ${{ github.event.pull_request.html_url }}
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         # --auto waits for required status checks before merging
-        run: gh pr merge --auto --squash "$PR_URL"
+        run: gh pr merge --auto --rebase "$PR_URL"
