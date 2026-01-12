@@ -47,4 +47,8 @@ COPY --from=backend-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 # Copy the static binary
 COPY --from=backend-builder /build/ldap-passwd /ldap-passwd
 
+# Health check using built-in --health-check flag (works in scratch without shell)
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+  CMD ["/ldap-passwd", "--health-check"]
+
 ENTRYPOINT [ "/ldap-passwd" ]
