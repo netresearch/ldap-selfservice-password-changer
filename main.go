@@ -202,7 +202,7 @@ func runHealthCheck() int {
 	ctx, cancel := context.WithTimeout(context.Background(), healthCheckTimeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, healthCheckEndpoint, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, healthCheckEndpoint, http.NoBody)
 	if err != nil {
 		return 1
 	}
