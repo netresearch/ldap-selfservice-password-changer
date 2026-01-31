@@ -5,7 +5,7 @@ go 1.25
 toolchain go1.25.6
 
 require (
-	github.com/gofiber/fiber/v2 v2.52.10
+	github.com/gofiber/fiber/v2 v2.52.11
 	github.com/gofiber/helmet/v2 v2.2.26
 	github.com/joho/godotenv v1.5.1
 	github.com/netresearch/simple-ldap-go v1.8.0
