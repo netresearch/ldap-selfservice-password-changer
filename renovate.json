@@ -3,7 +3,6 @@
   "extends": [
     "config:recommended"
   ],
-  "automerge": true,
   "automergeType": "pr",
   "platformAutomerge": true,
   "packageRules": [
