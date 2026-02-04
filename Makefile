@@ -9,6 +9,16 @@ install: ## Install all dependencies (Node + Go)
 	go mod download
 	@echo "✅ Dependencies installed"
 
+.PHONY: hooks
+hooks: ## Install git hooks
+	@echo "🔗 Installing git hooks..."
+	cp githooks/* .git/hooks/
+	chmod +x .git/hooks/pre-commit .git/hooks/commit-msg
+	@echo "✅ Git hooks installed"
+
+.PHONY: setup
+setup: install hooks ## Full setup: install deps and git hooks
+
 .PHONY: dev
 dev: ## Start development servers with hot-reload
 	@echo "🚀 Starting development mode..."
@@ -70,7 +80,7 @@ clean: ## Clean build artifacts
 	@echo "🧹 Cleaning build artifacts..."
 	rm -f ldap-selfservice-password-changer
 	rm -f coverage.out coverage.html
-	rm -rf node_modules/.cache
+	rm -rf node_modules/.cache tmp/
 	@echo "✅ Cleaned"
 
 .PHONY: docker-up

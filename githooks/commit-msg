@@ -1,0 +1,32 @@
+#!/bin/bash
+# Commit message validation - Conventional Commits format
+# Install: cp githooks/* .git/hooks/ && chmod +x .git/hooks/*
+
+commit_msg=$(cat "$1")
+
+# Conventional Commits regex pattern
+# type(scope)?: subject
+# type: feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert
+pattern="^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert|deps)(\(.+\))?(!)?: .{1,}"
+
+# Also allow merge commits and Revert commits
+if [[ "$commit_msg" =~ ^Merge ]] || [[ "$commit_msg" =~ ^Revert ]]; then
+  exit 0
+fi
+
+if ! [[ "$commit_msg" =~ $pattern ]]; then
+  echo "❌ Invalid commit message format"
+  echo ""
+  echo "Expected: type(scope)?: subject"
+  echo ""
+  echo "Types: feat, fix, docs, style, refactor, perf, test, build, ci, chore, revert, deps"
+  echo ""
+  echo "Examples:"
+  echo "  feat: add password reset feature"
+  echo "  fix(auth): correct token validation"
+  echo "  docs: update README"
+  echo "  chore(deps): update dependencies"
+  echo ""
+  echo "Your message: $commit_msg"
+  exit 1
+fi

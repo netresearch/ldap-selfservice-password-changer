@@ -11,3 +11,4 @@ ldap-selfservice-password-changer
 coverage.out
 coverage.html
 *.coverprofile
+tmp/
