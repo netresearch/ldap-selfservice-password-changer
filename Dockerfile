@@ -5,7 +5,7 @@ WORKDIR /build
 ENV HUSKY=0
 
 # Install pnpm globally via npm (Node 25 doesn't include corepack by default yet)
-RUN npm install -g pnpm@10.20.0
+RUN npm install -g pnpm@10.28.2
 
 # Copy dependency files first for better layer caching
 COPY package.json pnpm-lock.yaml ./
@@ -13,7 +13,6 @@ RUN pnpm install --frozen-lockfile
 
 # Copy only necessary files for frontend build
 COPY postcss.config.js tailwind.config.js tsconfig.json ./
-COPY scripts/ ./scripts/
 COPY internal/web/ ./internal/web/
 
 RUN pnpm build:assets
