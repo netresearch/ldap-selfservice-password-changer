@@ -1,8 +1,8 @@
 export default {
   plugins: {
-    "postcss-nested": {}, // Expand CSS nesting syntax before optimization
+    "@tailwindcss/postcss": {},
+    "postcss-nested": {},
     autoprefixer: {},
-    cssnano: {},
-    "@tailwindcss/postcss": {}
+    cssnano: {}
   }
 };
