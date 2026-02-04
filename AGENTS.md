@@ -1,6 +1,6 @@
 # Agent Guidelines
 
-<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2025-10-09 -->
+<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-02-04 -->
 
 **Precedence**: Nearest AGENTS.md wins. This is the root file with global defaults.
 
@@ -17,7 +17,7 @@
 
 Self-service password change/reset web app for LDAP/ActiveDirectory with email-based password reset, rate limiting, and strict accessibility standards. Single binary deployment with embedded assets.
 
-**Stack**: Go 1.25 + Fiber, TypeScript (ultra-strict), Tailwind CSS 4, Docker multi-stage builds, pnpm 10.18
+**Stack**: Go 1.25 + Fiber, TypeScript (ultra-strict), Tailwind CSS 4, Docker multi-stage builds, pnpm 10.28
 
 **Key characteristics**:
 
@@ -28,7 +28,7 @@ Self-service password change/reset web app for LDAP/ActiveDirectory with email-b
 
 ### Setup
 
-**Prerequisites**: Docker + Docker Compose (required), Go 1.25+, Node.js 24+, pnpm 10.18+ (for native dev)
+**Prerequisites**: Docker + Docker Compose (required), Go 1.25+, Node.js 24+, pnpm 10.28+ (for native dev)
 
 ```bash
 # Clone and setup environment
@@ -49,7 +49,7 @@ See [docs/development-guide.md](docs/development-guide.md) for comprehensive set
 
 ### Build & Test Commands
 
-**Package manager**: pnpm (specified in package.json: `pnpm@10.18.1`)
+**Package manager**: pnpm (specified in package.json: `pnpm@10.28.2`)
 
 ```bash
 # Build everything
@@ -74,6 +74,10 @@ go test ./internal/...    # Specific package tests
 pnpm prettier --write .   # Format TS, Go templates, config files
 pnpm prettier --check .   # Check formatting (CI)
 
+# Linting
+pnpm lint                 # ESLint check (TS/JS)
+pnpm lint:fix             # ESLint auto-fix
+
 # Type checking
 pnpm js:build             # TypeScript strict compilation (no emit in dev)
 go build -v ./...         # Go compilation + type checking
@@ -83,7 +87,9 @@ go build -v ./...         # Go compilation + type checking
 
 - Type check: `pnpm js:build` and `go build -v ./...`
 - Format check: `pnpm prettier --check .`
-- Tests: `go test -v ./...`
+- Lint Go: `golangci-lint` (via GitHub Action)
+- Lint JS/TS: `pnpm lint`
+- Tests: `go test -v -race ./...` (with coverage)
 
 ### Code Style
 

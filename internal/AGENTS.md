@@ -1,6 +1,6 @@
 # Go Backend Services
 
-<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2025-10-09 -->
+<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-02-04 -->
 
 **Scope**: Go backend packages in `internal/` directory
 
@@ -363,6 +363,13 @@ go build -gcflags="all=-N -l"
 - JSON-RPC 2.0 specification compliance
 - Error codes defined in [docs/api-reference.md](../docs/api-reference.md)
 - Request validation before processing
+- Endpoint: `POST /api/rpc`
+
+### Health Check
+
+- Endpoint: `GET /health/live` (returns `{"status": "alive"}`)
+- Used by Docker HEALTHCHECK via `--health-check` flag
+- Implemented in `main.go`
 
 ### validators/
 

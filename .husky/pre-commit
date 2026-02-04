@@ -32,10 +32,10 @@ if [ -f package.json ] && command -v pnpm >/dev/null 2>&1; then
   }
 fi
 
-# golangci-lint (fast preset)
+# golangci-lint
 if [ -f go.mod ] && command -v golangci-lint >/dev/null 2>&1; then
-  echo "→ Running golangci-lint (fast)..."
-  golangci-lint run --fast --timeout=2m || {
+  echo "→ Running golangci-lint..."
+  golangci-lint run --timeout=2m || {
     echo "⚠️  golangci-lint found issues"
     echo "Run: golangci-lint run"
     # Warning only for now

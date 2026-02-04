@@ -1,6 +1,6 @@
 # Frontend - TypeScript & Tailwind CSS
 
-<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2025-10-09 -->
+<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-02-04 -->
 
 **Scope**: Frontend assets in `internal/web/` directory - TypeScript, Tailwind CSS, HTML templates
 
@@ -13,11 +13,13 @@ Frontend implementation for LDAP selfservice password changer with strict access
 - **static/**: Client-side TypeScript, compiled CSS, static assets
   - **js/**: TypeScript source files (compiled to ES modules)
   - **styles.css**: Tailwind CSS output
+  - **static.go**: Embedded filesystem for static assets
   - Icons, logos, favicons, manifest
 - **templates/**: Go HTML templates (\*.gohtml)
-- **handlers.go**: HTTP route handlers
-- **middleware.go**: Security headers, CORS, etc.
-- **server.go**: Fiber server setup
+  - **templates.go**: Template rendering functions
+- **tailwind.css**: Tailwind CSS source (directives)
+
+Note: HTTP handlers, middleware, and server setup are in `main.go` at the project root, not in this directory.
 
 **Key characteristics**:
 
@@ -29,7 +31,7 @@ Frontend implementation for LDAP selfservice password changer with strict access
 
 ## Setup/Environment
 
-**Prerequisites**: Node.js 24+, pnpm 10.18+ (from root `package.json`)
+**Prerequisites**: Node.js 24+, pnpm 10.28+ (from root `package.json`)
 
 ```bash
 # From project root
