@@ -6,6 +6,12 @@
   /* Enhanced contrast colors for WCAG 2.2 AAA (7:1 ratio) - WCAG 1.4.6 */
   --color-gray-900: oklch(15% 0.034 264.665);
   --color-gray-100: oklch(99.5% 0.003 264.542);
+
+  /* AAA-compliant error colors (7:1+ contrast ratio) */
+  /* Light mode: error-dark on white = ~10:1 */
+  --color-error-dark: oklch(35% 0.15 25);
+  /* Dark mode: error-light on gray-900 = ~8:1 */
+  --color-error-light: oklch(80% 0.12 20);
 }
 
 @variant dark (&:where(.dark, .dark *));

@@ -11,6 +11,7 @@ import {
   toggleValidator
 } from "./validators.js";
 import { initThemeToggle, initDensityToggle } from "./toggles.js";
+import { setFieldErrors, updateErrorSummary } from "./error-utils.js";
 
 interface Opts {
   minLength: number;
@@ -31,6 +32,12 @@ export const init = (opts: Opts) => {
 
   const form = document.querySelector<HTMLFormElement>("#form");
   if (!form) throw new Error("Could not find form element");
+
+  const errorSummary = form.querySelector<HTMLDivElement>("#error-summary");
+  if (!errorSummary) throw new Error("Could not find error summary element");
+
+  const errorSummaryText = errorSummary.querySelector<HTMLSpanElement>("span[data-purpose='summaryText']");
+  if (!errorSummaryText) throw new Error("Could not find error summary text element");
 
   const submitButton = form.querySelector<HTMLButtonElement>("& > div[data-purpose='submit'] > button[type='submit']");
   if (!submitButton) throw new Error("Could not find submit button element");
@@ -83,24 +90,6 @@ export const init = (opts: Opts) => {
     if (!errorContainer) throw new Error(`Error for "${name}" does not exist`);
 
     const getValue = () => input.value;
-    const setErrors = (errors: string[]) => {
-      errorContainer.innerHTML = "";
-
-      if (errors.length > 0) {
-        inputContainer.classList.add("!border-red-700", "dark:!border-red-400");
-        input.setAttribute("aria-invalid", "true");
-      } else {
-        inputContainer.classList.remove("!border-red-700", "dark:!border-red-400");
-        input.setAttribute("aria-invalid", "false");
-      }
-
-      for (const error of errors) {
-        const el = document.createElement("p");
-        el.innerText = error;
-
-        errorContainer.appendChild(el);
-      }
-    };
 
     const validate = () => {
       const value = getValue();
@@ -113,7 +102,7 @@ export const init = (opts: Opts) => {
           return acc;
         }, []);
 
-      setErrors(errors);
+      setFieldErrors(errorContainer, inputContainer, input, errors);
 
       return errors.length > 0;
     };
@@ -167,8 +156,13 @@ export const init = (opts: Opts) => {
 
     const [username, oldPassword, newPassword] = fields.map((f) => f.getValue());
 
-    const hasErrors = fields.map(({ validate }) => validate()).some((e) => e);
+    const fieldErrors = fields.map(({ validate }) => validate());
+    const hasErrors = fieldErrors.some((e) => e);
+    const errorCount = fieldErrors.filter((e) => e).length;
+
     submitButton.disabled = hasErrors;
+    updateErrorSummary(errorSummary, errorSummaryText, errorCount, true); // Focus on submit attempt
+
     if (hasErrors) return;
 
     toggleFields(false);
@@ -219,7 +213,11 @@ export const init = (opts: Opts) => {
   form.onchange = (e) => {
     e.stopPropagation();
 
-    const hasErrors = fields.map(({ validate }) => validate()).some((e) => e);
+    const fieldErrors = fields.map(({ validate }) => validate());
+    const hasErrors = fieldErrors.some((e) => e);
+    const errorCount = fieldErrors.filter((e) => e).length;
+
     submitButton.disabled = hasErrors;
+    updateErrorSummary(errorSummary, errorSummaryText, errorCount, false); // Don't focus on change
   };
 };
