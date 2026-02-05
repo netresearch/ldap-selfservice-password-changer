@@ -62,7 +62,7 @@ jobs:
       contents: read
     services:
       openldap:
-        image: bitnami/openldap:2.6
+        image: bitnami/openldap:latest
         ports:
           - 1389:1389
         env:
@@ -182,9 +182,9 @@ jobs:
 
       - name: Run fuzz tests (quick)
         run: |
-          go test -fuzz=FuzzValidateNewPassword -fuzztime=10s ./internal/rpc/...
-          go test -fuzz=FuzzPluralize -fuzztime=10s ./internal/rpc/...
-          go test -fuzz=FuzzValidateEmailAddress -fuzztime=10s ./internal/email/...
+          go test -run=^$ -fuzz=FuzzValidateNewPassword -fuzztime=10s ./internal/rpc/...
+          go test -run=^$ -fuzz=FuzzPluralize -fuzztime=10s ./internal/rpc/...
+          go test -run=^$ -fuzz=FuzzValidateEmailAddress -fuzztime=10s ./internal/email/...
 
   types:
     name: Check types
