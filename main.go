@@ -35,7 +35,11 @@ func main() {
 		os.Exit(runHealthCheck())
 	}
 
-	opts := options.Parse()
+	opts, err := options.Parse()
+	if err != nil {
+		slog.Error("configuration error", "error", err)
+		os.Exit(1)
+	}
 
 	// Log LDAP connection security status
 	isEncrypted := strings.HasPrefix(opts.LDAP.Server, "ldaps://")
@@ -54,7 +58,6 @@ func main() {
 	}
 
 	var rpcHandler *rpc.Handler
-	var err error
 
 	// Initialize password reset services if enabled
 	if opts.PasswordResetEnabled {
