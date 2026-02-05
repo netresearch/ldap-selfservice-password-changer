@@ -62,20 +62,18 @@ jobs:
       contents: read
     services:
       openldap:
-        image: bitnami/openldap:latest
+        image: osixia/openldap:1.5.0
         ports:
-          - 1389:1389
+          - 1389:389
         env:
-          LDAP_ROOT: dc=example,dc=com
-          LDAP_ADMIN_USERNAME: admin
+          LDAP_ORGANISATION: Example Inc
+          LDAP_DOMAIN: example.com
           LDAP_ADMIN_PASSWORD: adminpassword
-          LDAP_USERS: testuser,resetuser
-          LDAP_PASSWORDS: testpass,resetpass
         options: >-
-          --health-cmd "ldapsearch -x -H ldap://localhost:1389 -b 'dc=example,dc=com' -D 'cn=admin,dc=example,dc=com' -w adminpassword"
+          --health-cmd "ldapsearch -x -H ldap://localhost:389 -b 'dc=example,dc=com' -D 'cn=admin,dc=example,dc=com' -w adminpassword"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
+          --health-retries 10
       mailhog:
         image: mailhog/mailhog:v1.0.1
         ports:
