@@ -133,9 +133,9 @@ func TestEnvIntOrDefault(t *testing.T) {
 			wantErr:    true,
 		},
 		{
-			name:       "returns default and adds error for overflow",
-			envName:    "TEST_INT_OVERFLOW",
-			envValue:   "999999",
+			name:       "returns default and adds error for decimal value",
+			envName:    "TEST_INT_DECIMAL",
+			envValue:   "3.14",
 			setEnv:     true,
 			defaultVal: 100,
 			want:       100,

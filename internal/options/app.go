@@ -2,9 +2,9 @@
 package options
 
 import (
-	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"strings"
@@ -81,7 +81,7 @@ func envStringOrDefault(name, d string) string {
 func envIntOrDefault(name string, d uint64, errs *ConfigError) uint {
 	raw := envStringOrDefault(name, strconv.FormatUint(d, 10))
 
-	v, err := strconv.ParseUint(raw, 10, 16)
+	v, err := strconv.ParseUint(raw, 10, strconv.IntSize)
 	if err != nil {
 		errs.Add(fmt.Sprintf("invalid value for %s: %q is not a valid unsigned integer", name, raw))
 		return uint(d) // Return default on error
@@ -115,6 +115,7 @@ func Parse() (*Opts, error) {
 
 	// Use a custom FlagSet to allow multiple Parse() calls in tests
 	fs := flag.NewFlagSet("gopherpass", flag.ContinueOnError)
+	fs.SetOutput(io.Discard) // Suppress flag parse error output; errors are collected in ConfigError
 
 	var (
 		fPort       = fs.String("port", envStringOrDefault("PORT", "3000"), "Port to listen on.")
@@ -169,7 +170,7 @@ func Parse() (*Opts, error) {
 		fPasswordCanIncludeUsername = fs.Bool(
 			"password-can-include-username",
 			envBoolOrDefault("PASSWORD_CAN_INCLUDE_USERNAME", false, errs),
-			"Enables that the password can include the password",
+			"Enables that the password can include the username.",
 		)
 
 		// Password Reset flags
@@ -289,7 +290,7 @@ func Parse() (*Opts, error) {
 	}, nil
 }
 
-// MustParse is like Parse but calls log.Fatal on error.
+// MustParse is like Parse but prints an error to stderr and exits with status 1 on failure.
 // Use this in main() when you want the old behavior.
 //
 // Deprecated: Prefer Parse() and handle errors explicitly.
@@ -302,6 +303,3 @@ func MustParse() *Opts {
 	}
 	return opts
 }
-
-// ErrMissingRequired is returned when required configuration options are missing.
-var ErrMissingRequired = errors.New("required configuration options missing")
