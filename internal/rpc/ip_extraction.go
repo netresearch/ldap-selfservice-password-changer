@@ -4,7 +4,7 @@ import (
 	"net"
 	"strings"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 )
 
 // extractClientIP extracts the real client IP address from the request.
@@ -15,7 +15,7 @@ import (
 //
 // This handles proxy scenarios correctly and provides defense against
 // IP spoofing by trusting proxy headers when present.
-func extractClientIP(c *fiber.Ctx) string {
+func extractClientIP(c fiber.Ctx) string {
 	// Check X-Forwarded-For header first (most common proxy scenario)
 	// Format: "client, proxy1, proxy2"
 	// The leftmost IP is the original client
