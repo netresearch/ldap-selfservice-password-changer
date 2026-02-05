@@ -52,10 +52,10 @@ if [ -f go.mod ] && command -v go >/dev/null 2>&1; then
   fi
 fi
 
-# Go tests
+# Go tests (fast mode with -short flag)
 if [ -f go.mod ] && command -v go >/dev/null 2>&1; then
-  echo "→ Running Go tests..."
-  go test ./... || {
+  echo "→ Running Go tests (fast mode)..."
+  go test -short ./... || {
     echo "❌ Go tests failed"
     exit 1
   }

@@ -2,6 +2,7 @@
 package templates
 
 import (
+	"html/template"
 	"strings"
 	"testing"
 
@@ -495,4 +496,42 @@ func BenchmarkRenderResetPassword(b *testing.B) {
 	for range b.N {
 		_, _ = RenderResetPassword(opts) //nolint:errcheck // benchmark
 	}
+}
+
+// TestRenderTemplateWithInvalidTemplate tests error handling for invalid templates.
+func TestRenderTemplateWithInvalidTemplate(t *testing.T) {
+	// Test with invalid template syntax (unclosed action)
+	invalidTemplate := `{{define "test"}}Hello {{.Name}{{end}}`
+	_, err := renderTemplate("test", invalidTemplate, nil)
+	assert.Error(t, err, "should error on invalid template syntax")
+	assert.Contains(t, err.Error(), "failed to parse")
+}
+
+// TestRenderTemplateWithExecutionError tests error handling during template execution.
+func TestRenderTemplateWithExecutionError(t *testing.T) {
+	// Template that references a non-existent template
+	templateWithMissingRef := `{{define "test"}}{{template "nonexistent"}}{{end}}`
+	_, err := renderTemplate("test", templateWithMissingRef, nil)
+	assert.Error(t, err, "should error when referencing non-existent template")
+}
+
+// TestRenderTemplateWithNilData tests rendering with nil data.
+func TestRenderTemplateWithNilData(t *testing.T) {
+	// Simple template that doesn't require data
+	simpleTemplate := `{{define "simple"}}Hello World{{end}}`
+	result, err := renderTemplate("simple", simpleTemplate, nil)
+	assert.NoError(t, err)
+	assert.Contains(t, string(result), "Hello World")
+}
+
+// TestParseCommonTemplatesDirectly tests parseCommonTemplates function.
+func TestParseCommonTemplatesDirectly(t *testing.T) {
+	// Create a new template and parse common templates
+	tpl := template.New("test")
+	err := parseCommonTemplates(tpl)
+	assert.NoError(t, err, "parseCommonTemplates should succeed with valid embedded templates")
+
+	// Verify some templates were defined
+	definedTemplates := tpl.DefinedTemplates()
+	assert.NotEmpty(t, definedTemplates, "should have defined templates")
 }

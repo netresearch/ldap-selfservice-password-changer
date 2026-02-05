@@ -9,6 +9,7 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	ldap "github.com/netresearch/simple-ldap-go"
@@ -445,4 +446,227 @@ func TestSetIPLimiterNil(t *testing.T) {
 	if handler.ipLimiter != nil {
 		t.Error("expected ipLimiter to be nil after setting nil")
 	}
+}
+
+// TestHandleRequestPasswordResetRateLimited tests that rate limiting returns generic success
+// (to prevent user enumeration - we don't reveal that the request was rate limited).
+func TestHandleRequestPasswordResetRateLimited(t *testing.T) {
+	handler := createTestHandlerWithResetEnabled()
+	// Make rate limiter deny requests
+	handler.rateLimiter = &mockHandlerRateLimiter{allowed: false}
+
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
+
+	body := `{"method":"request-password-reset","params":["user@example.com"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/rpc", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	// Rate limited requests still return 200 OK to prevent enumeration
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("status = %d, want %d (rate limited should return OK)", resp.StatusCode, http.StatusOK)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+	var response JSONRPCResponse
+	if err := json.Unmarshal(bodyBytes, &response); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	// Success is true even when rate limited (to prevent enumeration)
+	if !response.Success {
+		t.Error("expected success = true (rate limiting should not reveal itself)")
+	}
+}
+
+// TestHandleResetPasswordSuccess tests successful password reset.
+func TestHandleResetPasswordSuccess(t *testing.T) {
+	handler := createTestHandlerWithResetEnabled()
+	// Setup token store to return a valid token
+	handler.tokenStore = &mockHandlerTokenStoreWithToken{}
+	// Set up the resetLDAP client (required for password reset)
+	handler.resetLDAP = &mockHandlerLDAP{}
+
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
+
+	body := `{"method":"reset-password","params":["validtoken","NewPass123!"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/rpc", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			t.Fatalf("failed to read response body: %v", readErr)
+		}
+		t.Errorf("status = %d, want %d (body: %s)", resp.StatusCode, http.StatusOK, string(bodyBytes))
+	}
+}
+
+// TestHandleChangePasswordSuccess tests successful password change with full response validation.
+func TestHandleChangePasswordSuccess(t *testing.T) {
+	handler := createTestHandler()
+
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
+
+	body := `{"method":"change-password","params":["testuser","OldPass123!","NewPass456!"]}`
+	req := httptest.NewRequest(http.MethodPost, "/api/rpc", strings.NewReader(body))
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		t.Errorf("status = %d, want %d", resp.StatusCode, http.StatusOK)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+	var response JSONRPCResponse
+	if err := json.Unmarshal(bodyBytes, &response); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	if !response.Success {
+		t.Error("expected success = true")
+	}
+	if len(response.Data) == 0 {
+		t.Error("expected non-empty data")
+	}
+}
+
+// TestSendSuccessResponseWithEmptyData tests sendSuccessResponse with empty data.
+func TestSendSuccessResponseWithEmptyData(t *testing.T) {
+	app := fiber.New()
+	app.Get("/test", func(c fiber.Ctx) error {
+		return sendSuccessResponse(c, []string{})
+	})
+
+	req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	var response JSONRPCResponse
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		t.Fatalf("failed to read response body: %v", err)
+	}
+	if err := json.Unmarshal(bodyBytes, &response); err != nil {
+		t.Fatalf("failed to unmarshal response: %v", err)
+	}
+
+	if !response.Success {
+		t.Error("expected success = true")
+	}
+	if len(response.Data) != 0 {
+		t.Errorf("expected empty data, got: %v", response.Data)
+	}
+}
+
+// TestSendErrorResponseWithDifferentStatusCodes tests sendErrorResponse with various status codes.
+func TestSendErrorResponseWithDifferentStatusCodes(t *testing.T) {
+	testCases := []struct {
+		name       string
+		statusCode int
+		message    string
+	}{
+		{"internal server error", http.StatusInternalServerError, "internal error"},
+		{"not found", http.StatusNotFound, "not found"},
+		{"unauthorized", http.StatusUnauthorized, "unauthorized"},
+		{"forbidden", http.StatusForbidden, "forbidden"},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			app := fiber.New()
+			app.Get("/test", func(c fiber.Ctx) error {
+				return sendErrorResponse(c, tc.statusCode, tc.message)
+			})
+
+			req := httptest.NewRequest(http.MethodGet, "/test", http.NoBody)
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("app.Test failed: %v", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode != tc.statusCode {
+				t.Errorf("status = %d, want %d", resp.StatusCode, tc.statusCode)
+			}
+
+			var response JSONRPCResponse
+			bodyBytes, err := io.ReadAll(resp.Body)
+			if err != nil {
+				t.Fatalf("failed to read response body: %v", err)
+			}
+			if err := json.Unmarshal(bodyBytes, &response); err != nil {
+				t.Fatalf("failed to unmarshal response: %v", err)
+			}
+
+			if response.Success {
+				t.Error("expected success = false")
+			}
+			if len(response.Data) != 1 || response.Data[0] != tc.message {
+				t.Errorf("unexpected data: %v", response.Data)
+			}
+		})
+	}
+}
+
+// mockHandlerTokenStoreWithToken is a token store that returns a valid token.
+type mockHandlerTokenStoreWithToken struct{}
+
+func (m *mockHandlerTokenStoreWithToken) Store(_ *resettoken.ResetToken) error {
+	return nil
+}
+
+func (m *mockHandlerTokenStoreWithToken) Get(_ string) (*resettoken.ResetToken, error) {
+	return &resettoken.ResetToken{
+		Token:     "validtoken",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		Used:      false,
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+	}, nil
+}
+
+func (m *mockHandlerTokenStoreWithToken) MarkUsed(_ string) error {
+	return nil
+}
+
+func (m *mockHandlerTokenStoreWithToken) Delete(_ string) error {
+	return nil
+}
+
+func (m *mockHandlerTokenStoreWithToken) CleanupExpired() int {
+	return 0
+}
+
+func (m *mockHandlerTokenStoreWithToken) Count() int {
+	return 1
 }
