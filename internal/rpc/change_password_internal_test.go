@@ -479,7 +479,6 @@ func TestChangePasswordNoIPLimiter(t *testing.T) {
 		[]string{"testuser", "OldPass123!", "NewPass456!"},
 		testClientIP,
 	)
-
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
 		return

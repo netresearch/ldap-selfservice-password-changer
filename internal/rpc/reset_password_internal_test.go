@@ -595,7 +595,6 @@ func TestResetPasswordMarkUsedError(t *testing.T) {
 
 	params := []string{"mark-used-fail-token", "NewPass123!"}
 	result, err := handler.resetPassword(params)
-
 	// Should still succeed (password was changed, just logging the mark-used failure)
 	if err != nil {
 		t.Errorf("Expected success despite mark-used failure, got: %v", err)

@@ -17,7 +17,7 @@ func TestRunHealthCheckSuccess(t *testing.T) {
 		assert.Equal(t, "/health/live", r.URL.Path)
 		assert.Equal(t, http.MethodGet, r.Method)
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"alive"}`))
+		_, _ = w.Write([]byte(`{"status":"alive"}`)) //nolint:errcheck // test handler
 	}))
 	defer server.Close()
 
@@ -115,7 +115,7 @@ func TestRunHealthCheckWithHeaders(t *testing.T) {
 		w.Header().Set("Content-Type", "application/json")
 		w.Header().Set("X-Custom-Header", "test")
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"alive"}`))
+		_, _ = w.Write([]byte(`{"status":"alive"}`)) //nolint:errcheck // test handler
 	}))
 	defer server.Close()
 
@@ -156,7 +156,8 @@ func testableRunHealthCheckWithTimeout(endpoint string, timeout time.Duration) i
 func TestHealthCheckConstants(t *testing.T) {
 	// Verify constants are reasonable
 	assert.Equal(t, 3*time.Second, healthCheckTimeout, "health check timeout should be 3 seconds")
-	assert.Equal(t, "http://localhost:3000/health/live", healthCheckEndpoint, "health check endpoint should be localhost:3000")
+	assert.Equal(t, "http://localhost:3000/health/live", healthCheckEndpoint,
+		"health check endpoint should be localhost:3000")
 }
 
 // TestRunHealthCheckActualFunction tests the actual runHealthCheck function behavior.
@@ -172,12 +173,12 @@ func TestRunHealthCheckActualFunction(t *testing.T) {
 func BenchmarkRunHealthCheck(b *testing.B) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 		w.WriteHeader(http.StatusOK)
-		_, _ = w.Write([]byte(`{"status":"alive"}`))
+		_, _ = w.Write([]byte(`{"status":"alive"}`)) //nolint:errcheck // benchmark handler
 	}))
 	defer server.Close()
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
+	for range b.N {
 		_ = testableRunHealthCheck(server.URL + "/health/live")
 	}
 }

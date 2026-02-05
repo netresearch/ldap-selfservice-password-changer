@@ -3,6 +3,7 @@ package rpc
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 	"time"
 
@@ -465,15 +466,10 @@ func TestRequestPasswordResetEmailTooLong(t *testing.T) {
 	}
 
 	// Create an email longer than 254 characters
-	longEmail := ""
-	for range 256 {
-		longEmail += "a"
-	}
-	longEmail += "@example.com"
+	longEmail := strings.Repeat("a", 256) + "@example.com"
 
 	params := []string{longEmail}
 	result, err := handler.requestPasswordReset(params)
-
 	// Should return generic success without error (don't reveal validation failure)
 	if err != nil {
 		t.Errorf("Should not error on too-long email, got: %v", err)
@@ -510,7 +506,6 @@ func TestRequestPasswordResetTokenStoreError(t *testing.T) {
 
 	params := []string{"test@example.com"}
 	result, err := handler.requestPasswordReset(params)
-
 	// Should return generic success without error (don't reveal store failure)
 	if err != nil {
 		t.Errorf("Should not error on token store failure, got: %v", err)

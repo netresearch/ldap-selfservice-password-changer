@@ -55,17 +55,18 @@ func TestSendResetEmailValidation(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			err := service.SendResetEmail(tt.emailAddr, tt.token)
 
-			if tt.invalidEmail {
+			switch {
+			case tt.invalidEmail:
 				// Invalid emails should always error
 				if err == nil {
 					t.Errorf("SendResetEmail should error for invalid email %q", tt.emailAddr)
 				}
-			} else if smtpAvailable {
+			case smtpAvailable:
 				// Valid emails should succeed when SMTP is available
 				if err != nil {
 					t.Errorf("SendResetEmail should succeed with SMTP server for %q, got: %v", tt.emailAddr, err)
 				}
-			} else {
+			default:
 				// Valid emails should error when no SMTP server
 				if err == nil {
 					t.Error("SendResetEmail should error without SMTP server")

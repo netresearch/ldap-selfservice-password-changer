@@ -1,3 +1,4 @@
+//nolint:testpackage // tests internal functions
 package rpc
 
 import (

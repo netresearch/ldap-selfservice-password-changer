@@ -1,7 +1,7 @@
+//nolint:testpackage // tests internal functions
 package options
 
 import (
-	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -61,12 +61,8 @@ func TestEnvStringOrDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Clean up env before test
-			os.Unsetenv(tt.envName)
-
 			if tt.setEnv {
-				os.Setenv(tt.envName, tt.envValue)
-				t.Cleanup(func() { os.Unsetenv(tt.envName) })
+				t.Setenv(tt.envName, tt.envValue)
 			}
 
 			got := envStringOrDefault(tt.envName, tt.defaultVal)
@@ -120,12 +116,8 @@ func TestEnvIntOrDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Clean up env before test
-			os.Unsetenv(tt.envName)
-
 			if tt.setEnv {
-				os.Setenv(tt.envName, tt.envValue)
-				t.Cleanup(func() { os.Unsetenv(tt.envName) })
+				t.Setenv(tt.envName, tt.envValue)
 			}
 
 			got := envIntOrDefault(tt.envName, tt.defaultVal)
@@ -210,12 +202,8 @@ func TestEnvBoolOrDefault(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			// Clean up env before test
-			os.Unsetenv(tt.envName)
-
 			if tt.setEnv {
-				os.Setenv(tt.envName, tt.envValue)
-				t.Cleanup(func() { os.Unsetenv(tt.envName) })
+				t.Setenv(tt.envName, tt.envValue)
 			}
 
 			got := envBoolOrDefault(tt.envName, tt.defaultVal)
@@ -305,11 +293,25 @@ func TestOptsStruct(t *testing.T) {
 	// Verify struct fields are accessible and have expected values
 	assert.Equal(t, "3000", opts.Port)
 	assert.Equal(t, "cn=readonly,dc=example,dc=com", opts.ReadonlyUser)
+	assert.Equal(t, "secret", opts.ReadonlyPassword)
 	assert.Equal(t, uint(8), opts.MinLength)
+	assert.Equal(t, uint(1), opts.MinNumbers)
+	assert.Equal(t, uint(1), opts.MinSymbols)
+	assert.Equal(t, uint(1), opts.MinUppercase)
+	assert.Equal(t, uint(1), opts.MinLowercase)
+	assert.False(t, opts.PasswordCanIncludeUsername)
 	assert.True(t, opts.PasswordResetEnabled)
 	assert.Equal(t, uint(15), opts.ResetTokenExpiryMinutes)
+	assert.Equal(t, uint(3), opts.ResetRateLimitRequests)
+	assert.Equal(t, uint(60), opts.ResetRateLimitWindowMinutes)
 	assert.Equal(t, "smtp.example.com", opts.SMTPHost)
+	assert.Equal(t, uint(587), opts.SMTPPort)
+	assert.Equal(t, "smtpuser", opts.SMTPUsername)
+	assert.Equal(t, "smtppass", opts.SMTPPassword)
+	assert.Equal(t, "noreply@example.com", opts.SMTPFromAddress)
+	assert.Equal(t, "https://pwd.example.com", opts.AppBaseURL)
 	assert.Equal(t, "cn=reset,dc=example,dc=com", opts.ResetUser)
+	assert.Equal(t, "resetpass", opts.ResetPassword)
 }
 
 // TestEnvIntOrDefaultEdgeCases tests edge cases that don't cause os.Exit.
@@ -339,8 +341,8 @@ func TestEnvIntOrDefaultEdgeCases(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
+			// Use a unique env name that won't be set
 			envName := "TEST_INT_EDGE_" + tt.name
-			os.Unsetenv(envName)
 			got := envIntOrDefault(envName, tt.defaultVal)
 			assert.Equal(t, tt.want, got)
 		})
@@ -352,12 +354,11 @@ func TestEnvStringOrDefaultConcurrent(t *testing.T) {
 	const envName = "TEST_CONCURRENT_ENV"
 	const envValue = "concurrent_value"
 
-	os.Setenv(envName, envValue)
-	t.Cleanup(func() { os.Unsetenv(envName) })
+	t.Setenv(envName, envValue)
 
 	// Run concurrent reads
 	done := make(chan bool)
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		go func() {
 			result := envStringOrDefault(envName, "default")
 			require.Equal(t, envValue, result)
@@ -366,7 +367,7 @@ func TestEnvStringOrDefaultConcurrent(t *testing.T) {
 	}
 
 	// Wait for all goroutines
-	for i := 0; i < 100; i++ {
+	for range 100 {
 		<-done
 	}
 }
@@ -394,8 +395,7 @@ func TestEnvBoolOrDefaultVariations(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.envValue, func(t *testing.T) {
 			envName := "TEST_BOOL_VAR_" + tt.envValue
-			os.Setenv(envName, tt.envValue)
-			t.Cleanup(func() { os.Unsetenv(envName) })
+			t.Setenv(envName, tt.envValue)
 
 			got := envBoolOrDefault(envName, !tt.want)
 			assert.Equal(t, tt.want, got)

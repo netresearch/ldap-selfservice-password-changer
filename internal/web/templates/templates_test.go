@@ -1,3 +1,4 @@
+//nolint:testpackage // tests internal functions
 package templates
 
 import (
@@ -467,16 +468,16 @@ func BenchmarkRenderIndex(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = RenderIndex(opts)
+	for range b.N {
+		_, _ = RenderIndex(opts) //nolint:errcheck // benchmark
 	}
 }
 
 // BenchmarkRenderForgotPassword benchmarks the RenderForgotPassword function.
 func BenchmarkRenderForgotPassword(b *testing.B) {
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = RenderForgotPassword()
+	for range b.N {
+		_, _ = RenderForgotPassword() //nolint:errcheck // benchmark
 	}
 }
 
@@ -491,7 +492,7 @@ func BenchmarkRenderResetPassword(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for i := 0; i < b.N; i++ {
-		_, _ = RenderResetPassword(opts)
+	for range b.N {
+		_, _ = RenderResetPassword(opts) //nolint:errcheck // benchmark
 	}
 }

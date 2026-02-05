@@ -1,3 +1,4 @@
+//nolint:testpackage // tests internal functions
 package rpc
 
 import (
@@ -40,9 +41,10 @@ func FuzzValidateNewPassword(f *testing.F) {
 		PasswordCanIncludeUsername: false,
 	}
 
-	f.Fuzz(func(t *testing.T, password, username string) {
+	f.Fuzz(func(_ *testing.T, password, username string) {
 		// The function should not panic for any input
-		_ = ValidateNewPassword(password, username, opts)
+		// We intentionally ignore the return value as we only test for panics
+		_ = ValidateNewPassword(password, username, opts) //nolint:errcheck
 	})
 }
 
