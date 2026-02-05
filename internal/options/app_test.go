@@ -2,6 +2,7 @@
 package options
 
 import (
+	"errors"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -80,6 +81,7 @@ func TestEnvIntOrDefault(t *testing.T) {
 		setEnv     bool
 		defaultVal uint64
 		want       uint
+		wantErr    bool
 	}{
 		{
 			name:       "returns default when env not set",
@@ -112,6 +114,33 @@ func TestEnvIntOrDefault(t *testing.T) {
 			defaultVal: 0,
 			want:       65535,
 		},
+		{
+			name:       "returns default and adds error for invalid value",
+			envName:    "TEST_INT_INVALID",
+			envValue:   "not_a_number",
+			setEnv:     true,
+			defaultVal: 42,
+			want:       42,
+			wantErr:    true,
+		},
+		{
+			name:       "returns default and adds error for negative value",
+			envName:    "TEST_INT_NEGATIVE",
+			envValue:   "-5",
+			setEnv:     true,
+			defaultVal: 10,
+			want:       10,
+			wantErr:    true,
+		},
+		{
+			name:       "returns default and adds error for overflow",
+			envName:    "TEST_INT_OVERFLOW",
+			envValue:   "999999",
+			setEnv:     true,
+			defaultVal: 100,
+			want:       100,
+			wantErr:    true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -120,8 +149,14 @@ func TestEnvIntOrDefault(t *testing.T) {
 				t.Setenv(tt.envName, tt.envValue)
 			}
 
-			got := envIntOrDefault(tt.envName, tt.defaultVal)
+			errs := &ConfigError{}
+			got := envIntOrDefault(tt.envName, tt.defaultVal, errs)
 			assert.Equal(t, tt.want, got)
+			if tt.wantErr {
+				assert.True(t, errs.HasErrors(), "expected error to be recorded")
+			} else {
+				assert.False(t, errs.HasErrors(), "expected no errors")
+			}
 		})
 	}
 }
@@ -135,6 +170,7 @@ func TestEnvBoolOrDefault(t *testing.T) {
 		setEnv     bool
 		defaultVal bool
 		want       bool
+		wantErr    bool
 	}{
 		{
 			name:       "returns default true when env not set",
@@ -198,6 +234,24 @@ func TestEnvBoolOrDefault(t *testing.T) {
 			defaultVal: true,
 			want:       false,
 		},
+		{
+			name:       "returns default and adds error for invalid value",
+			envName:    "TEST_BOOL_INVALID",
+			envValue:   "not_a_bool",
+			setEnv:     true,
+			defaultVal: true,
+			want:       true,
+			wantErr:    true,
+		},
+		{
+			name:       "returns default and adds error for empty-ish value",
+			envName:    "TEST_BOOL_MAYBE",
+			envValue:   "maybe",
+			setEnv:     true,
+			defaultVal: false,
+			want:       false,
+			wantErr:    true,
+		},
 	}
 
 	for _, tt := range tests {
@@ -206,8 +260,14 @@ func TestEnvBoolOrDefault(t *testing.T) {
 				t.Setenv(tt.envName, tt.envValue)
 			}
 
-			got := envBoolOrDefault(tt.envName, tt.defaultVal)
+			errs := &ConfigError{}
+			got := envBoolOrDefault(tt.envName, tt.defaultVal, errs)
 			assert.Equal(t, tt.want, got)
+			if tt.wantErr {
+				assert.True(t, errs.HasErrors(), "expected error to be recorded")
+			} else {
+				assert.False(t, errs.HasErrors(), "expected no errors")
+			}
 		})
 	}
 }
@@ -314,7 +374,7 @@ func TestOptsStruct(t *testing.T) {
 	assert.Equal(t, "resetpass", opts.ResetPassword)
 }
 
-// TestEnvIntOrDefaultEdgeCases tests edge cases that don't cause os.Exit.
+// TestEnvIntOrDefaultEdgeCases tests edge cases for default values.
 func TestEnvIntOrDefaultEdgeCases(t *testing.T) {
 	// Test default value boundaries
 	tests := []struct {
@@ -343,8 +403,10 @@ func TestEnvIntOrDefaultEdgeCases(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			// Use a unique env name that won't be set
 			envName := "TEST_INT_EDGE_" + tt.name
-			got := envIntOrDefault(envName, tt.defaultVal)
+			errs := &ConfigError{}
+			got := envIntOrDefault(envName, tt.defaultVal, errs)
 			assert.Equal(t, tt.want, got)
+			assert.False(t, errs.HasErrors())
 		})
 	}
 }
@@ -397,8 +459,95 @@ func TestEnvBoolOrDefaultVariations(t *testing.T) {
 			envName := "TEST_BOOL_VAR_" + tt.envValue
 			t.Setenv(envName, tt.envValue)
 
-			got := envBoolOrDefault(envName, !tt.want)
+			errs := &ConfigError{}
+			got := envBoolOrDefault(envName, !tt.want, errs)
 			assert.Equal(t, tt.want, got)
+			assert.False(t, errs.HasErrors())
 		})
 	}
+}
+
+// TestConfigError tests the ConfigError type.
+func TestConfigError(t *testing.T) {
+	t.Run("empty error has no errors", func(t *testing.T) {
+		errs := &ConfigError{}
+		assert.False(t, errs.HasErrors())
+		assert.Empty(t, errs.Errors)
+	})
+
+	t.Run("Add appends errors", func(t *testing.T) {
+		errs := &ConfigError{}
+		errs.Add("first error")
+		errs.Add("second error")
+		assert.True(t, errs.HasErrors())
+		assert.Len(t, errs.Errors, 2)
+		assert.Contains(t, errs.Errors, "first error")
+		assert.Contains(t, errs.Errors, "second error")
+	})
+
+	t.Run("Error returns joined message", func(t *testing.T) {
+		errs := &ConfigError{}
+		errs.Add("invalid port")
+		errs.Add("missing server")
+		msg := errs.Error()
+		assert.Contains(t, msg, "configuration errors:")
+		assert.Contains(t, msg, "invalid port")
+		assert.Contains(t, msg, "missing server")
+	})
+}
+
+// TestParseWithMissingRequired tests Parse with missing required options.
+func TestParseWithMissingRequired(t *testing.T) {
+	// Clear all required env vars to test missing required options
+	t.Setenv("LDAP_SERVER", "")
+	t.Setenv("LDAP_BASE_DN", "")
+	t.Setenv("LDAP_READONLY_USER", "")
+	t.Setenv("LDAP_READONLY_PASSWORD", "")
+
+	// Parse should fail due to missing required options
+	_, err := Parse()
+	require.Error(t, err)
+
+	var configErr *ConfigError
+	require.True(t, errors.As(err, &configErr), "error should be *ConfigError")
+	assert.True(t, configErr.HasErrors())
+	assert.Contains(t, configErr.Error(), "required options missing")
+}
+
+// TestParseWithInvalidIntValue tests Parse with invalid integer values.
+func TestParseWithInvalidIntValue(t *testing.T) {
+	// Set required options
+	t.Setenv("LDAP_SERVER", "ldap://localhost")
+	t.Setenv("LDAP_BASE_DN", "dc=example,dc=com")
+	t.Setenv("LDAP_READONLY_USER", "cn=admin")
+	t.Setenv("LDAP_READONLY_PASSWORD", "secret")
+
+	// Set invalid integer value
+	t.Setenv("MIN_LENGTH", "not_a_number")
+
+	_, err := Parse()
+	require.Error(t, err)
+
+	var configErr *ConfigError
+	require.True(t, errors.As(err, &configErr), "error should be *ConfigError")
+	assert.Contains(t, configErr.Error(), "invalid value for MIN_LENGTH")
+}
+
+// TestParseWithInvalidBoolValue tests Parse with invalid boolean values.
+func TestParseWithInvalidBoolValue(t *testing.T) {
+	// Set required options
+	t.Setenv("LDAP_SERVER", "ldap://localhost")
+	t.Setenv("LDAP_BASE_DN", "dc=example,dc=com")
+	t.Setenv("LDAP_READONLY_USER", "cn=admin")
+	t.Setenv("LDAP_READONLY_PASSWORD", "secret")
+
+	// Set invalid boolean value
+	t.Setenv("LDAP_IS_AD", "maybe")
+
+	_, err := Parse()
+	require.Error(t, err)
+
+	var configErr *ConfigError
+	require.True(t, errors.As(err, &configErr), "error should be *ConfigError")
+	assert.Contains(t, configErr.Error(), "invalid value for LDAP_IS_AD")
 }

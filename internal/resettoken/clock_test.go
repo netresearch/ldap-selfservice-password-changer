@@ -40,7 +40,13 @@ func (m *MockClock) Set(t time.Time) {
 
 // setTestClock sets the package-level clock for testing and returns a cleanup function.
 func setTestClock(c Clock) func() {
+	clockMu.Lock()
 	old := defaultClock
 	defaultClock = c
-	return func() { defaultClock = old }
+	clockMu.Unlock()
+	return func() {
+		clockMu.Lock()
+		defaultClock = old
+		clockMu.Unlock()
+	}
 }
