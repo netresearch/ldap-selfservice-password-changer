@@ -123,7 +123,7 @@ func main() {
 		BodyLimit:    4 * 1024,
 		ReadTimeout:  10 * time.Second,  // Maximum time to read request (prevents slowloris)
 		WriteTimeout: 10 * time.Second,  // Maximum time to write response
-		IdleTimeout:  120 * time.Second, // Maximum time to keep idle connections alive,
+		IdleTimeout:  120 * time.Second, // Maximum time to keep idle connections alive
 	})
 
 	app.Use(compress.New(compress.Config{
