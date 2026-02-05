@@ -129,7 +129,7 @@ func (s *Store) cleanupExpiredLocked() int {
 
 // IsExpired checks if the token has expired.
 func (t *ResetToken) IsExpired() bool {
-	return time.Now().After(t.ExpiresAt)
+	return defaultClock.Now().After(t.ExpiresAt)
 }
 
 // StartCleanup starts a background goroutine that periodically cleans up expired tokens.

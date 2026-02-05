@@ -787,3 +787,182 @@ func TestStartCleanupNoExpiredTokens(t *testing.T) {
 
 	close(stop)
 }
+
+// =============================================================================
+// Mock Clock Tests - Instant time-based testing without real waits
+// =============================================================================
+
+// TestIsExpiredWithMockClock tests token expiration using a mock clock.
+// This allows instant testing without waiting for real time to pass.
+func TestIsExpiredWithMockClock(t *testing.T) {
+	baseTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	clock := NewMockClock(baseTime)
+	cleanup := setTestClock(clock)
+	defer cleanup()
+
+	token := &ResetToken{
+		Token:     "test-token",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		CreatedAt: baseTime,
+		ExpiresAt: baseTime.Add(15 * time.Minute),
+	}
+
+	// Token should not be expired initially
+	if token.IsExpired() {
+		t.Error("token should not be expired at creation time")
+	}
+
+	// Advance clock by 14 minutes - still valid
+	clock.Advance(14 * time.Minute)
+	if token.IsExpired() {
+		t.Error("token should not be expired before expiry time")
+	}
+
+	// Advance clock by 2 more minutes (total 16 minutes) - now expired
+	clock.Advance(2 * time.Minute)
+	if !token.IsExpired() {
+		t.Error("token should be expired after expiry time")
+	}
+}
+
+// TestIsExpiredExactBoundary tests expiration at exact boundary.
+func TestIsExpiredExactBoundary(t *testing.T) {
+	baseTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	clock := NewMockClock(baseTime)
+	cleanup := setTestClock(clock)
+	defer cleanup()
+
+	token := &ResetToken{
+		Token:     "boundary-token",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		CreatedAt: baseTime,
+		ExpiresAt: baseTime.Add(15 * time.Minute),
+	}
+
+	// At exact expiry time - not expired (After, not Equal)
+	clock.Set(baseTime.Add(15 * time.Minute))
+	if token.IsExpired() {
+		t.Error("token should not be expired at exact expiry time")
+	}
+
+	// 1 nanosecond after - expired
+	clock.Advance(1 * time.Nanosecond)
+	if !token.IsExpired() {
+		t.Error("token should be expired 1ns after expiry time")
+	}
+}
+
+// TestCleanupExpiredWithMockClock tests cleanup using mock clock for instant expiration.
+func TestCleanupExpiredWithMockClock(t *testing.T) {
+	baseTime := time.Date(2026, 1, 1, 12, 0, 0, 0, time.UTC)
+	clock := NewMockClock(baseTime)
+	cleanup := setTestClock(clock)
+	defer cleanup()
+
+	store := NewStore()
+
+	// Create tokens with different expiry times
+	token1 := &ResetToken{
+		Token:     "expires-5min",
+		Username:  "user1",
+		Email:     "user1@example.com",
+		CreatedAt: baseTime,
+		ExpiresAt: baseTime.Add(5 * time.Minute),
+	}
+	token2 := &ResetToken{
+		Token:     "expires-10min",
+		Username:  "user2",
+		Email:     "user2@example.com",
+		CreatedAt: baseTime,
+		ExpiresAt: baseTime.Add(10 * time.Minute),
+	}
+	token3 := &ResetToken{
+		Token:     "expires-20min",
+		Username:  "user3",
+		Email:     "user3@example.com",
+		CreatedAt: baseTime,
+		ExpiresAt: baseTime.Add(20 * time.Minute),
+	}
+
+	require.NoError(t, store.Store(token1))
+	require.NoError(t, store.Store(token2))
+	require.NoError(t, store.Store(token3))
+	if store.Count() != 3 {
+		t.Errorf("Expected 3 tokens, got %d", store.Count())
+	}
+
+	// Advance 6 minutes - token1 should expire
+	clock.Advance(6 * time.Minute)
+	count := store.CleanupExpired()
+	if count != 1 {
+		t.Errorf("Should cleanup 1 token, got %d", count)
+	}
+	if store.Count() != 2 {
+		t.Errorf("Expected 2 tokens, got %d", store.Count())
+	}
+
+	// Advance 5 more minutes (total 11) - token2 should expire
+	clock.Advance(5 * time.Minute)
+	count = store.CleanupExpired()
+	if count != 1 {
+		t.Errorf("Should cleanup 1 token, got %d", count)
+	}
+	if store.Count() != 1 {
+		t.Errorf("Expected 1 token, got %d", store.Count())
+	}
+
+	// Verify token3 still exists
+	_, err := store.Get("expires-20min")
+	require.NoError(t, err, "token3 should still exist")
+}
+
+// TestRealClockNow verifies RealClock returns current time.
+func TestRealClockNow(t *testing.T) {
+	clock := RealClock{}
+	before := time.Now()
+	now := clock.Now()
+	after := time.Now()
+
+	if now.Before(before) {
+		t.Error("clock.Now() should not be before time.Now()")
+	}
+	if now.After(after) {
+		t.Error("clock.Now() should not be after time.Now()")
+	}
+}
+
+// TestMockClockAdvance tests the Advance method of MockClock.
+func TestMockClockAdvance(t *testing.T) {
+	baseTime := time.Date(2026, 6, 15, 10, 30, 0, 0, time.UTC)
+	clock := NewMockClock(baseTime)
+
+	if !clock.Now().Equal(baseTime) {
+		t.Errorf("Initial time should be %v, got %v", baseTime, clock.Now())
+	}
+
+	clock.Advance(1 * time.Hour)
+	expected := baseTime.Add(1 * time.Hour)
+	if !clock.Now().Equal(expected) {
+		t.Errorf("After advancing 1h, time should be %v, got %v", expected, clock.Now())
+	}
+
+	clock.Advance(-30 * time.Minute)
+	expected = expected.Add(-30 * time.Minute)
+	if !clock.Now().Equal(expected) {
+		t.Errorf("After going back 30min, time should be %v, got %v", expected, clock.Now())
+	}
+}
+
+// TestMockClockSet tests the Set method of MockClock.
+func TestMockClockSet(t *testing.T) {
+	clock := NewMockClock(time.Now())
+
+	newTime := time.Date(2030, 12, 31, 23, 59, 59, 0, time.UTC)
+	clock.Set(newTime)
+
+	if !clock.Now().Equal(newTime) {
+		t.Errorf("After Set, time should be %v, got %v", newTime, clock.Now())
+	}
+}
