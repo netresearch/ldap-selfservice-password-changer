@@ -10,17 +10,17 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
-	"github.com/gofiber/fiber/v2/middleware/compress"
-	"github.com/gofiber/fiber/v2/middleware/filesystem"
-	"github.com/gofiber/helmet/v2"
+	"github.com/gofiber/fiber/v3"
+	"github.com/gofiber/fiber/v3/middleware/compress"
+	"github.com/gofiber/fiber/v3/middleware/helmet"
+	"github.com/gofiber/fiber/v3/middleware/static"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/email"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpc"
-	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/static"
+	webstatic "github.com/netresearch/ldap-selfservice-password-changer/internal/web/static"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/templates"
 )
 
@@ -147,12 +147,12 @@ func main() {
 		PermissionPolicy:   "geolocation=(), microphone=(), camera=()",
 	}))
 
-	app.Use("/static", filesystem.New(filesystem.Config{
-		Root:   http.FS(static.Static),
+	app.Use("/static", static.New("", static.Config{
+		FS:     webstatic.Static,
 		MaxAge: 24 * 60 * 60,
 	}))
 
-	app.Get("/", func(c *fiber.Ctx) error {
+	app.Get("/", func(c fiber.Ctx) error {
 		c.Set("Content-Type", fiber.MIMETextHTMLCharsetUTF8)
 		return c.Send(index)
 	})
@@ -171,12 +171,12 @@ func main() {
 			os.Exit(1)
 		}
 
-		app.Get("/forgot-password", func(c *fiber.Ctx) error {
+		app.Get("/forgot-password", func(c fiber.Ctx) error {
 			c.Set("Content-Type", fiber.MIMETextHTMLCharsetUTF8)
 			return c.Send(forgotPasswordPage)
 		})
 
-		app.Get("/reset-password", func(c *fiber.Ctx) error {
+		app.Get("/reset-password", func(c fiber.Ctx) error {
 			c.Set("Content-Type", fiber.MIMETextHTMLCharsetUTF8)
 			return c.Send(resetPasswordPage)
 		})
@@ -185,7 +185,7 @@ func main() {
 	app.Post("/api/rpc", rpcHandler.Handle)
 
 	// Health check endpoint for Docker HEALTHCHECK
-	app.Get("/health/live", func(c *fiber.Ctx) error {
+	app.Get("/health/live", func(c fiber.Ctx) error {
 		return c.JSON(fiber.Map{"status": "alive"})
 	})
 

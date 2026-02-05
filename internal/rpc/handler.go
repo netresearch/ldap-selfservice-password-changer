@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/gofiber/fiber/v2"
+	"github.com/gofiber/fiber/v3"
 	ldap "github.com/netresearch/simple-ldap-go"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
@@ -91,9 +91,9 @@ func NewWithServices(
 // Handle processes incoming JSON-RPC 2.0 requests and routes them to appropriate handlers.
 //
 //nolint:stylecheck // ST1016: c matches fiber conventions, other methods use h
-func (h *Handler) Handle(c *fiber.Ctx) error {
+func (h *Handler) Handle(c fiber.Ctx) error {
 	var body JSONRPC
-	if err := c.BodyParser(&body); err != nil {
+	if err := c.Bind().Body(&body); err != nil {
 		return fmt.Errorf("failed to parse request body: %w", err)
 	}
 
@@ -113,7 +113,7 @@ func (h *Handler) Handle(c *fiber.Ctx) error {
 }
 
 // handleChangePassword processes change-password requests with IP-based rate limiting.
-func (h *Handler) handleChangePassword(c *fiber.Ctx, params []string, clientIP string) error {
+func (h *Handler) handleChangePassword(c fiber.Ctx, params []string, clientIP string) error {
 	data, err := h.changePasswordWithIP(params, clientIP)
 	if err != nil {
 		return sendErrorResponse(c, http.StatusInternalServerError, err.Error())
@@ -122,7 +122,7 @@ func (h *Handler) handleChangePassword(c *fiber.Ctx, params []string, clientIP s
 }
 
 // handleRequestPasswordReset processes request-password-reset requests with IP-based rate limiting.
-func (h *Handler) handleRequestPasswordReset(c *fiber.Ctx, params []string, clientIP string) error {
+func (h *Handler) handleRequestPasswordReset(c fiber.Ctx, params []string, clientIP string) error {
 	if h.tokenStore == nil {
 		return sendErrorResponse(c, http.StatusBadRequest, "password reset feature not enabled")
 	}
@@ -134,7 +134,7 @@ func (h *Handler) handleRequestPasswordReset(c *fiber.Ctx, params []string, clie
 }
 
 // handleResetPassword processes reset-password requests.
-func (h *Handler) handleResetPassword(c *fiber.Ctx, params []string) error {
+func (h *Handler) handleResetPassword(c fiber.Ctx, params []string) error {
 	if h.tokenStore == nil {
 		return sendErrorResponse(c, http.StatusBadRequest, "password reset feature not enabled")
 	}
@@ -146,7 +146,7 @@ func (h *Handler) handleResetPassword(c *fiber.Ctx, params []string) error {
 }
 
 // sendSuccessResponse sends a successful JSON-RPC response.
-func sendSuccessResponse(c *fiber.Ctx, data []string) error {
+func sendSuccessResponse(c fiber.Ctx, data []string) error {
 	if jsonErr := c.JSON(JSONRPCResponse{
 		Success: true,
 		Data:    data,
@@ -157,7 +157,7 @@ func sendSuccessResponse(c *fiber.Ctx, data []string) error {
 }
 
 // sendErrorResponse sends an error JSON-RPC response.
-func sendErrorResponse(c *fiber.Ctx, statusCode int, message string) error {
+func sendErrorResponse(c fiber.Ctx, statusCode int, message string) error {
 	if jsonErr := c.Status(statusCode).JSON(JSONRPCResponse{
 		Success: false,
 		Data:    []string{message},
