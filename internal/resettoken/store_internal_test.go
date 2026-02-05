@@ -638,3 +638,152 @@ func BenchmarkGetToken(b *testing.B) {
 		}
 	}
 }
+
+// TestStartCleanupGoroutine tests the StartCleanup function lifecycle.
+func TestStartCleanupGoroutine(t *testing.T) {
+	store := NewStore()
+
+	// Add an expired token
+	expiredToken := &ResetToken{
+		Token:     "cleanup-test-expired",
+		Username:  "expired",
+		Email:     "expired@example.com",
+		CreatedAt: time.Now().Add(-20 * time.Minute),
+		ExpiresAt: time.Now().Add(-5 * time.Minute),
+	}
+	err := store.Store(expiredToken)
+	require.NoError(t, err)
+
+	// Add a valid token
+	validToken := &ResetToken{
+		Token:     "cleanup-test-valid",
+		Username:  "valid",
+		Email:     "valid@example.com",
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+	}
+	err = store.Store(validToken)
+	require.NoError(t, err)
+
+	// Verify both tokens exist
+	if store.Count() != 2 {
+		t.Errorf("Expected 2 tokens, got %d", store.Count())
+	}
+
+	// Start cleanup with very short interval for testing
+	stop := store.StartCleanup(50 * time.Millisecond)
+
+	// Wait for at least one cleanup cycle
+	time.Sleep(150 * time.Millisecond)
+
+	// Verify expired token was cleaned up
+	if store.Count() != 1 {
+		t.Errorf("Expected 1 token after cleanup, got %d", store.Count())
+	}
+
+	// Verify valid token still exists
+	_, err = store.Get("cleanup-test-valid")
+	require.NoError(t, err, "Valid token should still exist")
+
+	// Stop the cleanup goroutine
+	close(stop)
+
+	// Give goroutine time to exit
+	time.Sleep(100 * time.Millisecond)
+}
+
+// TestStartCleanupStop tests that the cleanup goroutine stops correctly.
+func TestStartCleanupStop(t *testing.T) {
+	store := NewStore()
+
+	// Start cleanup
+	stop := store.StartCleanup(10 * time.Millisecond)
+
+	// Stop immediately
+	close(stop)
+
+	// Add an expired token after stopping
+	expiredToken := &ResetToken{
+		Token:     "post-stop-expired",
+		Username:  "expired",
+		Email:     "expired@example.com",
+		CreatedAt: time.Now().Add(-20 * time.Minute),
+		ExpiresAt: time.Now().Add(-5 * time.Minute),
+	}
+	err := store.Store(expiredToken)
+	require.NoError(t, err)
+
+	// Wait longer than cleanup interval
+	time.Sleep(50 * time.Millisecond)
+
+	// Expired token should still exist because cleanup was stopped
+	if store.Count() != 1 {
+		t.Errorf("Expected 1 token (cleanup should be stopped), got %d", store.Count())
+	}
+}
+
+// TestStartCleanupMultiple tests starting multiple cleanup goroutines.
+func TestStartCleanupMultiple(t *testing.T) {
+	store := NewStore()
+
+	// Start multiple cleanup goroutines (not recommended but should be safe)
+	stop1 := store.StartCleanup(50 * time.Millisecond)
+	stop2 := store.StartCleanup(50 * time.Millisecond)
+
+	// Add an expired token
+	expiredToken := &ResetToken{
+		Token:     "multi-cleanup-expired",
+		Username:  "expired",
+		Email:     "expired@example.com",
+		CreatedAt: time.Now().Add(-20 * time.Minute),
+		ExpiresAt: time.Now().Add(-5 * time.Minute),
+	}
+	err := store.Store(expiredToken)
+	require.NoError(t, err)
+
+	// Wait for cleanup
+	time.Sleep(150 * time.Millisecond)
+
+	// Token should be cleaned up
+	if store.Count() != 0 {
+		t.Errorf("Expected 0 tokens, got %d", store.Count())
+	}
+
+	// Stop both
+	close(stop1)
+	close(stop2)
+
+	// Give goroutines time to exit
+	time.Sleep(100 * time.Millisecond)
+}
+
+// TestStartCleanupNoExpiredTokens tests cleanup when no tokens are expired.
+func TestStartCleanupNoExpiredTokens(t *testing.T) {
+	store := NewStore()
+
+	// Add only valid tokens
+	for i := 0; i < 5; i++ {
+		token := &ResetToken{
+			Token:     generateUniqueToken(0, i),
+			Username:  "valid",
+			Email:     "valid@example.com",
+			CreatedAt: time.Now(),
+			ExpiresAt: time.Now().Add(15 * time.Minute),
+		}
+		err := store.Store(token)
+		require.NoError(t, err)
+	}
+
+	// Start cleanup
+	stop := store.StartCleanup(50 * time.Millisecond)
+
+	// Wait for at least one cleanup cycle
+	time.Sleep(150 * time.Millisecond)
+
+	// All tokens should still exist
+	if store.Count() != 5 {
+		t.Errorf("Expected 5 tokens, got %d", store.Count())
+	}
+
+	close(stop)
+}

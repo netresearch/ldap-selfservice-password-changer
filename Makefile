@@ -37,9 +37,46 @@ build-docker: ## Build Docker image
 	@echo "✅ Docker image built"
 
 .PHONY: test
-test: ## Run all tests
+test: ## Run all unit tests
 	@echo "🧪 Running Go tests..."
 	go test -v ./...
+
+.PHONY: test-unit
+test-unit: ## Run unit tests with race detection
+	@echo "🧪 Running unit tests..."
+	go test -v -race ./...
+
+.PHONY: test-integration
+test-integration: ## Run integration tests (requires Docker services)
+	@echo "🧪 Running integration tests..."
+	go test -v -race -tags=integration ./...
+
+.PHONY: test-e2e
+test-e2e: ## Run end-to-end tests
+	@echo "🧪 Running E2E tests..."
+	go test -v -race -tags=e2e ./e2e/...
+
+.PHONY: test-fuzz
+test-fuzz: ## Run fuzz tests (30s per target)
+	@echo "🧪 Running fuzz tests..."
+	go test -fuzz=FuzzValidateNewPassword -fuzztime=30s ./internal/rpc/...
+	go test -fuzz=FuzzPluralize -fuzztime=30s ./internal/rpc/...
+	go test -fuzz=FuzzValidateEmailAddress -fuzztime=30s ./internal/email/...
+	go test -fuzz=FuzzExtractClientIP -fuzztime=30s ./internal/rpc/...
+	go test -fuzz=FuzzTokenStore -fuzztime=30s ./internal/resettoken/...
+
+.PHONY: test-fuzz-quick
+test-fuzz-quick: ## Run quick fuzz tests (5s per target)
+	@echo "🧪 Running quick fuzz tests..."
+	go test -fuzz=FuzzValidateNewPassword -fuzztime=5s ./internal/rpc/...
+	go test -fuzz=FuzzPluralize -fuzztime=5s ./internal/rpc/...
+	go test -fuzz=FuzzValidateEmailAddress -fuzztime=5s ./internal/email/...
+
+.PHONY: test-mutation
+test-mutation: ## Run mutation tests with gremlins (optional)
+	@echo "🧪 Running mutation tests..."
+	@command -v gremlins >/dev/null 2>&1 || { echo "gremlins not installed. Install with: go install github.com/go-gremlins/gremlins/cmd/gremlins@latest"; exit 1; }
+	gremlins unleash ./...
 
 .PHONY: test-cover
 test-cover: ## Run tests with coverage report
@@ -47,6 +84,10 @@ test-cover: ## Run tests with coverage report
 	go test -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out -o coverage.html
 	@echo "✅ Coverage report: coverage.html"
+
+.PHONY: test-all
+test-all: test-unit test-fuzz-quick ## Run unit and quick fuzz tests
+	@echo "✅ All tests passed"
 
 .PHONY: typecheck
 typecheck: ## Type check TypeScript

@@ -419,3 +419,30 @@ type mockHandlerRateLimiter struct {
 func (m *mockHandlerRateLimiter) AllowRequest(_ string) bool {
 	return m.allowed
 }
+
+// TestSetIPLimiter tests the SetIPLimiter method.
+func TestSetIPLimiter(t *testing.T) {
+	handler := createTestHandler()
+	// Initially has an IP limiter set
+	if handler.ipLimiter == nil {
+		t.Error("expected initial ipLimiter to be set")
+	}
+
+	// Set a new IP limiter
+	newLimiter := &mockHandlerIPLimiter{allowed: false}
+	handler.SetIPLimiter(newLimiter)
+
+	if handler.ipLimiter != newLimiter {
+		t.Error("SetIPLimiter did not update the ipLimiter")
+	}
+}
+
+// TestSetIPLimiterNil tests setting nil IP limiter.
+func TestSetIPLimiterNil(t *testing.T) {
+	handler := createTestHandler()
+	handler.SetIPLimiter(nil)
+
+	if handler.ipLimiter != nil {
+		t.Error("expected ipLimiter to be nil after setting nil")
+	}
+}

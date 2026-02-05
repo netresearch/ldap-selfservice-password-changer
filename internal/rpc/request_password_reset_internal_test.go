@@ -445,3 +445,104 @@ func TestRequestPasswordResetIPRateLimitCheckedBeforeEmail(t *testing.T) {
 		t.Errorf("Email limiter was called despite IP rate limit being hit")
 	}
 }
+
+func TestRequestPasswordResetEmailTooLong(t *testing.T) {
+	tokenStore := resettoken.NewStore()
+	limiter := ratelimit.NewLimiter(3, 60*time.Minute)
+	mockEmail := &mockEmailService{}
+	mockLDAP := &mockLDAPClient{
+		users: map[string]*ldap.User{},
+	}
+
+	handler := &Handler{
+		ldap:         mockLDAP,
+		tokenStore:   tokenStore,
+		emailService: mockEmail,
+		rateLimiter:  limiter,
+		opts: &options.Opts{
+			ResetTokenExpiryMinutes: 15,
+		},
+	}
+
+	// Create an email longer than 254 characters
+	longEmail := ""
+	for range 256 {
+		longEmail += "a"
+	}
+	longEmail += "@example.com"
+
+	params := []string{longEmail}
+	result, err := handler.requestPasswordReset(params)
+
+	// Should return generic success without error (don't reveal validation failure)
+	if err != nil {
+		t.Errorf("Should not error on too-long email, got: %v", err)
+	}
+	if len(result) != 1 {
+		t.Errorf("Expected 1 result, got %d", len(result))
+	}
+
+	// No email should have been sent
+	if mockEmail.lastTo != "" {
+		t.Errorf("Email should not be sent for too-long email address")
+	}
+}
+
+func TestRequestPasswordResetTokenStoreError(t *testing.T) {
+	mockTokenStore := &mockFailingTokenStore{}
+	limiter := ratelimit.NewLimiter(3, 60*time.Minute)
+	mockEmail := &mockEmailService{}
+	mockLDAP := &mockLDAPClient{
+		users: map[string]*ldap.User{
+			"test@example.com": {SAMAccountName: "testuser"},
+		},
+	}
+
+	handler := &Handler{
+		ldap:         mockLDAP,
+		tokenStore:   mockTokenStore,
+		emailService: mockEmail,
+		rateLimiter:  limiter,
+		opts: &options.Opts{
+			ResetTokenExpiryMinutes: 15,
+		},
+	}
+
+	params := []string{"test@example.com"}
+	result, err := handler.requestPasswordReset(params)
+
+	// Should return generic success without error (don't reveal store failure)
+	if err != nil {
+		t.Errorf("Should not error on token store failure, got: %v", err)
+	}
+	if len(result) != 1 {
+		t.Errorf("Expected 1 result, got %d", len(result))
+	}
+}
+
+// mockFailingTokenStore is a token store that always fails on Store.
+type mockFailingTokenStore struct{}
+
+func (m *mockFailingTokenStore) Store(_ *resettoken.ResetToken) error {
+	return errors.New("token store failed")
+}
+
+func (m *mockFailingTokenStore) Get(_ string) (*resettoken.ResetToken, error) {
+	return nil, errors.New("not found")
+}
+
+func (m *mockFailingTokenStore) MarkUsed(_ string) error {
+	return nil
+}
+
+func (m *mockFailingTokenStore) Delete(_ string) error {
+	return nil
+}
+
+func (m *mockFailingTokenStore) CleanupExpired() int {
+	return 0
+}
+
+func (m *mockFailingTokenStore) Count() int {
+	return 0
+}

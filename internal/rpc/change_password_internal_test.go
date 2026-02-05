@@ -1,6 +1,7 @@
 package rpc
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -294,4 +295,261 @@ type mockIPLimiter struct {
 
 func (m *mockIPLimiter) AllowRequest(_ string) bool {
 	return m.allowed
+}
+
+// TestChangePasswordEmptyInputs tests change-password with empty inputs.
+func TestChangePasswordEmptyInputs(t *testing.T) {
+	mockLDAP := &mockChangePasswordLDAP{}
+	opts := &options.Opts{
+		MinLength:    8,
+		MinNumbers:   1,
+		MinSymbols:   1,
+		MinUppercase: 1,
+		MinLowercase: 1,
+	}
+	ipLimiter := &mockIPLimiter{allowed: true}
+
+	handler := &Handler{
+		ldap:      mockLDAP,
+		opts:      opts,
+		ipLimiter: ipLimiter,
+	}
+
+	tests := []struct {
+		name      string
+		params    []string
+		wantError string
+	}{
+		{
+			name:      "empty username",
+			params:    []string{"", "OldPass123!", "NewPass456!"},
+			wantError: "username can't be empty",
+		},
+		{
+			name:      "empty current password",
+			params:    []string{"testuser", "", "NewPass456!"},
+			wantError: "old password can't be empty",
+		},
+		{
+			name:      "empty new password",
+			params:    []string{"testuser", "OldPass123!", ""},
+			wantError: "new password can't be empty",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := handler.changePasswordWithIP(tt.params, testClientIP)
+			if err == nil {
+				t.Errorf("Expected error containing %q, got nil", tt.wantError)
+				return
+			}
+			if result != nil {
+				t.Errorf("Expected nil result, got %v", result)
+			}
+			if !strings.Contains(err.Error(), tt.wantError) {
+				t.Errorf("Expected error containing %q, got %q", tt.wantError, err.Error())
+			}
+		})
+	}
+}
+
+// TestChangePasswordSamePassword tests when old and new passwords are the same.
+func TestChangePasswordSamePassword(t *testing.T) {
+	mockLDAP := &mockChangePasswordLDAP{}
+	opts := &options.Opts{
+		MinLength:    8,
+		MinNumbers:   1,
+		MinSymbols:   1,
+		MinUppercase: 1,
+		MinLowercase: 1,
+	}
+	ipLimiter := &mockIPLimiter{allowed: true}
+
+	handler := &Handler{
+		ldap:      mockLDAP,
+		opts:      opts,
+		ipLimiter: ipLimiter,
+	}
+
+	result, err := handler.changePasswordWithIP(
+		[]string{"testuser", "SamePass123!", "SamePass123!"},
+		testClientIP,
+	)
+
+	if err == nil {
+		t.Error("Expected error when old and new passwords are the same")
+		return
+	}
+	if result != nil {
+		t.Errorf("Expected nil result, got %v", result)
+	}
+	if !strings.Contains(err.Error(), "can't be same") {
+		t.Errorf("Expected error about same password, got %q", err.Error())
+	}
+}
+
+// TestChangePasswordLDAPError tests when LDAP returns an error.
+func TestChangePasswordLDAPError(t *testing.T) {
+	mockLDAP := &mockChangePasswordLDAP{
+		changePasswordError: errors.New("LDAP connection failed"),
+	}
+	opts := &options.Opts{
+		MinLength:    8,
+		MinNumbers:   1,
+		MinSymbols:   1,
+		MinUppercase: 1,
+		MinLowercase: 1,
+	}
+	ipLimiter := &mockIPLimiter{allowed: true}
+
+	handler := &Handler{
+		ldap:      mockLDAP,
+		opts:      opts,
+		ipLimiter: ipLimiter,
+	}
+
+	result, err := handler.changePasswordWithIP(
+		[]string{"testuser", "OldPass123!", "NewPass456!"},
+		testClientIP,
+	)
+
+	if err == nil {
+		t.Error("Expected error on LDAP failure")
+		return
+	}
+	if result != nil {
+		t.Errorf("Expected nil result, got %v", result)
+	}
+	if !strings.Contains(err.Error(), "failed to change password") {
+		t.Errorf("Expected error about failed change, got %q", err.Error())
+	}
+}
+
+// TestChangePasswordInvalidArgumentCount tests invalid parameter counts.
+func TestChangePasswordInvalidArgumentCount(t *testing.T) {
+	mockLDAP := &mockChangePasswordLDAP{}
+	opts := &options.Opts{}
+	ipLimiter := &mockIPLimiter{allowed: true}
+
+	handler := &Handler{
+		ldap:      mockLDAP,
+		opts:      opts,
+		ipLimiter: ipLimiter,
+	}
+
+	tests := []struct {
+		name   string
+		params []string
+	}{
+		{"no params", []string{}},
+		{"one param", []string{"user"}},
+		{"two params", []string{"user", "pass"}},
+		{"four params", []string{"user", "old", "new", "extra"}},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			_, err := handler.changePasswordWithIP(tt.params, testClientIP)
+			if !errors.Is(err, ErrInvalidArgumentCount) {
+				t.Errorf("Expected ErrInvalidArgumentCount, got: %v", err)
+			}
+		})
+	}
+}
+
+// TestChangePasswordNoIPLimiter tests when IP limiter is nil.
+func TestChangePasswordNoIPLimiter(t *testing.T) {
+	mockLDAP := &mockChangePasswordLDAP{}
+	opts := &options.Opts{
+		MinLength:    8,
+		MinNumbers:   1,
+		MinSymbols:   1,
+		MinUppercase: 1,
+		MinLowercase: 1,
+	}
+
+	handler := &Handler{
+		ldap:      mockLDAP,
+		opts:      opts,
+		ipLimiter: nil, // No IP limiter
+	}
+
+	result, err := handler.changePasswordWithIP(
+		[]string{"testuser", "OldPass123!", "NewPass456!"},
+		testClientIP,
+	)
+
+	if err != nil {
+		t.Errorf("Unexpected error: %v", err)
+		return
+	}
+	if len(result) != 1 || result[0] != "password changed successfully" {
+		t.Errorf("Expected success message, got %v", result)
+	}
+}
+
+// TestChangePasswordValidationFailure tests password policy violations.
+func TestChangePasswordValidationFailure(t *testing.T) {
+	mockLDAP := &mockChangePasswordLDAP{}
+	opts := &options.Opts{
+		MinLength:                  12,
+		MinNumbers:                 2,
+		MinSymbols:                 2,
+		MinUppercase:               2,
+		MinLowercase:               2,
+		PasswordCanIncludeUsername: false,
+	}
+	ipLimiter := &mockIPLimiter{allowed: true}
+
+	handler := &Handler{
+		ldap:      mockLDAP,
+		opts:      opts,
+		ipLimiter: ipLimiter,
+	}
+
+	tests := []struct {
+		name        string
+		newPassword string
+		username    string
+		wantError   string
+	}{
+		{
+			name:        "too short",
+			newPassword: "Short1!",
+			username:    "user",
+			wantError:   "at least 12 characters",
+		},
+		{
+			name:        "not enough numbers",
+			newPassword: "Password1!!!AA",
+			username:    "user",
+			wantError:   "2 numbers",
+		},
+		{
+			name:        "contains username",
+			newPassword: "Useruser12!!AA",
+			username:    "user",
+			wantError:   "username",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			result, err := handler.changePasswordWithIP(
+				[]string{tt.username, "OldPass123!", tt.newPassword},
+				testClientIP,
+			)
+			if err == nil {
+				t.Errorf("Expected error containing %q, got nil", tt.wantError)
+				return
+			}
+			if result != nil {
+				t.Errorf("Expected nil result, got %v", result)
+			}
+			if !strings.Contains(err.Error(), tt.wantError) {
+				t.Errorf("Expected error containing %q, got %q", tt.wantError, err.Error())
+			}
+		})
+	}
 }

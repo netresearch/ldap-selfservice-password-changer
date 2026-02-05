@@ -114,3 +114,21 @@ func TestIPLimiterIPv4AndIPv6Separate(t *testing.T) {
 		t.Error("IPv6 should not be rate limited by IPv4")
 	}
 }
+
+func TestIPLimiterIsFull(t *testing.T) {
+	limiter := ratelimit.NewIPLimiter()
+
+	// Initially not full (capacity is 1000).
+	if limiter.IsFull() {
+		t.Error("Empty IP limiter should not be full")
+	}
+
+	// Add some IPs.
+	limiter.AllowRequest("192.168.1.1")
+	limiter.AllowRequest("192.168.1.2")
+
+	// Still not full.
+	if limiter.IsFull() {
+		t.Error("IP limiter with 2 entries should not be full")
+	}
+}

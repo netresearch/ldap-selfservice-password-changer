@@ -31,25 +31,45 @@ func TestSendResetEmailValidation(t *testing.T) {
 	}
 	service := email.NewService(&config)
 
+	// Check if MailHog/SMTP is actually available by trying to send
+	smtpAvailable := false
+	testService := email.NewService(&config)
+	if err := testService.SendResetEmail("probe@example.com", "probe"); err == nil {
+		smtpAvailable = true
+	}
+
 	tests := []struct {
-		name      string
-		emailAddr string
-		token     string
-		shouldErr bool
+		name         string
+		emailAddr    string
+		token        string
+		invalidEmail bool // true if email format is invalid
 	}{
-		{"valid email", "user@example.com", "token123", true}, // Will error (no SMTP server)
+		{"valid email", "user@example.com", "token123", false},
 		{"empty email", "", "token123", true},
 		{"invalid email", "not-an-email", "token123", true},
 		{"email with spaces", "user @example.com", "token123", true},
-		{"valid complex email", "user+tag@sub.example.com", "token123", true}, // Will error (no SMTP server)
+		{"valid complex email", "user+tag@sub.example.com", "token123", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := service.SendResetEmail(tt.emailAddr, tt.token)
-			// All should error because no SMTP server is running
-			if err == nil {
-				t.Error("SendResetEmail should error without SMTP server")
+
+			if tt.invalidEmail {
+				// Invalid emails should always error
+				if err == nil {
+					t.Errorf("SendResetEmail should error for invalid email %q", tt.emailAddr)
+				}
+			} else if smtpAvailable {
+				// Valid emails should succeed when SMTP is available
+				if err != nil {
+					t.Errorf("SendResetEmail should succeed with SMTP server for %q, got: %v", tt.emailAddr, err)
+				}
+			} else {
+				// Valid emails should error when no SMTP server
+				if err == nil {
+					t.Error("SendResetEmail should error without SMTP server")
+				}
 			}
 		})
 	}

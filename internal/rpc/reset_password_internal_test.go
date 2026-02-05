@@ -2,6 +2,7 @@ package rpc
 
 import (
 	"errors"
+	"strings"
 	"testing"
 	"time"
 
@@ -355,7 +356,284 @@ func TestResetPasswordUsernameInPassword(t *testing.T) {
 }
 
 func TestResetPasswordLDAPFailure(t *testing.T) {
-	// This test would require mocking the LDAP client
-	// For now, we'll skip this as it requires more setup
-	t.Skip("Requires LDAP mock integration")
+	tokenStore := resettoken.NewStore()
+	opts := &options.Opts{
+		MinLength:    8,
+		MinNumbers:   1,
+		MinSymbols:   1,
+		MinUppercase: 1,
+		MinLowercase: 1,
+	}
+	mockLDAP := &mockResetLDAPClient{
+		resetPasswordError: errors.New("LDAP reset failed"),
+	}
+
+	handler := &Handler{
+		ldap:       mockLDAP,
+		resetLDAP:  mockLDAP,
+		tokenStore: tokenStore,
+		opts:       opts,
+	}
+
+	// Create a valid token
+	token := &resettoken.ResetToken{
+		Token:     "ldap-fail-token",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+		Used:      false,
+	}
+	err := tokenStore.Store(token)
+	require.NoError(t, err)
+
+	params := []string{"ldap-fail-token", "NewPass123!"}
+	_, err = handler.resetPassword(params)
+
+	if err == nil {
+		t.Error("Expected error for LDAP failure")
+	}
+
+	// Error message should be generic (not exposing LDAP details)
+	expectedErr := "failed to reset password; please contact your administrator if this problem persists"
+	if err.Error() != expectedErr {
+		t.Errorf("Error = %q, want %q", err.Error(), expectedErr)
+	}
+}
+
+func TestResetPasswordLazyInitSuccess(t *testing.T) {
+	tokenStore := resettoken.NewStore()
+	opts := &options.Opts{
+		MinLength:     8,
+		MinNumbers:    1,
+		MinSymbols:    1,
+		MinUppercase:  1,
+		MinLowercase:  1,
+		ResetUser:     "cn=reset,dc=example,dc=com",
+		ResetPassword: "resetpass",
+		LDAP: ldap.Config{
+			Server: "ldap://localhost:389",
+			BaseDN: "dc=example,dc=com",
+		},
+	}
+	mockLDAP := &mockResetLDAPClient{}
+
+	handler := &Handler{
+		ldap:       mockLDAP,
+		resetLDAP:  nil, // Not initialized - should trigger lazy init
+		tokenStore: tokenStore,
+		opts:       opts,
+	}
+
+	// Create a valid token
+	token := &resettoken.ResetToken{
+		Token:     "lazy-init-token",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+		Used:      false,
+	}
+	err := tokenStore.Store(token)
+	require.NoError(t, err)
+
+	// This will fail at LDAP init because we can't connect to actual LDAP
+	// but it tests the lazy init path
+	params := []string{"lazy-init-token", "NewPass123!"}
+	_, err = handler.resetPassword(params)
+
+	// Should fail with LDAP init error
+	if err == nil {
+		t.Error("Expected error for LDAP init failure")
+	}
+	if !strings.Contains(err.Error(), "initialize password reset connection") &&
+		!strings.Contains(err.Error(), "failed to reset password") {
+		t.Errorf("Unexpected error: %q", err.Error())
+	}
+}
+
+func TestResetPasswordLazyInitNotConfigured(t *testing.T) {
+	tokenStore := resettoken.NewStore()
+	opts := &options.Opts{
+		MinLength:     8,
+		MinNumbers:    1,
+		MinSymbols:    1,
+		MinUppercase:  1,
+		MinLowercase:  1,
+		ResetUser:     "", // Not configured
+		ResetPassword: "", // Not configured
+	}
+	mockLDAP := &mockResetLDAPClient{}
+
+	handler := &Handler{
+		ldap:       mockLDAP,
+		resetLDAP:  nil, // Not initialized and not configured
+		tokenStore: tokenStore,
+		opts:       opts,
+	}
+
+	// Create a valid token
+	token := &resettoken.ResetToken{
+		Token:     "not-configured-token",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+		Used:      false,
+	}
+	err := tokenStore.Store(token)
+	require.NoError(t, err)
+
+	params := []string{"not-configured-token", "NewPass123!"}
+	_, err = handler.resetPassword(params)
+
+	if err == nil {
+		t.Error("Expected error when reset not configured")
+	}
+	expectedErr := "password reset not properly configured; please contact your administrator"
+	if err.Error() != expectedErr {
+		t.Errorf("Error = %q, want %q", err.Error(), expectedErr)
+	}
+}
+
+func TestResetPasswordShortToken(t *testing.T) {
+	tokenStore := resettoken.NewStore()
+	opts := &options.Opts{MinLength: 8}
+	mockLDAP := &mockResetLDAPClient{}
+
+	handler := &Handler{
+		ldap:       mockLDAP,
+		resetLDAP:  mockLDAP,
+		tokenStore: tokenStore,
+		opts:       opts,
+	}
+
+	// Try with very short token that doesn't exist
+	params := []string{"abc", "NewPass123!"}
+	_, err := handler.resetPassword(params)
+
+	if err == nil {
+		t.Error("Expected error for invalid token")
+	}
+	if err.Error() != errInvalidOrExpiredToken {
+		t.Errorf("Error = %q, want %q", err.Error(), errInvalidOrExpiredToken)
+	}
+}
+
+func TestResetPasswordEmptyUsername(t *testing.T) {
+	tokenStore := resettoken.NewStore()
+	opts := &options.Opts{
+		MinLength:    8,
+		MinNumbers:   1,
+		MinSymbols:   1,
+		MinUppercase: 1,
+		MinLowercase: 1,
+	}
+	mockLDAP := &mockResetLDAPClient{}
+
+	handler := &Handler{
+		ldap:       mockLDAP,
+		resetLDAP:  mockLDAP,
+		tokenStore: tokenStore,
+		opts:       opts,
+	}
+
+	// Create a token with empty username
+	token := &resettoken.ResetToken{
+		Token:     "empty-username-token",
+		Username:  "", // Empty username
+		Email:     "test@example.com",
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+		Used:      false,
+	}
+	err := tokenStore.Store(token)
+	require.NoError(t, err)
+
+	params := []string{"empty-username-token", "NewPass123!"}
+	_, err = handler.resetPassword(params)
+
+	if err == nil {
+		t.Error("Expected error for empty username in token")
+	}
+	if err.Error() != errInvalidOrExpiredToken {
+		t.Errorf("Error = %q, want %q", err.Error(), errInvalidOrExpiredToken)
+	}
+}
+
+func TestResetPasswordMarkUsedError(t *testing.T) {
+	// Use a mock token store that fails on MarkUsed
+	mockTokenStore := &mockTokenStoreMarkUsedFails{
+		tokens: make(map[string]*resettoken.ResetToken),
+	}
+	opts := &options.Opts{
+		MinLength:    8,
+		MinNumbers:   1,
+		MinSymbols:   1,
+		MinUppercase: 1,
+		MinLowercase: 1,
+	}
+	mockLDAP := &mockResetLDAPClient{}
+
+	handler := &Handler{
+		ldap:       mockLDAP,
+		resetLDAP:  mockLDAP,
+		tokenStore: mockTokenStore,
+		opts:       opts,
+	}
+
+	// Create a valid token
+	token := &resettoken.ResetToken{
+		Token:     "mark-used-fail-token",
+		Username:  "testuser",
+		Email:     "test@example.com",
+		CreatedAt: time.Now(),
+		ExpiresAt: time.Now().Add(15 * time.Minute),
+		Used:      false,
+	}
+	mockTokenStore.tokens[token.Token] = token
+
+	params := []string{"mark-used-fail-token", "NewPass123!"}
+	result, err := handler.resetPassword(params)
+
+	// Should still succeed (password was changed, just logging the mark-used failure)
+	if err != nil {
+		t.Errorf("Expected success despite mark-used failure, got: %v", err)
+	}
+	if len(result) != 1 {
+		t.Errorf("Expected 1 result, got %d", len(result))
+	}
+}
+
+// mockTokenStoreMarkUsedFails is a mock token store that fails on MarkUsed.
+type mockTokenStoreMarkUsedFails struct {
+	tokens map[string]*resettoken.ResetToken
+}
+
+func (m *mockTokenStoreMarkUsedFails) Store(token *resettoken.ResetToken) error {
+	m.tokens[token.Token] = token
+	return nil
+}
+
+func (m *mockTokenStoreMarkUsedFails) Get(tokenString string) (*resettoken.ResetToken, error) {
+	if token, ok := m.tokens[tokenString]; ok {
+		return token, nil
+	}
+	return nil, errors.New("token not found")
+}
+
+func (m *mockTokenStoreMarkUsedFails) MarkUsed(_ string) error {
+	return errors.New("mark used failed")
+}
+
+func (m *mockTokenStoreMarkUsedFails) Delete(_ string) error {
+	return nil
+}
+
+func (m *mockTokenStoreMarkUsedFails) CleanupExpired() int {
+	return 0
+}
+
+func (m *mockTokenStoreMarkUsedFails) Count() int {
+	return len(m.tokens)
 }

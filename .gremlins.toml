@@ -1,0 +1,73 @@
+# Gremlins mutation testing configuration
+# Run with: gremlins unleash ./...
+# Documentation: https://gremlins.dev/
+
+# Timeout for each mutation test
+[global]
+timeout = "30s"
+
+# Only run on packages with tests
+[filter]
+# Exclude integration tests to speed up mutation testing
+tags = ["!integration", "!e2e"]
+
+# Exclude vendor and test files
+exclude = [
+    "**/vendor/**",
+    "**/*_test.go",
+    "**/testdata/**",
+    "**/mocks/**",
+]
+
+# Target specific packages for mutation testing
+include = [
+    "./internal/rpc/...",
+    "./internal/email/...",
+    "./internal/resettoken/...",
+    "./internal/validators/...",
+    "./internal/ratelimit/...",
+    "./internal/options/...",
+]
+
+# Mutation operators to use
+[mutators]
+# Arithmetic mutations: + -> -, * -> /, etc.
+arithmetic = true
+
+# Comparison mutations: == -> !=, < -> <=, etc.
+comparison = true
+
+# Logical mutations: && -> ||, ! -> (nothing), etc.
+logical = true
+
+# Increment/decrement mutations: ++ -> --, etc.
+incdec = true
+
+# Conditional boundary mutations: < -> <=, etc.
+conditional = true
+
+# Return value mutations
+return_vals = true
+
+# Void method call removal
+void_call = false
+
+# Constructor call mutations (usually too disruptive)
+constructor_calls = false
+
+# Output configuration
+[output]
+# Generate JSON report for CI integration
+format = "json"
+file = "mutation-report.json"
+
+# Threshold configuration
+[threshold]
+# Minimum mutation score to pass (percentage)
+# Start conservative and increase as coverage improves
+score = 70.0
+
+# Parallelism
+[execution]
+# Number of parallel workers
+workers = 4

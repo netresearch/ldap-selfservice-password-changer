@@ -211,32 +211,46 @@ func TestSendResetEmailValidation(t *testing.T) {
 	}
 	service := NewService(&config)
 
+	// Check if MailHog/SMTP is actually available by trying to send
+	smtpAvailable := false
+	testService := NewService(&config)
+	if err := testService.SendResetEmail("probe@example.com", "probe"); err == nil {
+		smtpAvailable = true
+	}
+
 	tests := []struct {
-		name      string
-		email     string
-		token     string
-		shouldErr bool
+		name         string
+		email        string
+		token        string
+		invalidEmail bool // true if email format is invalid
 	}{
-		{"valid email", "user@example.com", "token123", true}, // Will error (no SMTP server)
+		{"valid email", "user@example.com", "token123", false},
 		{"empty email", "", "token123", true},
 		{"invalid email", "not-an-email", "token123", true},
 		{"email with spaces", "user @example.com", "token123", true},
-		{"valid complex email", "user+tag@sub.example.com", "token123", true}, // Will error (no SMTP server)
+		{"valid complex email", "user+tag@sub.example.com", "token123", false},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			err := service.SendResetEmail(tt.email, tt.token)
-			// All should error because no SMTP server is running
-			// But invalid emails should error during validation, not SMTP
-			if err == nil {
-				t.Error("SendResetEmail should error without SMTP server")
-			}
 
-			// Check if validation error (invalid email) vs SMTP error
-			if !ValidateEmailAddress(tt.email) {
-				if !strings.Contains(err.Error(), "invalid email") {
+			if tt.invalidEmail {
+				// Invalid emails should always error with validation error
+				if err == nil {
+					t.Errorf("SendResetEmail should error for invalid email %q", tt.email)
+				} else if !strings.Contains(err.Error(), "invalid email") {
 					t.Errorf("Expected validation error for %q, got: %v", tt.email, err)
+				}
+			} else if smtpAvailable {
+				// Valid emails should succeed when SMTP is available
+				if err != nil {
+					t.Errorf("SendResetEmail should succeed with SMTP server for %q, got: %v", tt.email, err)
+				}
+			} else {
+				// Valid emails should error when no SMTP server
+				if err == nil {
+					t.Error("SendResetEmail should error without SMTP server")
 				}
 			}
 		})

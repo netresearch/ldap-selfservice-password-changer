@@ -285,3 +285,48 @@ func TestMixedIPv4IPv6(t *testing.T) {
 		t.Error("IPv6 should not be affected by IPv4 rate limit")
 	}
 }
+
+// TestIPLimiterStartCleanup tests the StartCleanup method on IPLimiter.
+func TestIPLimiterStartCleanup(t *testing.T) {
+	// Create an IPLimiter that wraps a Limiter
+	limiter := NewIPLimiter()
+
+	// Add some entries
+	limiter.AllowRequest("192.168.1.1")
+	limiter.AllowRequest("192.168.1.2")
+
+	if limiter.Count() != 2 {
+		t.Errorf("Count = %d, want 2", limiter.Count())
+	}
+
+	// Start cleanup goroutine
+	stop := limiter.StartCleanup(50 * time.Millisecond)
+	defer close(stop)
+
+	// Let it run briefly (entries won't expire since window is 60 minutes)
+	time.Sleep(100 * time.Millisecond)
+
+	// Entries should still be there (not expired)
+	if limiter.Count() != 2 {
+		t.Errorf("Count after cleanup = %d, want 2 (not expired)", limiter.Count())
+	}
+}
+
+// TestIPLimiterStartCleanupStop tests stopping the cleanup goroutine.
+func TestIPLimiterStartCleanupStop(t *testing.T) {
+	limiter := NewIPLimiter()
+
+	// Start cleanup
+	stop := limiter.StartCleanup(10 * time.Millisecond)
+
+	// Let it run briefly
+	time.Sleep(50 * time.Millisecond)
+
+	// Stop the goroutine
+	close(stop)
+
+	// Wait to ensure goroutine terminates
+	time.Sleep(30 * time.Millisecond)
+
+	// Test passes if no panic/hang
+}

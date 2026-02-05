@@ -55,6 +55,137 @@ jobs:
           name: go-coverage
           fail_ci_if_error: false
 
+  integration-test:
+    name: Run integration tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    services:
+      openldap:
+        image: bitnami/openldap:2.6
+        ports:
+          - 1389:1389
+        env:
+          LDAP_ROOT: dc=example,dc=com
+          LDAP_ADMIN_USERNAME: admin
+          LDAP_ADMIN_PASSWORD: adminpassword
+          LDAP_USERS: testuser,resetuser
+          LDAP_PASSWORDS: testpass,resetpass
+        options: >-
+          --health-cmd "ldapsearch -x -H ldap://localhost:1389 -b 'dc=example,dc=com' -D 'cn=admin,dc=example,dc=com' -w adminpassword"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      mailhog:
+        image: mailhog/mailhog:v1.0.1
+        ports:
+          - 1025:1025
+          - 8025:8025
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+        with:
+          go-version: "1.25"
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install && go mod download
+
+      - name: Build assets
+        run: pnpm build:assets
+
+      - name: Run integration tests with coverage
+        run: go test -v -race -tags=integration -coverprofile=coverage-integration.out -covermode=atomic ./...
+        env:
+          LDAP_SERVER: ldap://localhost:1389
+          LDAP_BASE_DN: dc=example,dc=com
+          LDAP_READONLY_USER: cn=admin,dc=example,dc=com
+          LDAP_READONLY_PASSWORD: adminpassword
+          SMTP_HOST: localhost
+          SMTP_PORT: "1025"
+
+      - name: Upload integration coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage-integration.out
+          flags: backend,integration
+          name: go-integration-coverage
+          fail_ci_if_error: false
+
+  e2e-test:
+    name: Run E2E tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+        with:
+          go-version: "1.25"
+
+      - uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+        name: Install pnpm
+        with:
+          run_install: false
+
+      - name: Set up Node.js
+        uses: actions/setup-node@6044e13b5dc448c55e2357c09f80417699197238 # v6.2.0
+        with:
+          node-version: "24"
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install && go mod download
+
+      - name: Build assets
+        run: pnpm build:assets
+
+      - name: Run E2E tests with coverage
+        run: go test -v -race -tags=e2e -coverprofile=coverage-e2e.out -covermode=atomic ./e2e/...
+
+      - name: Upload E2E coverage to Codecov
+        uses: codecov/codecov-action@671740ac38dd9b0130fbe1cec585b89eea48d3de # v5.5.2
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          files: ./coverage-e2e.out
+          flags: backend,e2e
+          name: go-e2e-coverage
+          fail_ci_if_error: false
+
+  fuzz-test:
+    name: Fuzz tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Set up Go
+        uses: actions/setup-go@7a3fe6cf4cb3a834922a1244abfce67bcef6a0c5 # v6.2.0
+        with:
+          go-version: "1.25"
+
+      - name: Run fuzz tests (quick)
+        run: |
+          go test -fuzz=FuzzValidateNewPassword -fuzztime=10s ./internal/rpc/...
+          go test -fuzz=FuzzPluralize -fuzztime=10s ./internal/rpc/...
+          go test -fuzz=FuzzValidateEmailAddress -fuzztime=10s ./internal/email/...
+
   types:
     name: Check types
     runs-on: ubuntu-latest
