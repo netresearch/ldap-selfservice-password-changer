@@ -15,7 +15,12 @@ import (
 )
 
 // TestNewHandlerInvalidLDAP tests New with invalid LDAP configuration.
+// This test is slow (~10s) as it waits for LDAP connection timeout.
 func TestNewHandlerInvalidLDAP(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping slow LDAP timeout test in short mode")
+	}
+
 	opts := &options.Opts{
 		LDAP: ldap.Config{
 			Server: "ldap://nonexistent-server:389",
@@ -33,7 +38,12 @@ func TestNewHandlerInvalidLDAP(t *testing.T) {
 }
 
 // TestNewWithServicesInvalidLDAP tests NewWithServices with invalid LDAP.
+// This test is slow (~10s) as it waits for LDAP connection timeout.
 func TestNewWithServicesInvalidLDAP(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping slow LDAP timeout test in short mode")
+	}
+
 	opts := &options.Opts{
 		LDAP: ldap.Config{
 			Server: "ldap://nonexistent-server:389",
