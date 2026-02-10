@@ -2,7 +2,7 @@ module github.com/netresearch/ldap-selfservice-password-changer
 
 go 1.25.0
 
-toolchain go1.25.7
+toolchain go1.26.0
 
 require (
 	github.com/gofiber/fiber/v3 v3.0.0
