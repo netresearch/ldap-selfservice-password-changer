@@ -17,7 +17,7 @@ COPY internal/web/ ./internal/web/
 
 RUN pnpm build:assets
 
-FROM golang:1.25-alpine AS backend-builder
+FROM golang:1.26-alpine AS backend-builder
 WORKDIR /build
 
 # Copy dependency files
