@@ -1,6 +1,6 @@
 # Agent Guidelines
 
-<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-02-04 -->
+<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-02-22 -->
 
 **Precedence**: Nearest AGENTS.md wins. This is the root file with global defaults.
 
@@ -17,7 +17,7 @@
 
 Self-service password change/reset web app for LDAP/ActiveDirectory with email-based password reset, rate limiting, and strict accessibility standards. Single binary deployment with embedded assets.
 
-**Stack**: Go 1.25 + Fiber, TypeScript (ultra-strict), Tailwind CSS 4, Docker multi-stage builds, pnpm 10.28
+**Stack**: Go 1.26 + Fiber v3, TypeScript (ultra-strict), Tailwind CSS 4, Docker multi-stage builds, pnpm 10.30
 
 **Key characteristics**:
 
@@ -49,7 +49,7 @@ See [docs/development-guide.md](docs/development-guide.md) for comprehensive set
 
 ### Build & Test Commands
 
-**Package manager**: pnpm (specified in package.json: `pnpm@10.28.2`)
+**Package manager**: pnpm (specified in package.json: `pnpm@10.30.1`)
 
 ```bash
 # Build everything
@@ -286,3 +286,11 @@ func connectLDAP(config LDAPConfig) *ldap.Conn {
 - Major version updates require changelog review
 - Use Context7 MCP or official docs for migrations
 - Keep pnpm-lock.yaml and go.sum committed
+- Use `pnpm.overrides` for transitive dependency CVE fixes when upstream hasn't patched yet
+- Don't add redundant direct deps if a unified package re-exports them (e.g., `typescript-eslint` provides `@typescript-eslint/parser` + `@typescript-eslint/eslint-plugin`)
+
+**CI/CD Workflows**:
+
+- `pr-quality.yml`: Auto-approves PRs from repo collaborators (solo-maintainer pattern)
+- `auto-merge-deps.yml`: Auto-merges Dependabot/Renovate PRs with strategy auto-detection
+- Bootstrap: The PR introducing `pr-quality.yml` requires manual approval; all subsequent PRs auto-approve

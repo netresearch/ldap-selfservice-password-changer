@@ -1,6 +1,6 @@
 # Go Backend Services
 
-<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-02-04 -->
+<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-02-22 -->
 
 **Scope**: Go backend packages in `internal/` directory
 
@@ -14,7 +14,7 @@ Backend services for LDAP selfservice password change/reset functionality. Organ
 - **options/**: Configuration management from environment variables
 - **ratelimit/**: IP-based rate limiting (3 req/hour default)
 - **resettoken/**: Cryptographic token generation and validation
-- **rpc/**: JSON-RPC 2.0 API handlers (password change/reset)
+- **rpchandler/**: JSON-RPC 2.0 API handlers (password change/reset) — renamed from `rpc/` to avoid Go stdlib `net/rpc` conflict
 - **validators/**: Password policy validation logic
 - **web/**: HTTP server setup, static assets, routing (see [web/AGENTS.md](web/AGENTS.md))
 
@@ -45,11 +45,11 @@ RATE_LIMIT_WINDOW=1h
 TOKEN_EXPIRY_DURATION=1h
 ```
 
-**Go toolchain**: Requires Go 1.25+ (specified in `go.mod`)
+**Go toolchain**: Requires Go 1.26+ (specified in `go.mod`)
 
 **Key dependencies**:
 
-- `github.com/gofiber/fiber/v2` - HTTP server
+- `github.com/gofiber/fiber/v3` - HTTP server
 - `github.com/netresearch/simple-ldap-go` - LDAP client
 - `github.com/testcontainers/testcontainers-go` - Integration testing
 - `github.com/joho/godotenv` - Environment loading
@@ -358,9 +358,11 @@ go build -gcflags="all=-N -l"
 - Base64 URL encoding (safe for URLs)
 - Store tokens server-side with expiry
 
-### rpc/
+### rpchandler/
 
 - JSON-RPC 2.0 specification compliance
+- Renamed from `rpc/` to avoid Go stdlib `net/rpc` conflict (revive var-naming)
+- Types: `Request` (was `JSONRPC`), `Response` (was `JSONRPCResponse`) — avoid stuttering (`rpchandler.JSONRPCResponse`)
 - Error codes defined in [docs/api-reference.md](../docs/api-reference.md)
 - Request validation before processing
 - Endpoint: `POST /api/rpc`
