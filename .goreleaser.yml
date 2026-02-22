@@ -73,7 +73,7 @@ snapshot:
 
 # Changelog generation from conventional commits
 changelog:
-  use: github
+  use: git
   sort: asc
   abbrev: 7
   filters:
