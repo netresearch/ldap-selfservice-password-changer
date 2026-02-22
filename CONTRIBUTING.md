@@ -49,7 +49,7 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 
 ### Prerequisites
 
-- **Go** 1.25 or higher
+- **Go** 1.26 or higher
 - **Node.js** 24.x or higher
 - **pnpm** 10.18 or higher (install via `corepack enable`)
 - **Git** for version control

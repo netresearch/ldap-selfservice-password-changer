@@ -110,7 +110,7 @@ LDAP Selfservice Password Changer provides:
 
 | Layer         | Technology     | Version |
 | ------------- | -------------- | ------- |
-| Backend       | Go             | 1.25+   |
+| Backend       | Go             | 1.26+   |
 | Web Framework | Fiber          | v2.52+  |
 | Frontend      | TypeScript     | 5.9+    |
 | CSS           | Tailwind CSS   | v4.1+   |

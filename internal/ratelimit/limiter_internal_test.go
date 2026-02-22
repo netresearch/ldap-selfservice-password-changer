@@ -124,13 +124,11 @@ func TestConcurrentAccess(t *testing.T) {
 	// Concurrent requests from same user
 	identifier := "concurrent@example.com"
 	for range goroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			for range requestsPerGoroutine {
 				limiter.AllowRequest(identifier)
 			}
-		}()
+		})
 	}
 
 	wg.Wait()
@@ -282,17 +280,15 @@ func TestCapacityConcurrentAccess(t *testing.T) {
 	const goroutines = 50
 
 	for i := range goroutines {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
-			identifier := fmt.Sprintf("concurrent%d@example.com", id)
+		wg.Go(func() {
+			identifier := fmt.Sprintf("concurrent%d@example.com", i)
 			allowed := limiter.AllowRequest(identifier)
 			if allowed {
 				mu.Lock()
 				successCount++
 				mu.Unlock()
 			}
-		}(i)
+		})
 	}
 
 	wg.Wait()
@@ -348,7 +344,7 @@ func BenchmarkAllowRequest(b *testing.B) {
 	identifier := "bench@example.com"
 
 	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		limiter.AllowRequest(identifier)
 	}
 }

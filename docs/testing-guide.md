@@ -595,7 +595,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.25"
+          go-version: "1.26"
 
       - uses: pnpm/action-setup@v4
         with:

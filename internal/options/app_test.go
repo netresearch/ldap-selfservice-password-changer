@@ -508,8 +508,8 @@ func TestParseWithMissingRequired(t *testing.T) {
 	_, err := Parse()
 	require.Error(t, err)
 
-	var configErr *ConfigError
-	require.True(t, errors.As(err, &configErr), "error should be *ConfigError")
+	configErr, ok := errors.AsType[*ConfigError](err)
+	require.True(t, ok, "error should be *ConfigError")
 	assert.True(t, configErr.HasErrors())
 	assert.Contains(t, configErr.Error(), "required options missing")
 }
@@ -528,8 +528,8 @@ func TestParseWithInvalidIntValue(t *testing.T) {
 	_, err := Parse()
 	require.Error(t, err)
 
-	var configErr *ConfigError
-	require.True(t, errors.As(err, &configErr), "error should be *ConfigError")
+	configErr, ok := errors.AsType[*ConfigError](err)
+	require.True(t, ok, "error should be *ConfigError")
 	assert.Contains(t, configErr.Error(), "invalid value for MIN_LENGTH")
 }
 
@@ -547,7 +547,7 @@ func TestParseWithInvalidBoolValue(t *testing.T) {
 	_, err := Parse()
 	require.Error(t, err)
 
-	var configErr *ConfigError
-	require.True(t, errors.As(err, &configErr), "error should be *ConfigError")
+	configErr, ok := errors.AsType[*ConfigError](err)
+	require.True(t, ok, "error should be *ConfigError")
 	assert.Contains(t, configErr.Error(), "invalid value for LDAP_IS_AD")
 }

@@ -88,7 +88,7 @@ func MakeInputOpts(name, placeholder, inputType, autocomplete, help string) Inpu
 	}
 }
 
-func makeSlice(args ...interface{}) []interface{} {
+func makeSlice(args ...any) []any {
 	return args
 }
 

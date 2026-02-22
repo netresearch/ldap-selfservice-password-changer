@@ -4,7 +4,7 @@
 
 ### Required Tools
 
-- **Go**: 1.25.0+ (tested with 1.25.1)
+- **Go**: 1.26+ (tested with 1.26.0)
 - **Node.js**: 24+ (tested with 24)
 - **pnpm**: 10.18.0+ (installed via Corepack)
 - **Git**: For version control
@@ -619,7 +619,7 @@ docker build -t ldap-password-changer .
 **Build Process**:
 
 1. Frontend build (Node.js 22)
-2. Backend build (Go 1.25-alpine)
+2. Backend build (Go 1.26-alpine)
 3. Tests run (build fails if tests fail)
 4. Runtime image (Alpine 3)
 

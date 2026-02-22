@@ -28,7 +28,7 @@ Self-service password change/reset web app for LDAP/ActiveDirectory with email-b
 
 ### Setup
 
-**Prerequisites**: Docker + Docker Compose (required), Go 1.25+, Node.js 24+, pnpm 10.28+ (for native dev)
+**Prerequisites**: Docker + Docker Compose (required), Go 1.26+, Node.js 24+, pnpm 10.28+ (for native dev)
 
 ```bash
 # Clone and setup environment

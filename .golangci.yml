@@ -8,7 +8,7 @@ run:
   tests: true
   modules-download-mode: readonly
   allow-parallel-runners: true
-  go: "1.25"
+  go: "1.26"
 
 linters:
   enable:

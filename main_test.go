@@ -178,7 +178,7 @@ func BenchmarkRunHealthCheck(b *testing.B) {
 	defer server.Close()
 
 	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		_ = testableRunHealthCheck(server.URL + "/health/live")
 	}
 }

@@ -56,7 +56,7 @@ Access at `http://localhost:3000`
 
 **Prerequisites:**
 
-- Go 1.25+
+- Go 1.26+
 - Node.js 24+
 - Corepack (`npm i -g corepack`)
 

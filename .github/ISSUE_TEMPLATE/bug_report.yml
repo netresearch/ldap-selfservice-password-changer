@@ -95,7 +95,7 @@ body:
       placeholder: |
         - OS: [e.g., Ubuntu 24.04]
         - Browser: [e.g., Chrome 120]
-        - Go version (if building from source): [e.g., 1.25]
+        - Go version (if building from source): [e.g., 1.26]
       value: |
         - OS:
         - Browser:

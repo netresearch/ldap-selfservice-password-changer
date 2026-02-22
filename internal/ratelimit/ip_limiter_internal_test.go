@@ -184,16 +184,14 @@ func TestIPLimiterConcurrentAccess(t *testing.T) {
 	var mu sync.Mutex
 
 	for range goroutines {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			allowed := limiter.AllowRequest(ip)
 			if allowed {
 				mu.Lock()
 				successCount++
 				mu.Unlock()
 			}
-		}()
+		})
 	}
 
 	wg.Wait()

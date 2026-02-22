@@ -248,12 +248,10 @@ func TestConcurrentAccess(t *testing.T) {
 
 	// Concurrent writes
 	for i := range goroutines {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
+		wg.Go(func() {
 			for j := range operationsPerGoroutine {
 				token := &ResetToken{
-					Token:     generateUniqueToken(id, j),
+					Token:     generateUniqueToken(i, j),
 					Username:  "user",
 					Email:     "user@example.com",
 					CreatedAt: time.Now(),
@@ -263,7 +261,7 @@ func TestConcurrentAccess(t *testing.T) {
 					t.Errorf("Failed to store token: %v", err)
 				}
 			}
-		}(i)
+		})
 	}
 
 	wg.Wait()
@@ -300,23 +298,19 @@ func TestConcurrentReadWrite(t *testing.T) {
 	// Concurrent readers and writers
 	for i := range 50 {
 		// Readers
-		wg.Add(1)
-		go func(_ int) {
-			defer wg.Done()
+		wg.Go(func() {
 			for j := range 100 {
 				if _, err := store.Get(generateUniqueToken(0, j)); err != nil {
 					t.Errorf("Failed to get token: %v", err)
 				}
 			}
-		}(i)
+		})
 
 		// Writers
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
+		wg.Go(func() {
 			for j := range 10 {
 				token := &ResetToken{
-					Token:     generateUniqueToken(id+1, j),
+					Token:     generateUniqueToken(i+1, j),
 					Username:  "user",
 					Email:     "user@example.com",
 					CreatedAt: time.Now(),
@@ -326,7 +320,7 @@ func TestConcurrentReadWrite(t *testing.T) {
 					t.Errorf("Failed to store token: %v", err)
 				}
 			}
-		}(i)
+		})
 	}
 
 	wg.Wait()
@@ -502,11 +496,9 @@ func TestCapacityConcurrentAccessAtCapacity(t *testing.T) {
 	const goroutines = 200
 
 	for i := range goroutines {
-		wg.Add(1)
-		go func(id int) {
-			defer wg.Done()
+		wg.Go(func() {
 			token := &ResetToken{
-				Token:     generateUniqueToken(id+1, 0),
+				Token:     generateUniqueToken(i+1, 0),
 				Username:  "concurrent",
 				Email:     "concurrent@example.com",
 				CreatedAt: time.Now(),
@@ -518,7 +510,7 @@ func TestCapacityConcurrentAccessAtCapacity(t *testing.T) {
 				successCount++
 				mu.Unlock()
 			}
-		}(i)
+		})
 	}
 
 	wg.Wait()
@@ -599,22 +591,21 @@ func containsHelper(s, substr string) bool {
 
 func BenchmarkStoreToken(b *testing.B) {
 	store := NewStore()
-	tokens := make([]*ResetToken, b.N)
-	for i := range b.N {
-		tokens[i] = &ResetToken{
+
+	b.ResetTimer()
+	i := 0
+	for b.Loop() {
+		token := &ResetToken{
 			Token:     generateUniqueToken(0, i),
 			Username:  "bench",
 			Email:     "bench@example.com",
 			CreatedAt: time.Now(),
 			ExpiresAt: time.Now().Add(15 * time.Minute),
 		}
-	}
-
-	b.ResetTimer()
-	for i := range b.N {
-		if err := store.Store(tokens[i]); err != nil {
+		if err := store.Store(token); err != nil {
 			b.Fatalf("Failed to store token: %v", err)
 		}
+		i++
 	}
 }
 
@@ -632,7 +623,7 @@ func BenchmarkGetToken(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		if _, err := store.Get("bench-token"); err != nil {
 			b.Fatalf("Failed to get token: %v", err)
 		}

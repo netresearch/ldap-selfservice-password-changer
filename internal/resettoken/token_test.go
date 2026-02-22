@@ -52,7 +52,7 @@ func TestTokenUniqueness(t *testing.T) {
 }
 
 func BenchmarkGenerateToken(b *testing.B) {
-	for range b.N {
+	for b.Loop() {
 		_, err := resettoken.GenerateToken()
 		if err != nil {
 			b.Fatalf("GenerateToken() error = %v", err)

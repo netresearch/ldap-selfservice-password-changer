@@ -346,28 +346,28 @@ func TestRenderResetPasswordIdempotent(t *testing.T) {
 func TestMakeSlice(t *testing.T) {
 	tests := []struct {
 		name string
-		args []interface{}
-		want []interface{}
+		args []any
+		want []any
 	}{
 		{
 			name: "empty slice",
-			args: []interface{}{},
-			want: []interface{}{},
+			args: []any{},
+			want: []any{},
 		},
 		{
 			name: "single element",
-			args: []interface{}{"hello"},
-			want: []interface{}{"hello"},
+			args: []any{"hello"},
+			want: []any{"hello"},
 		},
 		{
 			name: "multiple strings",
-			args: []interface{}{"a", "b", "c"},
-			want: []interface{}{"a", "b", "c"},
+			args: []any{"a", "b", "c"},
+			want: []any{"a", "b", "c"},
 		},
 		{
 			name: "mixed types",
-			args: []interface{}{"string", 42, true},
-			want: []interface{}{"string", 42, true},
+			args: []any{"string", 42, true},
+			want: []any{"string", 42, true},
 		},
 	}
 
@@ -469,7 +469,7 @@ func BenchmarkRenderIndex(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		_, _ = RenderIndex(opts) //nolint:errcheck // benchmark
 	}
 }
@@ -477,7 +477,7 @@ func BenchmarkRenderIndex(b *testing.B) {
 // BenchmarkRenderForgotPassword benchmarks the RenderForgotPassword function.
 func BenchmarkRenderForgotPassword(b *testing.B) {
 	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		_, _ = RenderForgotPassword() //nolint:errcheck // benchmark
 	}
 }
@@ -493,7 +493,7 @@ func BenchmarkRenderResetPassword(b *testing.B) {
 	}
 
 	b.ResetTimer()
-	for range b.N {
+	for b.Loop() {
 		_, _ = RenderResetPassword(opts) //nolint:errcheck // benchmark
 	}
 }
