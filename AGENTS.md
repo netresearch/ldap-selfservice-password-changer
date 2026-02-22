@@ -107,6 +107,7 @@ go build -v ./...         # Go compilation + type checking
 - Follow Go project layout: `internal/` for private packages, `main.go` at root
 - Use testcontainers for integration tests (see `*_test.go` files)
 - Error wrapping with context
+- Go 1.26 idioms: `wg.Go()`, `errors.AsType[T]`, `b.Loop()`, `any` (not `interface{}`)
 
 **General**:
 
@@ -277,7 +278,7 @@ func connectLDAP(config LDAPConfig) *ldap.Conn {
 **Type Safety**:
 
 - TypeScript: No `any`, all strict flags enabled
-- Go: Leverage type system, avoid `interface{}`
+- Go: Leverage type system, use `any` (not `interface{}`), use `errors.AsType[T]`
 - Validate inputs at boundaries
 
 **Dependency Management**:
@@ -294,3 +295,11 @@ func connectLDAP(config LDAPConfig) *ldap.Conn {
 - `pr-quality.yml`: Auto-approves PRs from repo collaborators (solo-maintainer pattern)
 - `auto-merge-deps.yml`: Auto-merges Dependabot/Renovate PRs with strategy auto-detection
 - Bootstrap: The PR introducing `pr-quality.yml` requires manual approval; all subsequent PRs auto-approve
+- `release.yml`: GoReleaser triggered on tag push; pnpm setup must precede setup-node
+
+**Releases (GoReleaser)**:
+
+- Create signed tag locally: `git tag -s vX.Y.Z -m "vX.Y.Z"` → `git push origin vX.Y.Z`
+- GoReleaser config: `.goreleaser.yml` with `use: git` for changelog (not `use: github` — ignores filters)
+- `mode: replace` overwrites release notes — update via API after GoReleaser if needed
+- No 32-bit ARM builds: Fiber v3 `math.MaxUint32` overflows on 32-bit (`linux/arm` excluded)

@@ -104,6 +104,14 @@ go test -v ./...
 - Prefer explicit over implicit
 - Use interfaces for testability (see `email/service.go`)
 
+**Go 1.26 Idioms** (prefer these over older patterns):
+
+- `wg.Go(func() { ... })` instead of `wg.Add(1); go func() { defer wg.Done(); ... }()`
+- `errors.AsType[*T](err)` instead of `var x *T; errors.As(err, &x)`
+- `for b.Loop() { ... }` instead of `for range b.N { ... }` in benchmarks
+- `any` instead of `interface{}`
+- Run `go fix ./...` after Go upgrades to auto-apply modernizations
+
 **Naming**:
 
 - `internal/package/file.go` - implementation
