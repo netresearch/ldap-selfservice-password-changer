@@ -1,4 +1,4 @@
-package rpc_test
+package rpchandler_test
 
 import (
 	"testing"
@@ -11,7 +11,7 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
-	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpc"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpchandler"
 )
 
 // TestNewHandlerInvalidLDAP tests New with invalid LDAP configuration.
@@ -30,7 +30,7 @@ func TestNewHandlerInvalidLDAP(t *testing.T) {
 		ReadonlyPassword: "password",
 	}
 
-	handler, err := rpc.New(opts)
+	handler, err := rpchandler.New(opts)
 	// Should fail because LDAP connection will fail
 	assert.Error(t, err)
 	assert.Nil(t, handler)
@@ -66,7 +66,7 @@ func TestNewWithServicesInvalidLDAP(t *testing.T) {
 	rateLimiter := ratelimit.NewLimiter(3, 60*time.Minute)
 	ipLimiter := ratelimit.NewIPLimiter()
 
-	handler, err := rpc.NewWithServices(opts, tokenStore, emailService, rateLimiter, ipLimiter)
+	handler, err := rpchandler.NewWithServices(opts, tokenStore, emailService, rateLimiter, ipLimiter)
 	assert.Error(t, err)
 	assert.Nil(t, handler)
 	assert.Contains(t, err.Error(), "failed to initialize LDAP connection")

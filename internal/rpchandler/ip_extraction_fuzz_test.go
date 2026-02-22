@@ -1,5 +1,5 @@
 //nolint:testpackage // tests internal functions
-package rpc
+package rpchandler
 
 import (
 	"net"

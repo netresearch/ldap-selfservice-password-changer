@@ -116,7 +116,7 @@ Changes a user's password in the LDAP/ActiveDirectory server.
 
 ### Backend Validation Flow
 
-**Location**: internal/rpc/change_password.go:18-72
+**Location**: internal/rpchandler/change_password.go:18-72
 
 ```go
 func (c *Handler) changePassword(params []string) ([]string, error) {
@@ -234,7 +234,7 @@ Errors are displayed below each input field in real-time:
 
 ### Server-Side Error Response
 
-**Location**: internal/rpc/handler.go:33-46
+**Location**: internal/rpchandler/handler.go:33-46
 
 All errors are wrapped in consistent JSON-RPC response format:
 

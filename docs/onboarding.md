@@ -67,7 +67,7 @@ Before starting, ensure you have:
 - [ ] Explore `main.go` - Entry point and routing
 - [ ] Read [Component Reference: internal/options](component-reference.md#go-package-internaloptions)
 - [ ] Understand configuration priority (flags > env vars > defaults)
-- [ ] Read [Component Reference: internal/rpc](component-reference.md#go-package-internalrpc)
+- [ ] Read [Component Reference: internal/rpchandler](component-reference.md#go-package-internalrpc)
 - [ ] Trace JSON-RPC request flow
 
 **Exercises**:
@@ -360,7 +360,7 @@ Can you trace the complete flow?
 
 **Priority Reading**:
 
-1. [Component Reference: internal/rpc](component-reference.md#go-package-internalrpc)
+1. [Component Reference: internal/rpchandler](component-reference.md#go-package-internalrpc)
 2. [Component Reference: internal/validators](component-reference.md#go-package-internalvalidators)
 3. [API Reference](api-reference.md)
 

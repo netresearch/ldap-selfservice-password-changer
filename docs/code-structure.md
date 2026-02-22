@@ -220,7 +220,7 @@ Delete(token string)                      // Explicitly delete token
 
 ---
 
-### `internal/rpc`
+### `internal/rpchandler`
 
 **Purpose**: JSON-RPC handlers for all API methods.
 
@@ -248,7 +248,7 @@ Response: {
 }
 ```
 
-**Handler**: `internal/rpc/change_password.go`
+**Handler**: `internal/rpchandler/change_password.go`
 
 - Validates input parameters
 - Authenticates with LDAP using current password
@@ -267,7 +267,7 @@ Response: {
 }
 ```
 
-**Handler**: `internal/rpc/request_password_reset.go`
+**Handler**: `internal/rpchandler/request_password_reset.go`
 
 - Rate limiting check (3 requests/hour per IP)
 - Lookup user by email in LDAP
@@ -287,7 +287,7 @@ Response: {
 }
 ```
 
-**Handler**: `internal/rpc/reset_password.go`
+**Handler**: `internal/rpchandler/reset_password.go`
 
 - Validate and consume reset token
 - Retrieve user email from token store
@@ -534,7 +534,7 @@ var staticFS embed.FS
 
 ### Integration Tests
 
-- **Package**: `internal/rpc` - 45.6% coverage
+- **Package**: `internal/rpchandler` - 45.6% coverage
 - **Package**: `internal/email` - 31.2% coverage
 - Uses testcontainers for real LDAP server
 - Tests complete RPC workflows
@@ -606,9 +606,9 @@ See [Security Documentation](security.md) for comprehensive security architectur
 
 ### Adding New RPC Methods
 
-1. Define method in `internal/rpc/handler.go`
-2. Create handler file `internal/rpc/method_name.go`
-3. Write tests in `internal/rpc/method_name_test.go`
+1. Define method in `internal/rpchandler/handler.go`
+2. Create handler file `internal/rpchandler/method_name.go`
+3. Write tests in `internal/rpchandler/method_name_test.go`
 4. Update API documentation in `docs/api-reference.md`
 
 ### Adding New UI Pages

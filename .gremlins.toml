@@ -21,7 +21,7 @@ exclude = [
 
 # Target specific packages for mutation testing
 include = [
-    "./internal/rpc/...",
+    "./internal/rpchandler/...",
     "./internal/email/...",
     "./internal/resettoken/...",
     "./internal/validators/...",

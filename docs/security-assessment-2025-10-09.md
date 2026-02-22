@@ -53,7 +53,7 @@ This comprehensive security assessment evaluated GopherPass across authenticatio
 
 **Affected Files:**
 
-- `internal/rpc/change_password.go:64`
+- `internal/rpchandler/change_password.go:64`
 - `internal/web/static/js/validators.ts:170`
 
 **Description:**
@@ -133,7 +133,7 @@ curl -X POST http://localhost:3000/api/rpc \
 
 **Affected Files:**
 
-- `internal/rpc/change_password.go` (no rate limiter applied)
+- `internal/rpchandler/change_password.go` (no rate limiter applied)
 - `main.go` (handler registration)
 
 **Description:**
@@ -254,8 +254,8 @@ done
 
 **Affected Files:**
 
-- `internal/rpc/change_password.go:18-76`
-- `internal/rpc/reset_password.go:18-129`
+- `internal/rpchandler/change_password.go:18-76`
+- `internal/rpchandler/reset_password.go:18-129`
 - Dependency: `github.com/netresearch/simple-ldap-go v1.6.0`
 
 **Description:**
@@ -1079,13 +1079,13 @@ h.tokenStore.Delete(resetToken) // Single-use enforcement
 
 ```bash
 # 1. Test case sensitivity fix
-go test -v ./internal/rpc -run TestPasswordUsernameInclusion
+go test -v ./internal/rpchandler -run TestPasswordUsernameInclusion
 
 # 2. Test rate limiting
 go test -v ./internal/ratelimit -run TestRateLimitPasswordChange
 
 # 3. Test LDAP injection protection
-go test -v ./internal/rpc -run TestLDAPInjectionProtection
+go test -v ./internal/rpchandler -run TestLDAPInjectionProtection
 
 # 4. Test security headers
 curl -I http://localhost:3000/ | grep -E "Content-Security|X-Frame|HSTS"

@@ -31,7 +31,7 @@ ok      github.com/netresearch/ldap-selfservice-password-changer/internal/valida
 
 **Missing Unit Tests**:
 
-- RPC handler logic (internal/rpc/change_password.go)
+- RPC handler logic (internal/rpchandler/change_password.go)
 - Configuration parsing (internal/options/app.go)
 - Template rendering (internal/web/templates/templates.go)
 - Frontend validators (internal/web/static/js/validators.ts)
@@ -59,7 +59,7 @@ ok      github.com/netresearch/ldap-selfservice-password-changer/internal/valida
 
 **Priority 1: RPC Handler Tests**
 
-**Location**: Create `internal/rpc/change_password_test.go`
+**Location**: Create `internal/rpchandler/change_password_test.go`
 
 **Test Cases**:
 
@@ -271,7 +271,7 @@ describe("mustIncludeNumbers", () => {
 
 **Tool**: Go standard library `net/http/httptest`
 
-**Location**: Create `internal/rpc/handler_integration_test.go`
+**Location**: Create `internal/rpchandler/handler_integration_test.go`
 
 **Example**:
 

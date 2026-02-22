@@ -120,7 +120,7 @@ Implement token-based password reset with email verification following these arc
 internal/resettoken/     # Token generation and storage
 internal/email/          # SMTP service for sending emails
 internal/ratelimit/      # Sliding window rate limiter
-internal/rpc/           # RPC handlers (request, reset)
+internal/rpchandler/           # RPC handlers (request, reset)
 internal/options/        # Configuration parsing
 ```
 

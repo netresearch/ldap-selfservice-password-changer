@@ -1,4 +1,4 @@
-package rpc
+package rpchandler
 
 import (
 	"bytes"
@@ -88,7 +88,7 @@ func TestHandle(t *testing.T) {
 			}
 
 			// Parse response
-			var response JSONRPCResponse
+			var response Response
 			if err := json.Unmarshal(bodyBytes, &response); err != nil {
 				t.Fatalf("failed to unmarshal response: %v", err)
 			}
@@ -160,7 +160,7 @@ func TestHandleChangePasswordError(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
 	}
-	var response JSONRPCResponse
+	var response Response
 	if err := json.Unmarshal(bodyBytes, &response); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
@@ -184,7 +184,7 @@ func TestSendSuccessResponse(t *testing.T) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	var response JSONRPCResponse
+	var response Response
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
@@ -219,7 +219,7 @@ func TestSendErrorResponse(t *testing.T) {
 		t.Errorf("status = %d, want %d", resp.StatusCode, http.StatusBadRequest)
 	}
 
-	var response JSONRPCResponse
+	var response Response
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
@@ -477,7 +477,7 @@ func TestHandleRequestPasswordResetRateLimited(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
 	}
-	var response JSONRPCResponse
+	var response Response
 	if err := json.Unmarshal(bodyBytes, &response); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
@@ -543,7 +543,7 @@ func TestHandleChangePasswordSuccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
 	}
-	var response JSONRPCResponse
+	var response Response
 	if err := json.Unmarshal(bodyBytes, &response); err != nil {
 		t.Fatalf("failed to unmarshal response: %v", err)
 	}
@@ -570,7 +570,7 @@ func TestSendSuccessResponseWithEmptyData(t *testing.T) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	var response JSONRPCResponse
+	var response Response
 	bodyBytes, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatalf("failed to read response body: %v", err)
@@ -618,7 +618,7 @@ func TestSendErrorResponseWithDifferentStatusCodes(t *testing.T) {
 				t.Errorf("status = %d, want %d", resp.StatusCode, tc.statusCode)
 			}
 
-			var response JSONRPCResponse
+			var response Response
 			bodyBytes, err := io.ReadAll(resp.Body)
 			if err != nil {
 				t.Fatalf("failed to read response body: %v", err)

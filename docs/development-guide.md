@@ -527,7 +527,7 @@ export const mustIncludeDigits = (amount: number) => (v: string) =>
 
 #### 4. Apply Validator
 
-**Backend** - `internal/rpc/change_password.go`:
+**Backend** - `internal/rpchandler/change_password.go`:
 
 ```go
 if !validators.MinDigitsInString(newPassword, c.opts.MinDigits) {

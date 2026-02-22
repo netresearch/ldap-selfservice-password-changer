@@ -1,4 +1,4 @@
-package rpc
+package rpchandler
 
 import (
 	"fmt"
@@ -92,7 +92,7 @@ func NewWithServices(
 //
 //nolint:stylecheck // ST1016: c matches fiber conventions, other methods use h
 func (h *Handler) Handle(c fiber.Ctx) error {
-	var body JSONRPC
+	var body Request
 	if err := c.Bind().Body(&body); err != nil {
 		return fmt.Errorf("failed to parse request body: %w", err)
 	}
@@ -147,7 +147,7 @@ func (h *Handler) handleResetPassword(c fiber.Ctx, params []string) error {
 
 // sendSuccessResponse sends a successful JSON-RPC response.
 func sendSuccessResponse(c fiber.Ctx, data []string) error {
-	if jsonErr := c.JSON(JSONRPCResponse{
+	if jsonErr := c.JSON(Response{
 		Success: true,
 		Data:    data,
 	}); jsonErr != nil {
@@ -158,7 +158,7 @@ func sendSuccessResponse(c fiber.Ctx, data []string) error {
 
 // sendErrorResponse sends an error JSON-RPC response.
 func sendErrorResponse(c fiber.Ctx, statusCode int, message string) error {
-	if jsonErr := c.Status(statusCode).JSON(JSONRPCResponse{
+	if jsonErr := c.Status(statusCode).JSON(Response{
 		Success: false,
 		Data:    []string{message},
 	}); jsonErr != nil {

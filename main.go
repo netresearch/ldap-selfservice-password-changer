@@ -19,7 +19,7 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
-	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpc"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpchandler"
 	webstatic "github.com/netresearch/ldap-selfservice-password-changer/internal/web/static"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/templates"
 )
@@ -57,7 +57,7 @@ func main() {
 		)
 	}
 
-	var rpcHandler *rpc.Handler
+	var rpcHandler *rpchandler.Handler
 
 	// Initialize password reset services if enabled
 	if opts.PasswordResetEnabled {
@@ -94,7 +94,7 @@ func main() {
 		ipLimiter.StartCleanup(5 * time.Minute)
 
 		// Create handler with password reset services
-		rpcHandler, err = rpc.NewWithServices(opts, tokenStore, emailService, rateLimiter, ipLimiter)
+		rpcHandler, err = rpchandler.NewWithServices(opts, tokenStore, emailService, rateLimiter, ipLimiter)
 		if err != nil {
 			slog.Error("initialization failed", "error", err)
 			os.Exit(1)
@@ -105,7 +105,7 @@ func main() {
 		ipLimiter := ratelimit.NewIPLimiter()
 		ipLimiter.StartCleanup(5 * time.Minute)
 
-		baseHandler, err := rpc.New(opts)
+		baseHandler, err := rpchandler.New(opts)
 		if err != nil {
 			slog.Error("initialization failed", "error", err)
 			os.Exit(1)
@@ -211,7 +211,7 @@ func runHealthCheck() int {
 	}
 
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //nolint:gosec,nolintlint // G704: URL is a compile-time constant, not user-controlled
 	if err != nil {
 		return 1
 	}
