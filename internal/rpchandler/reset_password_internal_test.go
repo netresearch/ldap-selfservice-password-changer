@@ -1,4 +1,4 @@
-package rpc
+package rpchandler
 
 import (
 	"errors"

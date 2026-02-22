@@ -29,8 +29,8 @@ func getEnvOrSkip(t *testing.T, key string) string {
 
 // MailHogMessage represents a message in MailHog's API.
 type MailHogMessage struct {
-	ID      string `json:"ID"`
-	From    struct {
+	ID   string `json:"ID"`
+	From struct {
 		Mailbox string `json:"Mailbox"`
 		Domain  string `json:"Domain"`
 	} `json:"From"`
