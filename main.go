@@ -211,7 +211,7 @@ func runHealthCheck() int {
 	}
 
 	client := &http.Client{}
-	resp, err := client.Do(req)
+	resp, err := client.Do(req) //nolint:gosec,nolintlint // G704: URL is a compile-time constant, not user-controlled
 	if err != nil {
 		return 1
 	}
