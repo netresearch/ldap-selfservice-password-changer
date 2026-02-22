@@ -23,7 +23,7 @@
 
 ### Backend Fix
 
-**File:** `internal/rpc/change_password.go`
+**File:** `internal/rpchandler/change_password.go`
 **Line:** 64
 
 **Current Code (VULNERABLE):**

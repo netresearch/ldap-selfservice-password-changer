@@ -1,6 +1,6 @@
 //go:build integration
 
-package rpc_test
+package rpchandler_test
 
 import (
 	"os"
@@ -14,7 +14,7 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
-	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpc"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpchandler"
 )
 
 // getEnvOrSkip returns an environment variable or skips the test.
@@ -42,7 +42,7 @@ func TestIntegration_NewHandler(t *testing.T) {
 		ReadonlyPassword: readonlyPassword,
 	}
 
-	handler, err := rpc.New(opts)
+	handler, err := rpchandler.New(opts)
 	require.NoError(t, err)
 	require.NotNil(t, handler)
 }
@@ -82,7 +82,7 @@ func TestIntegration_NewWithServices(t *testing.T) {
 	rateLimiter := ratelimit.NewLimiter(10, 60*time.Minute)
 	ipLimiter := ratelimit.NewIPLimiter()
 
-	handler, err := rpc.NewWithServices(opts, tokenStore, emailService, rateLimiter, ipLimiter)
+	handler, err := rpchandler.NewWithServices(opts, tokenStore, emailService, rateLimiter, ipLimiter)
 	require.NoError(t, err)
 	require.NotNil(t, handler)
 }

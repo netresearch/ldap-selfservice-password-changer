@@ -1,5 +1,5 @@
-// Package rpc provides JSON-RPC 2.0 handlers for password management operations.
-package rpc
+// Package rpchandler provides JSON-RPC 2.0 handlers for password management operations.
+package rpchandler
 
 import (
 	"errors"
