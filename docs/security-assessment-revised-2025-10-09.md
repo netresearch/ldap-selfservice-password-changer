@@ -65,7 +65,7 @@ This assessment has been revised to align with the organization's security archi
 
 **Affected Files:**
 
-- `internal/rpc/change_password.go:64`
+- `internal/rpchandler/change_password.go:64`
 - `internal/web/static/js/validators.ts:170`
 
 **Description:**
@@ -826,7 +826,7 @@ Proper separation of concerns - network-level protections at WAF layer
 
 ```bash
 # 1. Test case sensitivity fix
-go test -v ./internal/rpc -run TestPasswordUsernameInclusion
+go test -v ./internal/rpchandler -run TestPasswordUsernameInclusion
 
 # 2. Test LDAP escaping (in simple-ldap-go repository)
 cd ~/go/src/github.com/netresearch/simple-ldap-go

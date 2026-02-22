@@ -100,7 +100,7 @@ How to keep documentation accurate and up-to-date as the codebase evolves.
    - Update request/response formats
    - Update examples
 
-3. Update [Component Reference: internal/rpc](component-reference.md#go-package-internalrpc)
+3. Update [Component Reference: internal/rpchandler](component-reference.md#go-package-internalrpc)
    - Update handler documentation
    - Update function signatures
 
@@ -206,7 +206,7 @@ git commit -m "docs: regenerate comprehensive documentation"
 
 #### Code References
 
-✅ **Good**: `internal/rpc/handler.go:33-46 - wrapRPC function`
+✅ **Good**: `internal/rpchandler/handler.go:33-46 - wrapRPC function`
 ❌ **Bad**: `handler.go - the wrapper function`
 
 #### Code Examples
@@ -313,7 +313,7 @@ git commit -m "docs: regenerate comprehensive documentation"
 **Tip**: Use absolute line numbers + context description:
 
 ```markdown
-internal/rpc/handler.go:33-46 (wrapRPC function)
+internal/rpchandler/handler.go:33-46 (wrapRPC function)
 ```
 
 ---

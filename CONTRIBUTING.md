@@ -281,7 +281,7 @@ go test ./... -cover
 go test ./internal/validators -v
 
 # Run integration tests (requires Docker)
-go test ./internal/rpc -v
+go test ./internal/rpchandler -v
 ```
 
 ### Writing Tests
