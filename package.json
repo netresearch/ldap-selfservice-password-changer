@@ -38,7 +38,11 @@
       "@tailwindcss/oxide"
     ],
     "overrides": {
-      "minimatch@<10.2.1": "^10.2.1"
+      "minimatch@<10.2.1": "^10.2.1",
+      "flatted": ">=3.4.0"
     }
+  },
+  "overrides": {
+    "flatted": ">=3.4.0"
   }
 }
