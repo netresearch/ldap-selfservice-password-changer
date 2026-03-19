@@ -5,6 +5,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"io"
 	"net/http"
@@ -102,7 +103,7 @@ func TestIntegration_FullPasswordResetFlow(t *testing.T) {
 	})
 
 	// Test health endpoint
-	req := httptest.NewRequest(http.MethodGet, "/health/live", http.NoBody)
+	req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/health/live", http.NoBody)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
@@ -241,7 +242,7 @@ func TestIntegration_JSONRPCEndpoint(t *testing.T) {
 	bodyBytes, err := json.Marshal(reqBody)
 	require.NoError(t, err)
 
-	req := httptest.NewRequest(http.MethodPost, "/api/rpc", bytes.NewReader(bodyBytes))
+	req := httptest.NewRequestWithContext(context.Background(),http.MethodPost, "/api/rpc", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
