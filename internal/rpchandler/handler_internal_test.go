@@ -13,10 +13,9 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	ldap "github.com/netresearch/simple-ldap-go"
-
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
+	ldap "github.com/netresearch/simple-ldap-go"
 )
 
 // TestHandle tests the main Handle function routing and body parsing.
@@ -72,7 +71,7 @@ func TestHandle(t *testing.T) {
 			app.Post("/api/rpc", handler.Handle)
 
 			// Create test request
-			req := httptest.NewRequestWithContext(context.Background(),http.MethodPost, "/api/rpc", strings.NewReader(tt.body))
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(tt.body))
 			req.Header.Set("Content-Type", "application/json")
 
 			// Execute request
@@ -121,7 +120,7 @@ func TestHandleInvalidJSON(t *testing.T) {
 	app := fiber.New()
 	app.Post("/api/rpc", handler.Handle)
 
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodPost, "/api/rpc", strings.NewReader(`{invalid json`))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(`{invalid json`))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -144,7 +143,7 @@ func TestHandleChangePasswordError(t *testing.T) {
 	app.Post("/api/rpc", handler.Handle)
 
 	body := `{"method":"change-password","params":["testuser","OldPass123!","NewPass456!"]}`
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodPost, "/api/rpc", strings.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -178,7 +177,7 @@ func TestSendSuccessResponse(t *testing.T) {
 		return sendSuccessResponse(c, []string{"result1", "result2"})
 	})
 
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/test", http.NoBody)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", http.NoBody)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("app.Test failed: %v", err)
@@ -209,7 +208,7 @@ func TestSendErrorResponse(t *testing.T) {
 		return sendErrorResponse(c, http.StatusBadRequest, "test error message")
 	})
 
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/test", http.NoBody)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", http.NoBody)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("app.Test failed: %v", err)
@@ -263,7 +262,7 @@ func TestHandleWithPasswordResetEnabled(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(),http.MethodPost, "/api/rpc", strings.NewReader(tt.body))
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(tt.body))
 			req.Header.Set("Content-Type", "application/json")
 
 			resp, err := app.Test(req)
@@ -291,7 +290,7 @@ func TestHandleIPRateLimited(t *testing.T) {
 	app.Post("/api/rpc", handler.Handle)
 
 	body := `{"method":"change-password","params":["testuser","OldPass123!","NewPass456!"]}`
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodPost, "/api/rpc", strings.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -460,7 +459,7 @@ func TestHandleRequestPasswordResetRateLimited(t *testing.T) {
 	app.Post("/api/rpc", handler.Handle)
 
 	body := `{"method":"request-password-reset","params":["user@example.com"]}`
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodPost, "/api/rpc", strings.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -501,7 +500,7 @@ func TestHandleResetPasswordSuccess(t *testing.T) {
 	app.Post("/api/rpc", handler.Handle)
 
 	body := `{"method":"reset-password","params":["validtoken","NewPass123!"]}`
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodPost, "/api/rpc", strings.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -527,7 +526,7 @@ func TestHandleChangePasswordSuccess(t *testing.T) {
 	app.Post("/api/rpc", handler.Handle)
 
 	body := `{"method":"change-password","params":["testuser","OldPass123!","NewPass456!"]}`
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodPost, "/api/rpc", strings.NewReader(body))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
@@ -564,7 +563,7 @@ func TestSendSuccessResponseWithEmptyData(t *testing.T) {
 		return sendSuccessResponse(c, []string{})
 	})
 
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/test", http.NoBody)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", http.NoBody)
 	resp, err := app.Test(req)
 	if err != nil {
 		t.Fatalf("app.Test failed: %v", err)
@@ -608,7 +607,7 @@ func TestSendErrorResponseWithDifferentStatusCodes(t *testing.T) {
 				return sendErrorResponse(c, tc.statusCode, tc.message)
 			})
 
-			req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/test", http.NoBody)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", http.NoBody)
 			resp, err := app.Test(req)
 			if err != nil {
 				t.Fatalf("app.Test failed: %v", err)

@@ -14,12 +14,11 @@ import (
 
 	"github.com/gofiber/fiber/v3"
 	"github.com/gofiber/fiber/v3/middleware/helmet"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	webstatic "github.com/netresearch/ldap-selfservice-password-changer/internal/web/static"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/templates"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // createTestApp creates a Fiber app configured for E2E testing.
@@ -103,7 +102,7 @@ func TestE2E_SecurityHeaders(t *testing.T) {
 
 	for _, page := range pages {
 		t.Run(page, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, page, http.NoBody)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, page, http.NoBody)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer func() { _ = resp.Body.Close() }()
@@ -123,7 +122,7 @@ func TestE2E_SecurityHeaders(t *testing.T) {
 func TestE2E_IndexPage(t *testing.T) {
 	app := createTestApp(t)
 
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/", http.NoBody)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/", http.NoBody)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
@@ -157,7 +156,7 @@ func TestE2E_IndexPage(t *testing.T) {
 func TestE2E_ForgotPasswordPage(t *testing.T) {
 	app := createTestApp(t)
 
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/forgot-password", http.NoBody)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/forgot-password", http.NoBody)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
@@ -179,7 +178,7 @@ func TestE2E_ForgotPasswordPage(t *testing.T) {
 func TestE2E_ResetPasswordPage(t *testing.T) {
 	app := createTestApp(t)
 
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/reset-password", http.NoBody)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/reset-password", http.NoBody)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
@@ -201,7 +200,7 @@ func TestE2E_ResetPasswordPage(t *testing.T) {
 func TestE2E_HealthEndpoint(t *testing.T) {
 	app := createTestApp(t)
 
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/health/live", http.NoBody)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/health/live", http.NoBody)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
@@ -229,7 +228,7 @@ func TestE2E_404Response(t *testing.T) {
 
 	for _, path := range paths {
 		t.Run(path, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, path, http.NoBody)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, path, http.NoBody)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer func() { _ = resp.Body.Close() }()
@@ -254,7 +253,7 @@ func TestE2E_MethodNotAllowed(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.method+" "+tt.path, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(),tt.method, tt.path, http.NoBody)
+			req := httptest.NewRequestWithContext(context.Background(), tt.method, tt.path, http.NoBody)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer func() { _ = resp.Body.Close() }()
@@ -273,7 +272,7 @@ func TestE2E_AccessibilityAttributes(t *testing.T) {
 
 	for _, page := range pages {
 		t.Run(page, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, page, http.NoBody)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, page, http.NoBody)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer func() { _ = resp.Body.Close() }()
@@ -307,7 +306,7 @@ func TestE2E_ContentTypeHeaders(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.path, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, tt.path, http.NoBody)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, tt.path, http.NoBody)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer func() { _ = resp.Body.Close() }()
@@ -354,7 +353,7 @@ func TestE2E_XSSPrevention(t *testing.T) {
 
 	for _, attempt := range xssAttempts {
 		t.Run(attempt.name, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, attempt.url, http.NoBody)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, attempt.url, http.NoBody)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer func() { _ = resp.Body.Close() }()
@@ -382,7 +381,7 @@ func TestE2E_ResponseSize(t *testing.T) {
 
 	for _, page := range pages {
 		t.Run(page, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, page, http.NoBody)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, page, http.NoBody)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer func() { _ = resp.Body.Close() }()
@@ -413,7 +412,7 @@ func TestE2E_NoSensitiveDataInHTML(t *testing.T) {
 
 	for _, page := range pages {
 		t.Run(page, func(t *testing.T) {
-			req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, page, http.NoBody)
+			req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, page, http.NoBody)
 			resp, err := app.Test(req)
 			require.NoError(t, err)
 			defer func() { _ = resp.Body.Close() }()

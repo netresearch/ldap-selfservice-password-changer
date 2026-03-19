@@ -54,7 +54,7 @@ func FuzzExtractClientIP(f *testing.F) {
 			return c.SendStatus(http.StatusOK)
 		})
 
-		req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/test", http.NoBody)
+		req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/test", http.NoBody)
 		if xForwardedFor != "" {
 			req.Header.Set("X-Forwarded-For", xForwardedFor)
 		}

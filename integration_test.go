@@ -15,14 +15,13 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
-
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/email"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/templates"
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 // getEnvOrSkip returns an environment variable or skips the test.
@@ -103,7 +102,7 @@ func TestIntegration_FullPasswordResetFlow(t *testing.T) {
 	})
 
 	// Test health endpoint
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodGet, "/health/live", http.NoBody)
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/health/live", http.NoBody)
 	resp, err := app.Test(req)
 	require.NoError(t, err)
 	defer func() { _ = resp.Body.Close() }()
@@ -242,7 +241,7 @@ func TestIntegration_JSONRPCEndpoint(t *testing.T) {
 	bodyBytes, err := json.Marshal(reqBody)
 	require.NoError(t, err)
 
-	req := httptest.NewRequestWithContext(context.Background(),http.MethodPost, "/api/rpc", bytes.NewReader(bodyBytes))
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/rpc", bytes.NewReader(bodyBytes))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
