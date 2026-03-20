@@ -13,9 +13,10 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v3"
+	ldap "github.com/netresearch/simple-ldap-go"
+
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
-	ldap "github.com/netresearch/simple-ldap-go"
 )
 
 // TestHandle tests the main Handle function routing and body parsing.
@@ -120,7 +121,9 @@ func TestHandleInvalidJSON(t *testing.T) {
 	app := fiber.New()
 	app.Post("/api/rpc", handler.Handle)
 
-	req := httptest.NewRequestWithContext(context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(`{invalid json`))
+	body := `{invalid json`
+	req := httptest.NewRequestWithContext(
+		context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(body))
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)
