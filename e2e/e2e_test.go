@@ -59,7 +59,7 @@ func createTestApp(t *testing.T) *fiber.App {
 	app.Use(helmet.New(helmet.Config{
 		ContentSecurityPolicy: "default-src 'self'; " +
 			"script-src 'self'; " +
-			"style-src 'self'; " +
+			"style-src 'self' 'unsafe-inline'; " +
 			"img-src 'self' data:; " +
 			"font-src 'self'; " +
 			"connect-src 'self'; " +
