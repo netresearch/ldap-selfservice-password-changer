@@ -36,6 +36,12 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@tailwindcss/oxide"
-    ]
+    ],
+    "overrides": {
+      "picomatch@<2.3.2": "2.3.2",
+      "picomatch@>=4 <4.0.4": "4.0.4",
+      "yaml@>=2 <2.8.3": "2.8.3",
+      "brace-expansion@>=4 <5.0.5": "5.0.5"
+    }
   }
 }
