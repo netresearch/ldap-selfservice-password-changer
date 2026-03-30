@@ -3,7 +3,6 @@
     "target": "ESNext",
     "lib": ["DOM", "ESNext"],
     "module": "ESNext",
-    "baseUrl": "./internal/web/static",
     "rootDir": "./internal/web/static",
     "allowJs": true,
     "checkJs": true,
