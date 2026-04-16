@@ -169,6 +169,8 @@ linters:
         - whyNoLint # Allow missing explanations for nolint directives
 
   exclusions:
+    paths:
+      - node_modules
     rules:
       # Exclude some linters from running on tests files
       - path: '_test\.go'
