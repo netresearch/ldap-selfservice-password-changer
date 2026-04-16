@@ -1,21 +1,18 @@
-FROM node:25 AS frontend-builder
+FROM oven/bun:1 AS frontend-builder
 WORKDIR /build
 
 # Disable Husky git hooks in Docker build (no .git directory in build context)
 ENV HUSKY=0
 
-# Install pnpm globally via npm (Node 25 doesn't include corepack by default yet)
-RUN npm install -g pnpm@10.28.2
-
 # Copy dependency files first for better layer caching
-COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY package.json package-lock.json ./
+RUN bun install
 
 # Copy only necessary files for frontend build
 COPY postcss.config.js tailwind.config.js tsconfig.json ./
 COPY internal/web/ ./internal/web/
 
-RUN pnpm build:assets
+RUN bun run build:assets
 
 FROM golang:1.26-alpine AS backend-builder
 WORKDIR /build

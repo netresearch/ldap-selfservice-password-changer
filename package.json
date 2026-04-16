@@ -3,39 +3,33 @@
   "type": "module",
   "author": "DevMiner <devminer@devminer.xyz>",
   "license": "MIT",
-  "packageManager": "pnpm@10.33.0",
   "scripts": {
-    "start": "pnpm build:assets && go run .",
-    "dev": "pnpm build:assets && (pnpm js:dev & pnpm css:dev & air)",
-    "build": "pnpm build:assets && go build",
+    "start": "bun run build:assets && go run .",
+    "dev": "bun run build:assets && (bun run js:dev & bun run css:dev & air)",
+    "build": "bun run build:assets && go build",
     "build:assets": "tsc & postcss ./internal/web/tailwind.css -o ./internal/web/static/styles.css & wait",
     "js:build": "tsc",
     "js:dev": "tsc -w --preserveWatchOutput",
     "css:build": "postcss ./internal/web/tailwind.css -o ./internal/web/static/styles.css",
-    "css:dev": "pnpm css:build -w",
+    "css:dev": "bun run css:build -w",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@tailwindcss/postcss": "^4.2.2",
-    "autoprefixer": "^10.4.27",
-    "cssnano": "^7.1.3",
+    "autoprefixer": "^10.5.0",
+    "cssnano": "^7.1.5",
     "eslint": "^10.2.0",
     "eslint-config-prettier": "^10.1.8",
-    "postcss": "^8.5.8",
+    "postcss": "^8.5.10",
     "postcss-cli": "^11.0.1",
     "postcss-nested": "^7.0.2",
-    "prettier": "^3.8.1",
+    "prettier": "^3.8.3",
     "prettier-plugin-go-template": "^0.0.15",
     "prettier-plugin-tailwindcss": "^0.7.2",
     "tailwindcss": "^4.2.2",
     "typescript": "^6.0.2",
-    "typescript-eslint": "^8.57.2"
-  },
-  "pnpm": {
-    "onlyBuiltDependencies": [
-      "@tailwindcss/oxide"
-    ]
+    "typescript-eslint": "^8.58.2"
   }
 }

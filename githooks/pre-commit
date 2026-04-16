@@ -7,28 +7,28 @@ set -e
 echo "Running pre-commit checks..."
 
 # Format check (fast)
-if command -v pnpm >/dev/null 2>&1; then
+if command -v bun >/dev/null 2>&1; then
   echo "→ Checking code formatting..."
-  pnpm prettier --check . || {
-    echo "❌ Formatting check failed. Run: pnpm prettier --write ."
+  bunx prettier --check . || {
+    echo "❌ Formatting check failed. Run: bunx prettier --write ."
     exit 1
   }
 fi
 
 # TypeScript check (fast)
-if [ -f package.json ] && command -v pnpm >/dev/null 2>&1; then
+if [ -f package.json ] && command -v bun >/dev/null 2>&1; then
   echo "→ Checking TypeScript types..."
-  pnpm js:build || {
+  bun run js:build || {
     echo "❌ TypeScript check failed"
     exit 1
   }
 fi
 
 # ESLint check
-if [ -f package.json ] && command -v pnpm >/dev/null 2>&1; then
+if [ -f package.json ] && command -v bun >/dev/null 2>&1; then
   echo "→ Running ESLint..."
-  pnpm lint || {
-    echo "⚠️  ESLint found issues. Run: pnpm lint:fix"
+  bun run lint || {
+    echo "⚠️  ESLint found issues. Run: bun run lint:fix"
   }
 fi
 

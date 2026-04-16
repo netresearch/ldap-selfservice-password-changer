@@ -5,7 +5,7 @@ help: ## Show available targets
 .PHONY: install
 install: ## Install all dependencies (Node + Go)
 	@echo "📦 Installing dependencies..."
-	pnpm install
+	bun install
 	go mod download
 	@echo "✅ Dependencies installed"
 
@@ -22,12 +22,12 @@ setup: install hooks ## Full setup: install deps and git hooks
 .PHONY: dev
 dev: ## Start development servers with hot-reload
 	@echo "🚀 Starting development mode..."
-	pnpm dev
+	bun run dev
 
 .PHONY: build
 build: ## Build production binary
 	@echo "🔨 Building production binary..."
-	pnpm build
+	bun run build
 	@echo "✅ Build complete: ./ldap-selfservice-password-changer"
 
 .PHONY: build-docker
@@ -92,7 +92,7 @@ test-all: test-unit test-fuzz-quick ## Run unit and quick fuzz tests
 .PHONY: typecheck
 typecheck: ## Type check TypeScript
 	@echo "🔍 Type checking TypeScript..."
-	pnpm js:build
+	bun run js:build
 	@echo "✅ TypeScript type check passed"
 
 .PHONY: lint
@@ -105,14 +105,14 @@ lint: ## Run linters
 .PHONY: format
 format: ## Format all code
 	@echo "✨ Formatting code..."
-	pnpm prettier --write .
+	bunx prettier --write .
 	go fmt ./...
 	@echo "✅ Code formatted"
 
 .PHONY: format-check
 format-check: ## Check code formatting (CI)
 	@echo "🔍 Checking code formatting..."
-	pnpm prettier --check .
+	bunx prettier --check .
 	@test -z "$$(gofmt -l . | tee /dev/stderr)" || (echo "❌ Go files need formatting" && exit 1)
 	@echo "✅ Code formatting check passed"
 
