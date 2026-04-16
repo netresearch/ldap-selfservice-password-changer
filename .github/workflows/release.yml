@@ -31,19 +31,12 @@ jobs:
       - name: Build frontend assets
         run: bun install && bun run build:assets
 
-      - name: Commit generated build artifacts
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add -f bun.lock internal/web/static/
-          git diff --cached --quiet || git commit -m "build: generated frontend assets"
-
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7.0.0
         with:
           distribution: goreleaser
           version: "~> v2"
-          args: release --clean
+          args: release --clean --skip=validate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
