@@ -9,8 +9,6 @@ run:
   modules-download-mode: readonly
   allow-parallel-runners: true
   go: "1.26"
-  exclude-dirs:
-    - node_modules
 
 linters:
   enable:
@@ -214,3 +212,5 @@ issues:
   max-issues-per-linter: 0
   max-same-issues: 0
   uniq-by-line: true
+  exclude-dirs:
+    - node_modules
