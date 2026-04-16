@@ -7,6 +7,32 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [v1.3.0] - 2026-04-16
+
+### Fixed
+
+- **Password change bug**: Upgrade `simple-ldap-go` v1.9.0 → v1.10.0 — fixes `ChangePasswordForSAMAccountNameContext` passing empty username to credential creation, causing all password changes to fail (NRS-4340)
+- Consistent `ValidateSAMAccountName` input validation across all sAMAccountName entrypoints (prevents LDAP injection)
+- Exclude `node_modules` from golangci-lint (`linters.exclusions.paths`)
+
+### Changed
+
+- **Migrate from pnpm to Bun** — faster installs, resolves broken `pnpm audit` (npm retired audit API endpoint)
+- All CI workflows, Dockerfile, Makefile, githooks updated for Bun
+
+### Dependencies
+
+- `simple-ldap-go` v1.9.0 → v1.10.0
+- `golang.org/x/crypto` v0.49.0 → v0.50.0
+- `golang.org/x/text` v0.35.0 → v0.36.0
+- `golang.org/x/net` v0.52.0 → v0.53.0
+- `go.opentelemetry.io/otel` v1.42.0 → v1.43.0
+- All Node dependencies upgraded to latest
+
+---
+
 ### Added
 
 - **GopherPass Branding**: Introduced GopherPass as the public-facing name across all user touchpoints
