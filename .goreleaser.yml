@@ -67,6 +67,33 @@ checksum:
   name_template: "checksums.txt"
   algorithm: sha256
 
+# SBOM generation (Syft → SPDX-JSON per archive)
+sboms:
+  - id: spdx
+    artifacts: archive
+    documents:
+      - "{{ .ArtifactName }}.spdx.json"
+    cmd: syft
+    args:
+      - "$artifact"
+      - "--output"
+      - "spdx-json=$document"
+
+# Cosign keyless OIDC signing of checksums.txt
+signs:
+  - id: cosign-checksums
+    cmd: cosign
+    certificate: "${artifact}.pem"
+    signature: "${artifact}.sig"
+    args:
+      - "sign-blob"
+      - "--yes"
+      - "--output-certificate=${certificate}"
+      - "--output-signature=${signature}"
+      - "${artifact}"
+    artifacts: checksum
+    output: true
+
 # Snapshot configuration for local/test builds
 snapshot:
   version_template: "{{ incpatch .Version }}-next"
@@ -109,7 +136,10 @@ release:
     name: ldap-selfservice-password-changer
   draft: false
   prerelease: auto
-  mode: replace
+  # keep-existing preserves the release body/flags set by the
+  # create-release reusable (notably the computed make_latest flag).
+  # GoReleaser only uploads artifacts, doesn't rewrite the release.
+  mode: keep-existing
   name_template: "{{.ProjectName}} {{.Version}}"
   header: |
     ## GopherPass {{.Version}}
