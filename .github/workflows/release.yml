@@ -99,9 +99,10 @@ jobs:
   verify-notes:
     name: Append verification notes
     # GoReleaser already produces checksums.txt, cosign-signs them, and
-    # generates per-binary SBOMs, so the finalize-release reusable (which
-    # assumes it owns the checksum generation) is not reused here. We
-    # just add the standardized "Verify your download" block inline.
+    # generates per-archive SBOMs, so the finalize-release reusable
+    # (which assumes it owns the checksum generation) is not reused
+    # here. We just add the standardized "Verify your download" block
+    # inline.
     needs: [create-release, goreleaser, container]
     runs-on: ubuntu-latest
     permissions:
