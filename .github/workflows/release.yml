@@ -4,19 +4,45 @@ on:
   push:
     tags:
       - "v*"
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Tag to (re)build (e.g. v1.3.1)"
+        required: true
+        type: string
 
 permissions:
-  contents: write
-  packages: write
+  contents: read
 
 jobs:
-  release:
+  create-release:
+    name: Create GitHub Release
+    uses: netresearch/.github/.github/workflows/create-release.yml@main
+    permissions:
+      contents: write
+    with:
+      tag: ${{ inputs.tag || '' }}
+
+  goreleaser:
+    name: Build binaries + archives + SBOMs (GoReleaser)
+    needs: create-release
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
+        with:
+          egress-policy: audit
+
       - name: Checkout
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
         with:
           fetch-depth: 0
+          ref: ${{ needs.create-release.outputs.tag }}
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
@@ -26,10 +52,16 @@ jobs:
           cache: true
 
       - name: Install Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
+        uses: oven-sh/setup-bun@735343b667d3e6f658f44d0eca948eb6282f2b76 # v2.0.2
+
+      - name: Install Syft (for SBOMs)
+        uses: anchore/sbom-action/download-syft@e22c389904149dbc22b58101806040fa8d37a610 # v0.24.0
+
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@cad07c2e89fa2edd6e2d7bab4c1aa38e53f76003 # v4.1.1
 
       - name: Build frontend assets
-        run: bun install && bun run build:assets
+        run: bun install --frozen-lockfile && bun run build:assets
 
       - name: Run GoReleaser
         uses: goreleaser/goreleaser-action@ec59f474b9834571250b370d4735c50f8e2d1e29 # v7.0.0
@@ -40,9 +72,92 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Upload release artifacts
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+      - name: Attest release artifacts
+        uses: actions/attest-build-provenance@a2bbfa25375fe432b6a289bc6b6cd05ecd0c4c32 # v4.1.0
         with:
-          name: release-artifacts
-          path: dist/
-          retention-days: 5
+          subject-path: |
+            dist/*.tar.gz
+            dist/*.zip
+            dist/*.spdx.json
+
+  container:
+    name: Build container image
+    needs: create-release
+    uses: netresearch/.github/.github/workflows/build-container.yml@main
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+      attestations: write
+    with:
+      image-name: ldap-selfservice-password-changer
+      ref: ${{ needs.create-release.outputs.tag }}
+      sign: true
+      attest: true
+
+  verify-notes:
+    name: Append verification notes
+    # GoReleaser already produces checksums.txt, cosign-signs them, and
+    # generates per-binary SBOMs, so the finalize-release reusable (which
+    # assumes it owns the checksum generation) is not reused here. We
+    # just add the standardized "Verify your download" block inline.
+    needs: [create-release, goreleaser, container]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      TAG: ${{ needs.create-release.outputs.tag }}
+      VERSION: ${{ needs.create-release.outputs.version }}
+      REPO: ${{ github.repository }}
+      IMAGE_REF: ghcr.io/${{ github.repository_owner }}/ldap-selfservice-password-changer
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
+        with:
+          egress-policy: audit
+
+      - name: Append verification block to release notes
+        run: |
+          set -euo pipefail
+          CURRENT=$(gh release view "$TAG" --repo "$REPO" --json body --jq '.body // ""')
+          MARKER="<!-- verification-notes -->"
+          if printf '%s' "$CURRENT" | grep -q "$MARKER"; then
+            echo "Verification notes already present — skipping"
+            exit 0
+          fi
+          FENCE='```'
+          {
+            printf '%s\n\n' "$CURRENT"
+            printf '%s\n' "$MARKER"
+            printf '## Verify your download\n\n'
+            printf 'Verify the checksums file (signed by GoReleaser via cosign keyless OIDC):\n\n'
+            printf '%s\n' "${FENCE}sh"
+            printf 'cosign verify-blob \\\n'
+            printf '  --certificate checksums.txt.pem \\\n'
+            printf '  --signature checksums.txt.sig \\\n'
+            printf '  --certificate-identity-regexp "https://github.com/%s/" \\\n' "$REPO"
+            printf '  --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \\\n'
+            printf '  checksums.txt\n'
+            printf '%s\n\n' "${FENCE}"
+            printf 'Verify each artifact against checksums.txt:\n\n'
+            printf '%s\n' "${FENCE}sh"
+            printf 'sha256sum -c checksums.txt --ignore-missing\n'
+            printf '%s\n\n' "${FENCE}"
+            printf 'Verify build provenance attestations:\n\n'
+            printf '%s\n' "${FENCE}sh"
+            printf 'gh attestation verify <artifact> --repo %s\n' "$REPO"
+            printf '%s\n\n' "${FENCE}"
+            printf 'Verify the container image signature:\n\n'
+            printf '%s\n' "${FENCE}sh"
+            printf 'cosign verify %s:%s \\\n' "$IMAGE_REF" "$VERSION"
+            printf '  --certificate-identity-regexp "https://github.com/%s/" \\\n' "$REPO"
+            printf '  --certificate-oidc-issuer "https://token.actions.githubusercontent.com"\n'
+            printf '%s\n\n' "${FENCE}"
+            printf 'Verify the container image build provenance:\n\n'
+            printf '%s\n' "${FENCE}sh"
+            printf 'gh attestation verify oci://%s:%s --repo %s\n' "$IMAGE_REF" "$VERSION" "$REPO"
+            printf '%s\n' "${FENCE}"
+          } > release_body.md
+          gh release edit "$TAG" --repo "$REPO" --notes-file release_body.md

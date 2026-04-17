@@ -1,5 +1,8 @@
 name: Docker
 
+# Note: tag builds go through .github/workflows/release.yml (which calls
+# the same reusable with sign: true + attest: true). This workflow
+# handles non-release container builds only.
 on:
   schedule:
     - cron: "0 0 * * 0"
@@ -7,14 +10,9 @@ on:
   push:
     branches:
       - main
-    tags:
-      - "v*"
-  workflow_dispatch:
-    inputs:
-      tag:
-        description: "Tag to build (e.g. v1.3.0). Leave empty to build the current ref."
-        required: false
-        type: string
+
+permissions:
+  contents: read
 
 jobs:
   build:
@@ -25,4 +23,3 @@ jobs:
       security-events: write
     with:
       image-name: ldap-selfservice-password-changer
-      ref: ${{ inputs.tag || '' }}
