@@ -42,8 +42,6 @@ Source: `package.json` scripts + `go test`. Run from repo root.
 
 **Docker-first**: `docker compose --profile dev up` is the canonical dev path; native Bun/Go is optional convenience.
 
-**Docker-first**: `docker compose --profile dev up` is the canonical dev path; native Bun/Go is optional convenience.
-
 ## Workflow
 
 1. Before coding, read the nearest `AGENTS.md` for the area you're touching.
