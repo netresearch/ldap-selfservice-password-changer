@@ -3,7 +3,9 @@
 # without manual review.
 #
 # SECURITY: uses pull_request_target which runs with base-branch perms.
-# The reusable does NOT checkout PR code into a privileged context.
+# We rely on the pinned reusable (see the `uses:` SHA below) to avoid
+# checking out PR code into a privileged context. Verify the pinned
+# commit before bumping the ref.
 #
 # Bootstrap: the PR that introduces this file must be approved manually
 # (the workflow isn't on the base branch yet). All subsequent PRs
@@ -19,7 +21,7 @@ permissions: {}
 
 jobs:
   quality:
-    uses: netresearch/.github/.github/workflows/pr-quality.yml@main
+    uses: netresearch/.github/.github/workflows/pr-quality.yml@4f6d149347c61a27ce243f5ac8011d6748487341 # main
     permissions:
       contents: read
       pull-requests: write

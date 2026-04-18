@@ -15,7 +15,7 @@ permissions:
 jobs:
   go:
     name: Go
-    uses: netresearch/.github/.github/workflows/go-check.yml@main
+    uses: netresearch/.github/.github/workflows/go-check.yml@4f6d149347c61a27ce243f5ac8011d6748487341 # main
     with:
       go-version-file: go.mod
       setup-bun: true
@@ -30,7 +30,7 @@ jobs:
 
   ts:
     name: TypeScript
-    uses: netresearch/.github/.github/workflows/ts-check.yml@main
+    uses: netresearch/.github/.github/workflows/ts-check.yml@4f6d149347c61a27ce243f5ac8011d6748487341 # main
     permissions:
       contents: read
 

@@ -17,7 +17,7 @@ permissions:
 jobs:
   create-release:
     name: Create GitHub Release
-    uses: netresearch/.github/.github/workflows/create-release.yml@main
+    uses: netresearch/.github/.github/workflows/create-release.yml@4f6d149347c61a27ce243f5ac8011d6748487341 # main
     permissions:
       contents: write
     with:
@@ -83,7 +83,7 @@ jobs:
   container:
     name: Build container image
     needs: create-release
-    uses: netresearch/.github/.github/workflows/build-container.yml@main
+    uses: netresearch/.github/.github/workflows/build-container.yml@4f6d149347c61a27ce243f5ac8011d6748487341 # main
     permissions:
       contents: read
       packages: write
