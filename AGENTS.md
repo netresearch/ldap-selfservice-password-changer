@@ -19,24 +19,28 @@ LDAP self-service password changer (hybrid Go + TypeScript web app). Email-based
 
 ## Commands
 
-Source: `package.json` scripts + `go test`. All commands runnable from repo root.
+Source: `package.json` scripts + `go test`. Run from repo root.
 
-| Task            | Command                                                   |
-| --------------- | --------------------------------------------------------- |
-| Install deps    | `bun install --frozen-lockfile`                           |
-| Dev (all watch) | `bun run dev`                                             |
-| Build all       | `bun run build`                                           |
-| Build assets    | `bun run build:assets`                                    |
-| TS watch        | `bun run js:dev`                                          |
-| TS build/check  | `bun run js:build`                                        |
-| CSS watch       | `bun run css:dev`                                         |
-| CSS build       | `bun run css:build`                                       |
-| Go test         | `go test -v -race ./...`                                  |
-| Go build        | `go build -v ./...`                                       |
-| Format          | `bunx prettier --write .`                                 |
-| Format check    | `bunx prettier --check .`                                 |
-| Lint TS         | `bun run lint` (or `bun run lint:fix`)                    |
-| Lint Go         | `golangci-lint run` (CI: `golangci/golangci-lint-action`) |
+| Task                    | Command                                                                                                 |
+| ----------------------- | ------------------------------------------------------------------------------------------------------- |
+| Install deps            | `bun install` (CI; adds `--frozen-lockfile` for reproducible release builds)                            |
+| Dev (all watch)         | `bun run dev` (runs `build:assets` then TS/CSS watchers + `air` for Go hot-reload)                      |
+| Build all               | `bun run build`                                                                                         |
+| Build assets            | `bun run build:assets` (Tailwind CSS + `tsc`)                                                           |
+| TS watch                | `bun run js:dev`                                                                                        |
+| TS type-check / compile | `bun run js:build` (runs `tsc`; no minifier configured)                                                 |
+| CSS watch               | `bun run css:dev`                                                                                       |
+| CSS build               | `bun run css:build`                                                                                     |
+| Go test                 | `go test -v -race ./...`                                                                                |
+| Go build                | `go build -v ./...`                                                                                     |
+| Format                  | `bunx prettier --write .`                                                                               |
+| Format check            | `bunx prettier --check .`                                                                               |
+| Lint TS                 | `bun run lint` (or `bun run lint:fix`)                                                                  |
+| Lint Go                 | CI runs via `golangci/golangci-lint-action`. Locally: install `golangci-lint` then `golangci-lint run`. |
+
+**Toolchain install**: Bun and Go are installed separately (no `packageManager`/`engines` pins in `package.json`). `air` is declared as a bun script dep; `golangci-lint` is not — install via `go install` or your package manager.
+
+**Docker-first**: `docker compose --profile dev up` is the canonical dev path; native Bun/Go is optional convenience.
 
 **Docker-first**: `docker compose --profile dev up` is the canonical dev path; native Bun/Go is optional convenience.
 

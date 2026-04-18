@@ -58,7 +58,7 @@ TOKEN_EXPIRY_DURATION=1h
 
 ```bash
 # Development
-go run .                      # Start server with hot-reload (via bun run dev)
+go run .                      # Start server once (no hot-reload). For hot-reload, run `bun run dev` which invokes `air`.
 go build -v ./...             # Compile all packages
 go test -v ./...              # Run all tests with verbose output
 

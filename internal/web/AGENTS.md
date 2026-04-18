@@ -31,7 +31,7 @@ Note: HTTP handlers, middleware, and server setup are in `main.go` at the projec
 
 ## Setup/Environment
 
-**Prerequisites**: Node.js 24+, Bun 1.1+ (from root `package.json`)
+**Prerequisites**: Bun 1.1+ (install separately; `package.json` does not pin `packageManager` or `engines`). Node.js only needed for tooling that doesn't run under Bun.
 
 ```bash
 # From project root
@@ -55,7 +55,7 @@ bun run dev              # Concurrent: CSS + TS + Go hot-reload
 bun run build:assets     # TypeScript + CSS (production builds)
 
 # TypeScript
-bun run js:build         # Compile TS → ES modules + minify
+bun run js:build         # Compile TS → ES modules (type-check; no minifier configured)
 bun run js:dev           # Watch mode with preserveWatchOutput
 tsc --noEmit          # Type check only (no output)
 
@@ -70,11 +70,17 @@ bunx prettier --check internal/web/    # Check formatting (CI)
 
 **No unit tests yet** - TypeScript strict mode catches most errors, integration via Go tests
 
-**CI validation** (from `.github/workflows/check.yml`):
+**CI validation** (`.github/workflows/check.yml`):
 
 ```bash
-bun install --frozen-lockfile
+# "Check types" job
+bun install
 bun run js:build         # TypeScript strict compilation
+```
+
+```bash
+# "Check formatting" job (separate)
+bun install
 bunx prettier --check .
 ```
 
@@ -350,7 +356,7 @@ console.log(items[0].toUpperCase()); // ❌ may crash if empty array
 
 **Performance checklist**:
 
-- [ ] Minified JS (via `bun run js:build`)
+- [ ] TypeScript compiled cleanly (`bun run js:build`; no minification step is configured today — if added, reference it here)
 - [ ] CSS optimized (cssnano via PostCSS)
 - [ ] No unused Tailwind classes (purged automatically)
 - [ ] No console.log in production code
