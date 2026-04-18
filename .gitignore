@@ -12,3 +12,6 @@ coverage.out
 coverage.html
 *.coverprofile
 tmp/
+
+# Playwright MCP snapshot artifacts
+.playwright-mcp/
