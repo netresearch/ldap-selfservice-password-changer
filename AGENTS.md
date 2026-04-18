@@ -1,305 +1,121 @@
-# Agent Guidelines
+# AGENTS.md
 
-<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-02-22 -->
+<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-04-18 -->
 
-**Precedence**: Nearest AGENTS.md wins. This is the root file with global defaults.
+**Precedence:** the **closest `AGENTS.md`** to the files you're changing wins. This root holds global defaults only; scoped files override.
 
-**Project**: LDAP Selfservice Password Changer — hybrid Go + TypeScript web application with WCAG 2.2 AAA accessibility compliance.
+## Index of scoped AGENTS.md
 
-## Quick Navigation
+| Path                                             | Scope                                               |
+| ------------------------------------------------ | --------------------------------------------------- |
+| [internal/AGENTS.md](./internal/AGENTS.md)       | Go backend packages — LDAP, rate limit, RPC, tokens |
+| [internal/web/AGENTS.md](./internal/web/AGENTS.md) | Frontend — TypeScript, Tailwind CSS, WCAG 2.2 AAA |
 
-- [internal/AGENTS.md](internal/AGENTS.md) - Go backend services
-- [internal/web/AGENTS.md](internal/web/AGENTS.md) - TypeScript frontend & Tailwind CSS
+## Project
 
-## Global Defaults
+LDAP self-service password changer (hybrid Go + TypeScript web app). Email-based reset, rate limiting, WCAG 2.2 AAA compliance. Single binary deployment with embedded assets.
 
-### Project Overview
+**Stack**: Go 1.26 + Fiber v3, TypeScript (ultra-strict), Tailwind CSS 4, Docker multi-stage, **Bun** (migrated from pnpm in [`8f69f47`](https://github.com/netresearch/ldap-selfservice-password-changer/commit/8f69f47)).
 
-Self-service password change/reset web app for LDAP/ActiveDirectory with email-based password reset, rate limiting, and strict accessibility standards. Single binary deployment with embedded assets.
+## Commands
 
-**Stack**: Go 1.26 + Fiber v3, TypeScript (ultra-strict), Tailwind CSS 4, Docker multi-stage builds, pnpm 10.30
+Source: `package.json` scripts + `go test`. All commands runnable from repo root.
 
-**Key characteristics**:
+| Task            | Command                                       |
+| --------------- | --------------------------------------------- |
+| Install deps    | `bun install --frozen-lockfile`               |
+| Dev (all watch) | `bun run dev`                                 |
+| Build all       | `bun run build`                               |
+| Build assets    | `bun run build:assets`                        |
+| TS watch        | `bun run js:dev`                              |
+| TS build/check  | `bun run js:build`                            |
+| CSS watch       | `bun run css:dev`                             |
+| CSS build       | `bun run css:build`                           |
+| Go test         | `go test -v -race ./...`                      |
+| Go build        | `go build -v ./...`                           |
+| Format          | `bunx prettier --write .`                     |
+| Format check    | `bunx prettier --check .`                     |
+| Lint TS         | `bun run lint` (or `bun run lint:fix`)        |
+| Lint Go         | `golangci-lint run` (CI: `golangci/golangci-lint-action`) |
 
-- Docker-first: All dev/CI must work via Docker
-- Accessibility: WCAG 2.2 AAA compliance (7:1 contrast, keyboard nav, screen readers)
-- Type-safe: Go with testcontainers, TypeScript with all strict flags
-- Security-focused: LDAPS, rate limiting, token-based reset, no password storage
+**Docker-first**: `docker compose --profile dev up` is the canonical dev path; native Bun/Go is optional convenience.
 
-### Setup
+## Workflow
 
-**Prerequisites**: Docker + Docker Compose (required), Go 1.26+, Node.js 24+, pnpm 10.28+ (for native dev)
+1. Before coding, read the nearest `AGENTS.md` for the area you're touching.
+2. After a change: smallest relevant check (`bun run js:build` for TS, `go test ./pkg/...` for Go).
+3. Before committing: `bunx prettier --write .` + full `go test ./...` if ≥2 files or shared code.
+4. Before claiming done: run verification, **show output as evidence** — never "try again" or "should work now" without proof.
+
+## Security (global)
+
+- **No secrets in git.** Use `.env.local` (gitignored). Never commit LDAP/SMTP credentials.
+- **LDAPS required** in production (`ldaps://` URLs).
+- **No PII logging** — passwords, tokens, session IDs never reach logs.
+- **Rate limiting** 3 req/hour/IP (configurable via `RATE_LIMIT_*`).
+- **Cryptographic random tokens** with configurable expiry; single-use, server-side.
+- **Strict input validation** at boundaries — see `internal/validators/`.
+- **Container runs as UID 65534** (nobody), not root.
+- **Renovate** handles dependency updates; review major-version changelogs.
+
+## PR/Commit Checklist
+
+Before commit:
+
+- [ ] `bunx prettier --write .`
+- [ ] `bun run js:build` (TypeScript strict)
+- [ ] `go test ./...`
+- [ ] `go build`
+- [ ] No secrets in staged files
+- [ ] Docs updated if behavior changed
+- [ ] WCAG 2.2 AAA maintained (if UI changed — see [docs/accessibility.md](docs/accessibility.md))
+
+Commit format: [Conventional Commits](https://www.conventionalcommits.org/). Examples: `feat(auth): add reset via email`, `fix(validators): correct regex`, `chore(deps): bump bun`. **No AI attribution** in messages.
+
+PR:
+
+- [ ] CI green (types, formatting, tests, security scans)
+- [ ] Keep small (~≤300 net LOC when possible)
+- [ ] Prefix with ticket ID when applicable
+- [ ] Updated docs land in same PR
+
+## House Rules
+
+- **Docker-first.** Native setup is convenience, not requirement. Use compose profiles: `dev`, `test`.
+- **YAGNI.** Build only what's requested. No speculative features.
+- **Type safety.** TS: no `any`, all strict flags on. Go: `any` (not `interface{}`), `errors.AsType[T]`, wrap errors with context.
+- **Accessibility non-negotiable.** 7:1 contrast, full keyboard nav, screen-reader tested. See [docs/accessibility.md](docs/accessibility.md).
+- **Dependencies.** Keep `bun.lock` and `go.sum` committed. Use top-level `overrides` in `package.json` for transitive CVE fixes when upstream hasn't patched.
+- **CI/CD.** `pr-quality.yml` auto-approves collaborator PRs. `auto-merge-deps.yml` handles Dependabot/Renovate. See [docs/development-guide.md](docs/development-guide.md) for bootstrap.
+
+## Releases
+
+Unified with the org's release pipeline ([`netresearch/.github`](https://github.com/netresearch/.github) reusables).
 
 ```bash
-# Clone and setup environment
-git clone <repo>
-cd ldap-selfservice-password-changer
-cp .env.local.example .env.local  # Edit with your LDAP config
-
-# Docker (recommended)
-docker compose --profile dev up
-
-# Native development
-pnpm install
-go mod download
-pnpm dev  # Runs concurrent TS watch, CSS watch, and Go with hot-reload
+git tag -s vX.Y.Z -m "vX.Y.Z"    # annotated + signed tag (required)
+git push origin vX.Y.Z            # triggers release.yml
 ```
 
-See [docs/development-guide.md](docs/development-guide.md) for comprehensive setup.
+Pipeline (see [.github/workflows/release.yml](.github/workflows/release.yml)):
 
-### Build & Test Commands
+1. **`create-release`** — creates GitHub Release; computes `make_latest` from semver vs existing releases (backfills and older-major bugfixes don't steal the Latest badge).
+2. **`goreleaser`** — builds binaries, archives, per-archive Syft SBOMs, cosign-signed `checksums.txt`; attests archives+SBOMs via `actions/attest-build-provenance`.
+3. **`container`** — multi-arch ghcr.io image, cosign keyless-signed + SLSA provenance.
+4. **`verify-notes`** — appends standardized "Verify your download" block.
 
-**Package manager**: pnpm (specified in package.json: `pnpm@10.30.1`)
+**Backfill**: `gh workflow run release.yml --ref main -f tag=vX.Y.Z`.
 
-```bash
-# Build everything
-pnpm build                # Build frontend assets + Go binary
+**GoReleaser config notes** ([`.goreleaser.yml`](.goreleaser.yml)):
 
-# Frontend only
-pnpm build:assets         # TypeScript + Tailwind CSS
-pnpm js:build             # TypeScript compile + minify
-pnpm css:build            # Tailwind CSS + PostCSS
+- `mode: keep-existing` (preserves create-release's notes; don't change to `replace`)
+- `changelog.use: git` (not `github` — `github` ignores filters)
+- No 32-bit ARM: Fiber v3 `math.MaxUint32` overflows `int` on 32-bit → `linux/arm` excluded
 
-# Development (watch mode)
-pnpm dev                  # Concurrent: TS watch, CSS watch, Go hot-reload
-pnpm js:dev               # TypeScript watch
-pnpm css:dev              # CSS watch
-pnpm go:dev               # Go with nodemon hot-reload
+## When Stuck
 
-# Tests
-go test -v ./...          # All Go tests with verbose output
-go test ./internal/...    # Specific package tests
-
-# Formatting
-pnpm prettier --write .   # Format TS, Go templates, config files
-pnpm prettier --check .   # Check formatting (CI)
-
-# Linting
-pnpm lint                 # ESLint check (TS/JS)
-pnpm lint:fix             # ESLint auto-fix
-
-# Type checking
-pnpm js:build             # TypeScript strict compilation (no emit in dev)
-go build -v ./...         # Go compilation + type checking
-```
-
-**CI commands** (from `.github/workflows/check.yml`):
-
-- Type check: `pnpm js:build` and `go build -v ./...`
-- Format check: `pnpm prettier --check .`
-- Lint Go: `golangci-lint` (via GitHub Action)
-- Lint JS/TS: `pnpm lint`
-- Tests: `go test -v -race ./...` (with coverage)
-
-### Code Style
-
-**TypeScript**:
-
-- Ultra-strict tsconfig: `strict: true`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes`, `noPropertyAccessFromIndexSignature`
-- Prettier formatting: 120 char width, semicolons, double quotes, 2-space tabs
-- No `any` types - use proper type definitions
-- Follow existing patterns in `internal/web/static/`
-
-**Go**:
-
-- Standard Go formatting (`go fmt`)
-- Prettier with `prettier-plugin-go-template` for HTML templates
-- Follow Go project layout: `internal/` for private packages, `main.go` at root
-- Use testcontainers for integration tests (see `*_test.go` files)
-- Error wrapping with context
-- Go 1.26 idioms: `wg.Go()`, `errors.AsType[T]`, `b.Loop()`, `any` (not `interface{}`)
-
-**General**:
-
-- Composition over inheritance
-- SOLID, KISS, DRY, YAGNI principles
-- Law of Demeter: minimize coupling
-- No secrets in VCS (use .env.local, excluded from git)
-
-### Security
-
-- **No secrets in git**: Use `.env.local` (gitignored), never commit LDAP credentials
-- **LDAPS required**: Production must use encrypted LDAP connections
-- **Rate limiting**: 3 requests/hour per IP (configurable via `RATE_LIMIT_*` env vars)
-- **Token security**: Cryptographic random tokens with configurable expiry
-- **Input validation**: Strict validation on all user inputs (see `internal/validators/`)
-- **Dependency scanning**: Renovate enabled, review changelogs for major updates
-- **No PII logging**: Redact sensitive data in logs
-- **Run as non-root**: Dockerfile uses UID 65534 (nobody)
-
-### PR/Commit Checklist
-
-✅ **Before commit**:
-
-- [ ] Run `pnpm prettier --write .` (format all)
-- [ ] Run `pnpm js:build` (TypeScript strict check)
-- [ ] Run `go test ./...` (all tests pass)
-- [ ] Run `go build` (compilation check)
-- [ ] No secrets in changed files
-- [ ] Update docs if behavior changed
-- [ ] WCAG 2.2 AAA compliance maintained (if UI changed)
-
-✅ **Commit format**: Conventional Commits
-
-```
-type(scope): description
-
-Examples:
-feat(auth): add password reset via email
-fix(validators): correct password policy regex
-docs(api): update JSON-RPC examples
-chore(deps): update pnpm to v10.18.1
-```
-
-**No Claude attribution** in commit messages.
-
-✅ **PR requirements**:
-
-- [ ] All CI checks pass (types, formatting, tests)
-- [ ] Keep PRs small (~≤300 net LOC if possible)
-- [ ] Include ticket ID if applicable: `fix(rate-limit): ISSUE-123: fix memory leak`
-- [ ] Update relevant docs in same PR (README, AGENTS.md, docs/)
-
-### Good vs Bad Examples
-
-**✅ Good - TypeScript strict types**:
-
-```typescript
-interface PasswordPolicy {
-  minLength: number;
-  requireNumbers: boolean;
-}
-
-function validatePassword(password: string, policy: PasswordPolicy): boolean {
-  const hasNumber = /\d/.test(password);
-  return password.length >= policy.minLength && (!policy.requireNumbers || hasNumber);
-}
-```
-
-**❌ Bad - Using any or unsafe access**:
-
-```typescript
-function validatePassword(password: any, policy: any) {
-  // ❌ any types
-  return password.length >= policy.minLength; // ❌ unsafe access
-}
-```
-
-**✅ Good - Go error handling**:
-
-```go
-func connectLDAP(config LDAPConfig) (*ldap.Conn, error) {
-    conn, err := ldap.DialURL(config.URL)
-    if err != nil {
-        return nil, fmt.Errorf("failed to connect to LDAP at %s: %w", config.URL, err)
-    }
-    return conn, nil
-}
-```
-
-**❌ Bad - Ignoring errors**:
-
-```go
-func connectLDAP(config LDAPConfig) *ldap.Conn {
-    conn, _ := ldap.DialURL(config.URL)  // ❌ ignoring error
-    return conn                           // ❌ may return nil
-}
-```
-
-**✅ Good - Accessible UI**:
-
-```html
-<button type="submit" aria-label="Submit password change" class="bg-blue-600 hover:bg-blue-700 focus:ring-4">
-  Change Password
-</button>
-```
-
-**❌ Bad - Inaccessible UI**:
-
-```html
-<div onclick="submit()">Submit</div>
-❌ not keyboard accessible, wrong semantics
-```
-
-### When Stuck
-
-1. **Check existing docs**: [docs/](docs/) has comprehensive guides
-2. **Review similar code**: Look for patterns in `internal/` packages
-3. **Run tests**: `go test -v ./...` often reveals issues
-4. **Check CI logs**: GitHub Actions shows exact failure points
-5. **Verify environment**: Ensure `.env.local` is properly configured
-6. **Docker issues**: `docker compose down -v && docker compose --profile dev up --build`
-7. **Type errors**: Review `tsconfig.json` strict flags, use proper types
-8. **Accessibility**: See [docs/accessibility.md](docs/accessibility.md) for WCAG 2.2 AAA guidelines
-
-### House Rules
-
-**Docker-First Philosophy**:
-
-- All dev and CI must work via Docker Compose
-- Native setup is optional convenience, not requirement
-- Use profiles in compose.yml: `--profile dev` or `--profile test`
-
-**Documentation Currency**:
-
-- Update docs in same PR as code changes
-- No drift between code and documentation
-- Keep README, AGENTS.md, and docs/ synchronized
-
-**Testing Standards**:
-
-- Aim for ≥80% coverage on changed code
-- Use testcontainers for integration tests (see existing `*_test.go`)
-- For bugfixes: write failing test first (TDD)
-- Tests must pass before PR approval
-
-**Scope Discipline**:
-
-- Build only what's requested
-- No speculative features
-- MVP first, iterate based on feedback
-- YAGNI: You Aren't Gonna Need It
-
-**Accessibility Non-Negotiable**:
-
-- WCAG 2.2 AAA compliance required
-- 7:1 contrast ratios for text
-- Full keyboard navigation support
-- Screen reader tested (VoiceOver/NVDA)
-- See [docs/accessibility.md](docs/accessibility.md)
-
-**Commit Practices**:
-
-- Atomic commits: one logical change per commit
-- Conventional Commits format enforced
-- Never commit secrets or `.env.local`
-- Keep PRs focused and reviewable
-
-**Type Safety**:
-
-- TypeScript: No `any`, all strict flags enabled
-- Go: Leverage type system, use `any` (not `interface{}`), use `errors.AsType[T]`
-- Validate inputs at boundaries
-
-**Dependency Management**:
-
-- Renovate auto-updates enabled
-- Major version updates require changelog review
-- Use Context7 MCP or official docs for migrations
-- Keep pnpm-lock.yaml and go.sum committed
-- Use `pnpm.overrides` for transitive dependency CVE fixes when upstream hasn't patched yet
-- Don't add redundant direct deps if a unified package re-exports them (e.g., `typescript-eslint` provides `@typescript-eslint/parser` + `@typescript-eslint/eslint-plugin`)
-
-**CI/CD Workflows**:
-
-- `pr-quality.yml`: Auto-approves PRs from repo collaborators (solo-maintainer pattern)
-- `auto-merge-deps.yml`: Auto-merges Dependabot/Renovate PRs with strategy auto-detection
-- Bootstrap: The PR introducing `pr-quality.yml` requires manual approval; all subsequent PRs auto-approve
-- `release.yml`: GoReleaser triggered on tag push; pnpm setup must precede setup-node
-
-**Releases (GoReleaser)**:
-
-- Create signed tag locally: `git tag -s vX.Y.Z -m "vX.Y.Z"` → `git push origin vX.Y.Z`
-- GoReleaser config: `.goreleaser.yml` with `use: git` for changelog (not `use: github` — ignores filters)
-- `mode: replace` overwrites release notes — update via API after GoReleaser if needed
-- No 32-bit ARM builds: Fiber v3 `math.MaxUint32` overflows on 32-bit (`linux/arm` excluded)
+1. Scoped `AGENTS.md` for the area → code in `internal/` → [docs/](docs/).
+2. Similar patterns: search git history / existing tests.
+3. `go test -v ./...` surfaces many problems.
+4. Docker weirdness: `docker compose down -v && docker compose --profile dev up --build`.
+5. Env config: `.env.local` vs `.env.local.example`.

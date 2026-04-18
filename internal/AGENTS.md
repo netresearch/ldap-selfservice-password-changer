@@ -1,6 +1,6 @@
 # Go Backend Services
 
-<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-02-22 -->
+<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-04-18 -->
 
 **Scope**: Go backend packages in `internal/` directory
 
@@ -58,7 +58,7 @@ TOKEN_EXPIRY_DURATION=1h
 
 ```bash
 # Development
-go run .                      # Start server with hot-reload (via pnpm go:dev)
+go run .                      # Start server with hot-reload (via bun run dev)
 go build -v ./...             # Compile all packages
 go test -v ./...              # Run all tests with verbose output
 
@@ -184,7 +184,7 @@ conn, _ := ldap.Dial(url)
 
 **Before committing Go code**:
 
-- [ ] Run `go fmt ./...` (or `pnpm prettier --write .`)
+- [ ] Run `go fmt ./...` (or `bunx prettier --write .`)
 - [ ] Run `go vet ./...` (static analysis)
 - [ ] Run `go test ./...` (all tests pass)
 - [ ] Run `go build` (compilation check)

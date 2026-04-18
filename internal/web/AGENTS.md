@@ -1,6 +1,6 @@
 # Frontend - TypeScript & Tailwind CSS
 
-<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-02-04 -->
+<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-04-18 -->
 
 **Scope**: Frontend assets in `internal/web/` directory - TypeScript, Tailwind CSS, HTML templates
 
@@ -31,17 +31,17 @@ Note: HTTP handlers, middleware, and server setup are in `main.go` at the projec
 
 ## Setup/Environment
 
-**Prerequisites**: Node.js 24+, pnpm 10.28+ (from root `package.json`)
+**Prerequisites**: Node.js 24+, Bun 1.1+ (from root `package.json`)
 
 ```bash
 # From project root
-pnpm install          # Install dependencies
+bun install --frozen-lockfile          # Install dependencies
 
 # Development (watch mode)
-pnpm css:dev          # Tailwind CSS watch
-pnpm js:dev           # TypeScript watch
+bun run css:dev          # Tailwind CSS watch
+bun run js:dev           # TypeScript watch
 # OR
-pnpm dev              # Concurrent: CSS + TS + Go hot-reload
+bun run dev              # Concurrent: CSS + TS + Go hot-reload
 ```
 
 **No .env needed for frontend** - all config comes from Go backend
@@ -52,20 +52,20 @@ pnpm dev              # Concurrent: CSS + TS + Go hot-reload
 
 ```bash
 # Build frontend assets
-pnpm build:assets     # TypeScript + CSS (production builds)
+bun run build:assets     # TypeScript + CSS (production builds)
 
 # TypeScript
-pnpm js:build         # Compile TS → ES modules + minify
-pnpm js:dev           # Watch mode with preserveWatchOutput
+bun run js:build         # Compile TS → ES modules + minify
+bun run js:dev           # Watch mode with preserveWatchOutput
 tsc --noEmit          # Type check only (no output)
 
 # CSS
-pnpm css:build        # Tailwind + PostCSS → styles.css
-pnpm css:dev          # Watch mode
+bun run css:build        # Tailwind + PostCSS → styles.css
+bun run css:dev          # Watch mode
 
 # Formatting
-pnpm prettier --write internal/web/    # Format TS, CSS, HTML templates
-pnpm prettier --check internal/web/    # Check formatting (CI)
+bunx prettier --write internal/web/    # Format TS, CSS, HTML templates
+bunx prettier --check internal/web/    # Check formatting (CI)
 ```
 
 **No unit tests yet** - TypeScript strict mode catches most errors, integration via Go tests
@@ -73,9 +73,9 @@ pnpm prettier --check internal/web/    # Check formatting (CI)
 **CI validation** (from `.github/workflows/check.yml`):
 
 ```bash
-pnpm install
-pnpm js:build         # TypeScript strict compilation
-pnpm prettier --check .
+bun install --frozen-lockfile
+bun run js:build         # TypeScript strict compilation
+bunx prettier --check .
 ```
 
 **Accessibility testing**:
@@ -306,12 +306,30 @@ if (first) {
 console.log(items[0].toUpperCase()); // ❌ may crash if empty array
 ```
 
+## Security
+
+**Threat model**: frontend assets are served to unauthenticated users and rendered in their browser. Treat everything that reaches the DOM as potentially attacker-controlled.
+
+- **No inline scripts.** Content-Security-Policy rejects them. All JS lives in `static/js/*.ts` → compiled to ES modules and loaded via `<script type="module" src=...>`.
+- **Escape at the template boundary.** Go templates auto-escape via `html/template`; never emit raw HTML into a template. For dynamic values that must include markup, sanitize server-side before rendering.
+- **No `innerHTML` for user-controlled data.** Use `textContent` or build DOM nodes with `createElement`. Only `innerHTML` a known-static string.
+- **No `eval` / `Function(...)` / `setTimeout(stringArg)`.** Treat these as banned — they bypass CSP and taint the whole page.
+- **Autocomplete hygiene.** New-password fields MUST set `autocomplete="new-password"`; current-password fields use `autocomplete="current-password"`. Wrong or missing autocomplete confuses password managers and can cause them to fill wrong values.
+- **Password-manager-friendly forms.** Every password input sits inside a `<form>` with proper `<label>`. Don't hide real `<input type="password">` behind a fake div — managers won't detect it.
+- **No PII in client logs.** Never `console.log` passwords, tokens, usernames, or email addresses. Strip diagnostic logs before committing.
+- **No third-party scripts.** Keep the CSP strict; no CDN-hosted libraries, no analytics, no remote fonts. All assets ship from the same origin via Go's embedded FS.
+- **Focus trap on modals.** Any dialog must trap focus while open (for security + a11y). Escape must close and restore focus.
+- **Subresource integrity.** If a local asset ever must reference an external URL (shouldn't happen here), pin with SRI hashes.
+- **Tailwind classes are static.** Never template-compose class names from user data — JIT won't pick them up and the attacker could produce unexpected styling. Always full static strings.
+
+**Verify**: browser DevTools → Network → confirm CSP header `default-src 'self'` (or stricter). Console → no CSP violations.
+
 ## PR/Commit Checklist
 
 **Before committing frontend code**:
 
-- [ ] Run `pnpm js:build` (TypeScript strict check)
-- [ ] Run `pnpm prettier --write internal/web/`
+- [ ] Run `bun run js:build` (TypeScript strict check)
+- [ ] Run `bunx prettier --write internal/web/`
 - [ ] Verify keyboard navigation works
 - [ ] Test with screen reader (VoiceOver/NVDA)
 - [ ] Check contrast ratios (7:1 for text)
@@ -332,7 +350,7 @@ console.log(items[0].toUpperCase()); // ❌ may crash if empty array
 
 **Performance checklist**:
 
-- [ ] Minified JS (via `pnpm js:minify`)
+- [ ] Minified JS (via `bun run js:build`)
 - [ ] CSS optimized (cssnano via PostCSS)
 - [ ] No unused Tailwind classes (purged automatically)
 - [ ] No console.log in production code
@@ -407,11 +425,11 @@ function showError(input: any, message: string) {
 1. **Type errors**: Check `tsconfig.json` flags, use proper types (no `any`)
 2. **Null errors**: Add null checks or type guards
 3. **Module errors**: Ensure ES module syntax (`import`/`export`)
-4. **Build errors**: `pnpm install` to refresh dependencies
+4. **Build errors**: `bun install --frozen-lockfile` to refresh dependencies
 
 **CSS issues**:
 
-1. **Styles not applying**: Check Tailwind purge config, rebuild with `pnpm css:build`
+1. **Styles not applying**: Check Tailwind purge config, rebuild with `bun run css:build`
 2. **Dark mode broken**: Use `dark:` prefix on utilities
 3. **Responsive broken**: Use `md:`, `lg:` breakpoint prefixes
 4. **Custom classes**: Don't - use Tailwind utilities instead
