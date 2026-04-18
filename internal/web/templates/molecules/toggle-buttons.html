@@ -1,25 +1,27 @@
 {{ define "toggle-buttons" }}
-<button
-  type="button"
-  id="densityToggle"
-  class="comfortable:h-10 comfortable:p-2 compact:h-9 compact:p-1.5 absolute top-4 right-16 rounded-md border-2 border-gray-300 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:border-gray-400 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900"
-  aria-label="Display density"
-  data-density-mode="auto"
->
-  <span id="density-comfortable" class="hidden">{{ template "Squares2x2Icon" }}</span>
-  <span id="density-compact" class="hidden">{{ template "SquaresPlusIcon" }}</span>
-  <span id="density-auto">{{ template "SparklesIcon" }}</span>
-</button>
+<div role="toolbar" aria-label="Display preferences" class="absolute top-4 right-4 flex gap-2">
+  <button
+    type="button"
+    id="densityToggle"
+    class="comfortable:h-10 comfortable:p-2 compact:h-9 compact:p-1.5 rounded-md border-2 border-gray-300 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:border-gray-400 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900"
+    aria-label="Display density"
+    data-density-mode="auto"
+  >
+    <span id="density-comfortable" class="hidden">{{ template "Squares2x2Icon" }}</span>
+    <span id="density-compact" class="hidden">{{ template "SquaresPlusIcon" }}</span>
+    <span id="density-auto">{{ template "SparklesIcon" }}</span>
+  </button>
 
-<button
-  type="button"
-  id="themeToggle"
-  class="comfortable:h-10 comfortable:p-2 compact:h-9 compact:p-1.5 absolute top-4 right-4 rounded-md border-2 border-gray-300 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:border-gray-400 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900"
-  aria-label="Theme"
-  data-theme="auto"
->
-  <span id="theme-light" class="hidden">{{ template "SunIcon" }}</span>
-  <span id="theme-dark" class="hidden">{{ template "MoonIcon" }}</span>
-  <span id="theme-auto">{{ template "ComputerIcon" }}</span>
-</button>
+  <button
+    type="button"
+    id="themeToggle"
+    class="comfortable:h-10 comfortable:p-2 compact:h-9 compact:p-1.5 rounded-md border-2 border-gray-300 text-gray-600 outline-none hover:bg-gray-100 focus:ring-2 focus:ring-gray-900 focus:ring-offset-2 dark:border-gray-400 dark:text-gray-400 dark:hover:bg-gray-800 dark:focus:ring-gray-300 dark:focus:ring-offset-gray-900"
+    aria-label="Theme"
+    data-theme="auto"
+  >
+    <span id="theme-light" class="hidden">{{ template "SunIcon" }}</span>
+    <span id="theme-dark" class="hidden">{{ template "MoonIcon" }}</span>
+    <span id="theme-auto">{{ template "ComputerIcon" }}</span>
+  </button>
+</div>
 {{ end }}
