@@ -75,8 +75,8 @@ type InputOpts struct {
 
 // MakeInputOpts creates an InputOpts configuration for rendering form input fields.
 func MakeInputOpts(name, placeholder, inputType, autocomplete, help string) InputOpts {
-	if inputType != "password" && inputType != "text" {
-		panic("InputOpts type must be either `password` or `text`")
+	if inputType != "password" && inputType != "text" && inputType != "email" {
+		panic("InputOpts type must be one of `password`, `text`, or `email`")
 	}
 
 	return InputOpts{
