@@ -9,47 +9,35 @@ on:
       - main
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 jobs:
-  go-test:
-    name: Run Go tests
-    runs-on: ubuntu-latest
+  go:
+    name: Go
+    uses: netresearch/.github/.github/workflows/go-check.yml@main
+    with:
+      go-version-file: go.mod
+      setup-bun: true
+      pre-build-cmd: "bun install --frozen-lockfile && bun run build:assets"
+      enable-codecov: true
+      codecov-flags: "backend,unittests"
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
     permissions:
       contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      security-events: write
 
-      - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.26"
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-
-      - name: Install dependencies
-        run: bun install && go mod download
-
-      - name: Check types
-        run: bun run build:assets
-
-      - name: Build
-        run: go build -v ./...
-
-      - name: Test with coverage
-        run: go test -v -race -coverprofile=coverage.out -covermode=atomic ./...
-
-      - name: Upload coverage to Codecov
-        uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
-        with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          files: ./coverage.out
-          flags: backend,unittests
-          name: go-coverage
-          fail_ci_if_error: false
+  ts:
+    name: TypeScript
+    uses: netresearch/.github/.github/workflows/ts-check.yml@main
+    permissions:
+      contents: read
 
   integration-test:
     name: Run integration tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     services:
@@ -72,24 +60,32 @@ jobs:
           - 1025:1025
           - 8025:8025
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Harden Runner
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.26"
+          go-version-file: go.mod
+          cache: true
 
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
 
       - name: Install dependencies
-        run: bun install && go mod download
+        run: bun install --frozen-lockfile && go mod download
 
       - name: Build assets
         run: bun run build:assets
 
       - name: Run integration tests with coverage
-        run: go test -v -race -tags=integration -coverprofile=coverage-integration.out -covermode=atomic ./...
         env:
           LDAP_SERVER: ldap://localhost:1389
           LDAP_BASE_DN: dc=example,dc=com
@@ -97,6 +93,7 @@ jobs:
           LDAP_READONLY_PASSWORD: adminpassword
           SMTP_HOST: localhost
           SMTP_PORT: "1025"
+        run: go test -v -race -tags=integration -coverprofile=coverage-integration.out -covermode=atomic ./...
 
       - name: Upload integration coverage to Codecov
         uses: codecov/codecov-action@57e3a136b779b570ffcdbf80b3bdc90e7fab3de2 # v6.0.0
@@ -110,21 +107,31 @@ jobs:
   e2e-test:
     name: Run E2E tests
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Harden Runner
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.26"
+          go-version-file: go.mod
+          cache: true
 
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
 
       - name: Install dependencies
-        run: bun install && go mod download
+        run: bun install --frozen-lockfile && go mod download
 
       - name: Build assets
         run: bun run build:assets
@@ -144,98 +151,28 @@ jobs:
   fuzz-test:
     name: Fuzz tests
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: read
     steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+      - name: Harden Runner
+        uses: step-security/harden-runner@6c3c2f2c1c457b00c10c4848d6f5491db3b629df # v2.18.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
 
       - name: Set up Go
         uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
         with:
-          go-version: "1.26"
+          go-version-file: go.mod
+          cache: true
 
       - name: Run fuzz tests (quick)
         run: |
           go test -run=^$ -fuzz=FuzzValidateNewPassword -fuzztime=10s ./internal/rpchandler/...
           go test -run=^$ -fuzz=FuzzPluralize -fuzztime=10s ./internal/rpchandler/...
           go test -run=^$ -fuzz=FuzzValidateEmailAddress -fuzztime=10s ./internal/email/...
-
-  types:
-    name: Check types
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Check types
-        run: bun run js:build
-
-  formatting:
-    name: Check formatting
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Check formatting
-        run: bunx prettier --check .
-
-  lint-go:
-    name: Lint Go code
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Set up Go
-        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
-        with:
-          go-version: "1.26"
-          cache: true
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Build assets
-        run: bun run build:assets
-
-      - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@1e7e51e771db61008b38414a730f564565cf7c20 # v9.2.0
-        with:
-          version: latest
-          args: --timeout=5m
-
-  lint-js:
-    name: Lint TypeScript/JavaScript
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2
-
-      - name: Install dependencies
-        run: bun install
-
-      - name: Run ESLint
-        run: bun run lint
