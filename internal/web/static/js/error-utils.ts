@@ -30,25 +30,88 @@ export function createErrorElement(errorMessage: string): HTMLParagraphElement {
   return el;
 }
 
+/** One entry in the error summary — a field and its first error message. */
+export interface FieldError {
+  fieldId: string; // id of the <input>, used as the anchor target
+  label: string;
+  error: string;
+}
+
 /**
- * Updates error summary visibility and focus (WCAG 3.3.6)
+ * Updates error summary visibility, content and focus (WCAG 3.3.6).
+ * When errors exist, renders a linked list (<ol> of anchor links) so users
+ * can jump directly to the broken field.
  */
 export function updateErrorSummary(
   errorSummary: HTMLElement,
   errorSummaryText: HTMLElement,
-  errorCount: number,
+  fieldErrors: FieldError[],
   focusOnErrors: boolean
 ): void {
-  if (errorCount > 0) {
-    const fieldWord = errorCount === 1 ? "field" : "fields";
-    errorSummaryText.textContent = `Please correct ${errorCount.toString()} ${fieldWord} with errors below`;
-    errorSummary.classList.remove("hidden");
-    if (focusOnErrors) {
-      // Move focus to error summary for screen readers (WCAG 3.3.6)
-      errorSummary.focus();
-    }
-  } else {
+  const errorCount = fieldErrors.length;
+
+  if (errorCount === 0) {
     errorSummary.classList.add("hidden");
+    return;
+  }
+
+  const fieldWord = errorCount === 1 ? "field" : "fields";
+  errorSummaryText.textContent = `Please correct ${errorCount.toString()} ${fieldWord} below`;
+
+  let list = errorSummary.querySelector<HTMLOListElement>("ol[data-purpose='errorList']");
+  if (!list) {
+    list = document.createElement("ol");
+    list.dataset["purpose"] = "errorList";
+    list.className = "mt-2 ml-5 list-decimal space-y-1 text-sm text-error-dark dark:text-error-light";
+    errorSummary.appendChild(list);
+  }
+  while (list.firstChild) list.removeChild(list.firstChild);
+
+  for (const fe of fieldErrors) {
+    const li = document.createElement("li");
+    const a = document.createElement("a");
+    a.href = `#${fe.fieldId}`;
+    a.className = "underline hover:no-underline focus:ring-2 focus:ring-error-dark dark:focus:ring-error-light rounded";
+    a.textContent = `${fe.label}: ${fe.error}`;
+    a.addEventListener("click", (e) => {
+      e.preventDefault();
+      const target = document.getElementById(fe.fieldId);
+      if (target) {
+        target.focus();
+        // Respect prefers-reduced-motion (WCAG 2.3.3).
+        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        target.scrollIntoView({ block: "center", behavior: prefersReducedMotion ? "auto" : "smooth" });
+      }
+    });
+    li.appendChild(a);
+    list.appendChild(li);
+  }
+
+  errorSummary.classList.remove("hidden");
+  if (focusOnErrors) errorSummary.focus();
+}
+
+/**
+ * Render a server/submit error using the shared error element, so the visual
+ * matches the inline field errors (icon + text).
+ */
+export function setSubmitError(container: HTMLElement, message: string): void {
+  while (container.firstChild) container.removeChild(container.firstChild);
+  if (message) container.appendChild(createErrorElement(message));
+}
+
+/**
+ * Toggle red border + aria-invalid without rendering inline error text.
+ * Used when error text is surfaced elsewhere (e.g. the live password-policy
+ * checklist takes over the new_password text channel).
+ */
+export function setFieldInvalidStyle(inputContainer: HTMLElement, input: HTMLInputElement, invalid: boolean): void {
+  if (invalid) {
+    inputContainer.classList.add("!border-error-dark", "dark:!border-error-light");
+    input.setAttribute("aria-invalid", "true");
+  } else {
+    inputContainer.classList.remove("!border-error-dark", "dark:!border-error-light");
+    input.setAttribute("aria-invalid", "false");
   }
 }
 
@@ -66,13 +129,7 @@ export function setFieldErrors(
     errorContainer.removeChild(errorContainer.firstChild);
   }
 
-  if (errors.length > 0) {
-    inputContainer.classList.add("!border-error-dark", "dark:!border-error-light");
-    input.setAttribute("aria-invalid", "true");
-  } else {
-    inputContainer.classList.remove("!border-error-dark", "dark:!border-error-light");
-    input.setAttribute("aria-invalid", "false");
-  }
+  setFieldInvalidStyle(inputContainer, input, errors.length > 0);
 
   for (const error of errors) {
     errorContainer.appendChild(createErrorElement(error));

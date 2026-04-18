@@ -1,12 +1,15 @@
 /**
- * Density initialization - runs before page renders to prevent layout shift
- * Extracted from inline script for CSP compliance
+ * Density initialization - runs before page renders to prevent layout shift.
+ * Extracted from inline script for CSP compliance.
+ *
+ * Sets `data-density` on <html> synchronously. The CSS variants in
+ * tailwind.css match `[data-density="..."] *`, so every descendant picks
+ * up the right spacing/visibility at first paint.
  */
 
 function initDensity(): void {
   const storedDensityMode = localStorage.getItem("densityMode") ?? "auto";
 
-  // Determine actual density to apply
   const determineDensity = (): string => {
     const isTouch = window.matchMedia("(pointer: coarse)").matches;
     const highContrast = window.matchMedia("(prefers-contrast: more)").matches;
@@ -15,25 +18,10 @@ function initDensity(): void {
 
   const actualDensity = storedDensityMode === "auto" ? determineDensity() : storedDensityMode;
 
-  // Apply to HTML element for global CSS variants
-  if (actualDensity === "compact") {
-    document.documentElement.classList.add("compact");
-  } else {
-    document.documentElement.classList.remove("compact");
-  }
-
-  // Apply to page-card container for density-variant classes
-  // Wait for DOM to be ready before querying elements
-  if (document.readyState === "loading") {
-    document.addEventListener("DOMContentLoaded", () => {
-      const pageCard = document.querySelector<HTMLDivElement>("div[data-density]");
-      if (pageCard?.dataset) pageCard.dataset["density"] = actualDensity;
-    });
-  } else {
-    const pageCard = document.querySelector<HTMLDivElement>("div[data-density]");
-    if (pageCard?.dataset) pageCard.dataset["density"] = actualDensity;
-  }
+  // Single source of truth: <html data-density="...">
+  document.documentElement.dataset["density"] = actualDensity;
+  // Kept for any selectors that key off the class (none currently, but cheap).
+  document.documentElement.classList.toggle("compact", actualDensity === "compact");
 }
 
-// Run immediately (before DOMContentLoaded to prevent layout shift)
 initDensity();

@@ -42,13 +42,13 @@ func TestMakeInputOpts(t *testing.T) {
 			wantPanic:    false,
 		},
 		{
-			name:         "invalid input type causes panic",
+			name:         "valid email input",
 			inputName:    "email",
 			placeholder:  "Email",
 			inputType:    "email",
 			autocomplete: "email",
 			help:         "Enter your email",
-			wantPanic:    true,
+			wantPanic:    false,
 		},
 		{
 			name:         "empty type causes panic",

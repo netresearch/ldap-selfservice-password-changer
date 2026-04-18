@@ -68,7 +68,7 @@ export const mustBeLongerThan = (minLength: number, fieldName: string) => (v: st
  * validator("abc12"); // Returns: ""
  */
 export const mustIncludeNumbers = (amount: number, fieldName: string) => (v: string) =>
-  v.split("").filter((c) => !isNaN(+c)).length < amount
+  (v.match(/\d/g) ?? []).length < amount
     ? `${fieldName} must include at least ${amount.toString()} ${pluralize("number", amount)}`
     : "";
 
@@ -204,7 +204,74 @@ export const toggleValidator = (validate: (v: string) => string, enabled: boolea
  * isValidEmail("user+tag@sub.example.co.uk"); // Returns: ""
  */
 export const isValidEmail = (v: string) => {
-  // RFC 5322 compliant email regex (simplified but comprehensive)
+  // Simplified email regex — covers the common cases. Not full RFC 5322
+  // (no IDN, no quoted local parts). Good enough for LDAP deployments;
+  // the browser's native type="email" parser runs alongside it.
   const emailRegex = /^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,63}$/;
   return !emailRegex.test(v) ? "The input must be a valid email address" : "";
+};
+
+/**
+ * A single password-policy rule, used by the live checklist under the
+ * New Password field. Each rule has a stable id (for DOM keying), a
+ * human-readable label, and a check predicate.
+ */
+export interface PolicyRule {
+  id: string;
+  label: string;
+  check: (value: string) => boolean;
+}
+
+export interface PolicyOpts {
+  minLength: number;
+  minNumbers: number;
+  minSymbols: number;
+  minUppercase: number;
+  minLowercase: number;
+}
+
+/**
+ * Build the list of policy rules from the server-provided options.
+ * Rules with a `min*` of 0 are omitted (nothing to satisfy).
+ * The length rule is always present (minLength defaults to 8).
+ */
+export const buildPolicyRules = (opts: PolicyOpts): PolicyRule[] => {
+  const rules: PolicyRule[] = [
+    {
+      id: "length",
+      label: `At least ${opts.minLength.toString()} ${pluralize("character", opts.minLength)}`,
+      check: (v) => v.length >= opts.minLength
+    }
+  ];
+  if (opts.minNumbers > 0) {
+    rules.push({
+      id: "numbers",
+      label: `At least ${opts.minNumbers.toString()} ${pluralize("number", opts.minNumbers)}`,
+      check: (v) => (v.match(/\d/g) ?? []).length >= opts.minNumbers
+    });
+  }
+  if (opts.minSymbols > 0) {
+    rules.push({
+      id: "symbols",
+      label: `At least ${opts.minSymbols.toString()} special ${pluralize("character", opts.minSymbols)} (e.g. !, @, #, $)`,
+      check: (v) => v.split("").filter((c) => specialCharacters.includes(c)).length >= opts.minSymbols
+    });
+  }
+  if (opts.minUppercase > 0) {
+    rules.push({
+      id: "uppercase",
+      label: `At least ${opts.minUppercase.toString()} uppercase ${pluralize("character", opts.minUppercase)}`,
+      check: (v) =>
+        v.split("").filter((c) => c === c.toUpperCase() && c !== c.toLowerCase()).length >= opts.minUppercase
+    });
+  }
+  if (opts.minLowercase > 0) {
+    rules.push({
+      id: "lowercase",
+      label: `At least ${opts.minLowercase.toString()} lowercase ${pluralize("character", opts.minLowercase)}`,
+      check: (v) =>
+        v.split("").filter((c) => c === c.toLowerCase() && c !== c.toUpperCase()).length >= opts.minLowercase
+    });
+  }
+  return rules;
 };

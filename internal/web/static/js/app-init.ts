@@ -1,15 +1,15 @@
 /**
- * App initialization wrapper - reads configuration from data attributes
- * for CSP compliance (no inline scripts)
+ * App initialization wrapper — reads configuration from data attributes
+ * for CSP compliance (no inline scripts).
+ *
+ * NOTE: `document.currentScript` is ALWAYS null inside ES modules (per spec),
+ * so we look the script up explicitly by src.
  */
 
 import { init } from "./app.js";
 
-// Get the current script element to read data attributes
-// Note: document.currentScript can be null in ES6 modules, so we provide fallback
-const currentScript = document.currentScript as HTMLScriptElement | null;
+const currentScript = document.querySelector<HTMLScriptElement>('script[src*="app-init.js"]');
 
-// Read configuration from data attributes with defaults
 const config = {
   minLength: Number(currentScript?.dataset["minLength"] ?? "8"),
   minNumbers: Number(currentScript?.dataset["minNumbers"] ?? "0"),
@@ -19,5 +19,4 @@ const config = {
   passwordCanIncludeUsername: currentScript?.dataset["passwordCanIncludeUsername"] === "true"
 };
 
-// Initialize the app with configuration (always call, even with defaults)
 init(config);
