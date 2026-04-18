@@ -49,7 +49,8 @@
 @custom-variant error-input-focus (&:has(input[aria-invalid="true"]:focus));
 
 /* Custom variants for UI density toggle */
-/* Matches both the container AND its descendants */
+/* Matches the container AND its descendants. density-init.ts sets
+ * data-density on <html> synchronously, so first paint is correct (no FOUC). */
 @custom-variant comfortable (&:is([data-density="comfortable"], [data-density="comfortable"] *));
 @custom-variant compact (&:is([data-density="compact"], [data-density="compact"] *));
 

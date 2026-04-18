@@ -33,10 +33,9 @@ export const initThemeToggle = () => {
         dark: "Dark mode",
         auto: "Auto mode (follows system preference)"
       };
-      themeToggle.setAttribute(
-        "aria-label",
-        `Theme: ${themeLabels[theme]}. Click to switch to ${themeLabels[nextTheme]}`
-      );
+      const themeMessage = `Theme: ${themeLabels[theme]}. Click to switch to ${themeLabels[nextTheme]}`;
+      themeToggle.setAttribute("aria-label", themeMessage);
+      themeToggle.title = themeMessage; // sighted-user tooltip on hover
 
       // Apply theme
       if (theme === "light") {
@@ -74,9 +73,8 @@ export const initDensityToggle = () => {
   const densityComfortableIcon = document.getElementById("density-comfortable");
   const densityCompactIcon = document.getElementById("density-compact");
   const densityAutoIcon = document.getElementById("density-auto");
-  const mainContainer = document.querySelector<HTMLDivElement>("div[data-density]");
 
-  if (densityToggle && densityComfortableIcon && densityCompactIcon && densityAutoIcon && mainContainer) {
+  if (densityToggle && densityComfortableIcon && densityCompactIcon && densityAutoIcon) {
     // Determine appropriate density based on system preferences
     const determineDensityFromPreferences = (): DensityState => {
       const isTouch = window.matchMedia("(pointer: coarse)").matches;
@@ -98,14 +96,11 @@ export const initDensityToggle = () => {
       // Determine actual state to apply
       const actualState: DensityState = mode === "auto" ? determineDensityFromPreferences() : mode;
 
-      // Apply to main container (this triggers all density-variant classes)
-      mainContainer.dataset["density"] = actualState;
-
-      // Apply to html element (this triggers all density-variant classes)
-      document.documentElement.classList.remove("compact");
-      if (actualState === "compact") {
-        document.documentElement.classList.add("compact");
-      }
+      // Single source of truth: <html data-density="..."> — the `comfortable`
+      // / `compact` variants in tailwind.css key off this attribute and cascade
+      // to every descendant.
+      document.documentElement.dataset["density"] = actualState;
+      document.documentElement.classList.toggle("compact", actualState === "compact");
 
       // Update icon visibility (show only current mode's icon)
       densityComfortableIcon.classList.toggle("hidden", mode !== "comfortable");
@@ -121,10 +116,9 @@ export const initDensityToggle = () => {
 
       const nextMode: DensityMode = mode === "auto" ? "comfortable" : mode === "comfortable" ? "compact" : "auto";
 
-      densityToggle.setAttribute(
-        "aria-label",
-        `Density: ${modeLabels[mode]}. Click to switch to ${modeLabels[nextMode]}`
-      );
+      const densityMessage = `Density: ${modeLabels[mode]}. Click to switch to ${modeLabels[nextMode]}`;
+      densityToggle.setAttribute("aria-label", densityMessage);
+      densityToggle.title = densityMessage; // sighted-user tooltip on hover
     };
 
     // Initialize on page load
