@@ -21,7 +21,7 @@ permissions: {}
 
 jobs:
   quality:
-    uses: netresearch/.github/.github/workflows/pr-quality.yml@4f6d149347c61a27ce243f5ac8011d6748487341 # main
+    uses: netresearch/.github/.github/workflows/pr-quality.yml@main
     permissions:
       contents: read
       pull-requests: write

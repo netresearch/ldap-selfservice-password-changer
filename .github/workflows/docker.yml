@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   build:
-    uses: netresearch/.github/.github/workflows/build-container.yml@4f6d149347c61a27ce243f5ac8011d6748487341 # main
+    uses: netresearch/.github/.github/workflows/build-container.yml@main
     permissions:
       contents: read
       packages: write
