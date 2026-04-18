@@ -68,7 +68,7 @@ export const mustBeLongerThan = (minLength: number, fieldName: string) => (v: st
  * validator("abc12"); // Returns: ""
  */
 export const mustIncludeNumbers = (amount: number, fieldName: string) => (v: string) =>
-  v.split("").filter((c) => !isNaN(+c)).length < amount
+  (v.match(/\d/g) ?? []).length < amount
     ? `${fieldName} must include at least ${amount.toString()} ${pluralize("number", amount)}`
     : "";
 
@@ -247,7 +247,7 @@ export const buildPolicyRules = (opts: PolicyOpts): PolicyRule[] => {
     rules.push({
       id: "numbers",
       label: `At least ${opts.minNumbers.toString()} ${pluralize("number", opts.minNumbers)}`,
-      check: (v) => v.split("").filter((c) => !isNaN(+c)).length >= opts.minNumbers
+      check: (v) => (v.match(/\d/g) ?? []).length >= opts.minNumbers
     });
   }
   if (opts.minSymbols > 0) {

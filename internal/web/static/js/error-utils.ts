@@ -78,7 +78,9 @@ export function updateErrorSummary(
       const target = document.getElementById(fe.fieldId);
       if (target) {
         target.focus();
-        target.scrollIntoView({ block: "center", behavior: "smooth" });
+        // Respect prefers-reduced-motion (WCAG 2.3.3).
+        const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        target.scrollIntoView({ block: "center", behavior: prefersReducedMotion ? "auto" : "smooth" });
       }
     });
     li.appendChild(a);

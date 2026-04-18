@@ -42,11 +42,13 @@ export const init = (opts: Opts) => {
   const errorSummaryText = errorSummary.querySelector<HTMLSpanElement>("span[data-purpose='summaryText']");
   if (!errorSummaryText) throw new Error("Could not find error summary text element");
 
-  const submitButton = form.querySelector<HTMLButtonElement>("& > div[data-purpose='submit'] > button[type='submit']");
+  const submitButton = form.querySelector<HTMLButtonElement>(
+    ":scope > div[data-purpose='submit'] > button[type='submit']"
+  );
   if (!submitButton) throw new Error("Could not find submit button element");
 
   const submitErrorContainer = form.querySelector<HTMLDivElement>(
-    "& > div[data-purpose='submit'] > div[data-purpose='errors']"
+    ":scope > div[data-purpose='submit'] > div[data-purpose='errors']"
   );
   if (!submitErrorContainer) throw new Error("Could not find submit error container element");
 
@@ -97,11 +99,10 @@ export const init = (opts: Opts) => {
     if (!errorContainer) throw new Error(`Error for "${name}" does not exist`);
 
     const getValue = () => input.value;
-    const getErrors = (): string[] =>
-      validators
-        .map((v) => v(getValue()))
-        .reduce<string[]>((acc, msg) => (msg.length > 0 ? (acc.push(msg), acc) : acc), []);
-    const paint = (errors: string[]) => setFieldErrors(errorContainer, inputContainer, input, errors);
+    const getErrors = (): string[] => validators.map((v) => v(getValue())).filter((msg) => msg.length > 0);
+    const paint = (errors: string[]) => {
+      setFieldErrors(errorContainer, inputContainer, input, errors);
+    };
     const paintBorderOnly = (invalid: boolean) => {
       while (errorContainer.firstChild) errorContainer.removeChild(errorContainer.firstChild);
       setFieldInvalidStyle(inputContainer, input, invalid);
@@ -143,7 +144,9 @@ export const init = (opts: Opts) => {
   const policyUpdater = policyList && newPasswordField ? renderPolicyList(policyList, buildPolicyRules(opts)) : null;
   if (policyUpdater && newPasswordField) {
     policyUpdater(newPasswordField.getValue());
-    newPasswordField.paint = (errors) => newPasswordField.paintBorderOnly(errors.length > 0);
+    newPasswordField.paint = (errors) => {
+      newPasswordField.paintBorderOnly(errors.length > 0);
+    };
   }
 
   const touched = new Set<string>();
@@ -198,7 +201,7 @@ export const init = (opts: Opts) => {
     }
   });
 
-  form.addEventListener("submit", async (e) => {
+  const handleSubmit = async (e: SubmitEvent): Promise<void> => {
     e.preventDefault();
 
     for (const f of fields) {
@@ -240,5 +243,9 @@ export const init = (opts: Opts) => {
       setSubmitError(submitErrorContainer, (err as Error).message);
       toggleFields(true);
     }
+  };
+
+  form.addEventListener("submit", (e) => {
+    void handleSubmit(e);
   });
 };
