@@ -1,15 +1,15 @@
 /**
- * Reset password initialization wrapper - reads configuration from data attributes
- * for CSP compliance (no inline scripts)
+ * Reset password initialization wrapper — reads configuration from data
+ * attributes for CSP compliance (no inline scripts).
+ *
+ * NOTE: `document.currentScript` is ALWAYS null inside ES modules (per spec),
+ * so we look the script up explicitly by src.
  */
 
 import { init } from "./reset-password.js";
 
-// Get the current script element to read data attributes
-// Note: document.currentScript can be null in ES6 modules, so we provide fallback
-const currentScript = document.currentScript as HTMLScriptElement | null;
+const currentScript = document.querySelector<HTMLScriptElement>('script[src*="reset-password-init.js"]');
 
-// Read configuration from data attributes with defaults
 const config = {
   minLength: Number(currentScript?.dataset["minLength"] ?? "8"),
   minNumbers: Number(currentScript?.dataset["minNumbers"] ?? "0"),
@@ -18,5 +18,4 @@ const config = {
   minLowercase: Number(currentScript?.dataset["minLowercase"] ?? "0")
 };
 
-// Initialize with configuration (always call, even with defaults)
 init(config);
