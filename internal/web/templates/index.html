@@ -32,7 +32,14 @@
           <!-- prettier-ignore -->
           {{ template "input" InputOpts "current_password" "Current Password" "password" "current-password" "Enter your current password to verify your identity" }}
           <!-- prettier-ignore -->
-          {{ template "input" InputOpts "new_password" "New Password" "password" "new-password" "Your new password must be strong and meet all security requirements shown below when you start typing" }}
+          {{ template "input" InputOpts "new_password" "New Password" "password" "new-password" "Your new password must satisfy all the requirements listed below." }}
+          <ul
+            id="password-policy"
+            class="comfortable:text-sm compact:text-xs text-gray-800 dark:text-gray-200 space-y-1"
+            aria-label="Password requirements"
+            aria-live="polite"
+            data-purpose="policy"
+          ></ul>
           <!-- prettier-ignore -->
           {{ template "input" InputOpts "confirm_password" "Confirm New Password" "password" "new-password" "Re-enter your new password to confirm" }}
 
