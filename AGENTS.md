@@ -6,10 +6,10 @@
 
 ## Index of scoped AGENTS.md
 
-| Path                                             | Scope                                               |
-| ------------------------------------------------ | --------------------------------------------------- |
-| [internal/AGENTS.md](./internal/AGENTS.md)       | Go backend packages — LDAP, rate limit, RPC, tokens |
-| [internal/web/AGENTS.md](./internal/web/AGENTS.md) | Frontend — TypeScript, Tailwind CSS, WCAG 2.2 AAA |
+| Path                                               | Scope                                               |
+| -------------------------------------------------- | --------------------------------------------------- |
+| [internal/AGENTS.md](./internal/AGENTS.md)         | Go backend packages — LDAP, rate limit, RPC, tokens |
+| [internal/web/AGENTS.md](./internal/web/AGENTS.md) | Frontend — TypeScript, Tailwind CSS, WCAG 2.2 AAA   |
 
 ## Project
 
@@ -21,21 +21,21 @@ LDAP self-service password changer (hybrid Go + TypeScript web app). Email-based
 
 Source: `package.json` scripts + `go test`. All commands runnable from repo root.
 
-| Task            | Command                                       |
-| --------------- | --------------------------------------------- |
-| Install deps    | `bun install --frozen-lockfile`               |
-| Dev (all watch) | `bun run dev`                                 |
-| Build all       | `bun run build`                               |
-| Build assets    | `bun run build:assets`                        |
-| TS watch        | `bun run js:dev`                              |
-| TS build/check  | `bun run js:build`                            |
-| CSS watch       | `bun run css:dev`                             |
-| CSS build       | `bun run css:build`                           |
-| Go test         | `go test -v -race ./...`                      |
-| Go build        | `go build -v ./...`                           |
-| Format          | `bunx prettier --write .`                     |
-| Format check    | `bunx prettier --check .`                     |
-| Lint TS         | `bun run lint` (or `bun run lint:fix`)        |
+| Task            | Command                                                   |
+| --------------- | --------------------------------------------------------- |
+| Install deps    | `bun install --frozen-lockfile`                           |
+| Dev (all watch) | `bun run dev`                                             |
+| Build all       | `bun run build`                                           |
+| Build assets    | `bun run build:assets`                                    |
+| TS watch        | `bun run js:dev`                                          |
+| TS build/check  | `bun run js:build`                                        |
+| CSS watch       | `bun run css:dev`                                         |
+| CSS build       | `bun run css:build`                                       |
+| Go test         | `go test -v -race ./...`                                  |
+| Go build        | `go build -v ./...`                                       |
+| Format          | `bunx prettier --write .`                                 |
+| Format check    | `bunx prettier --check .`                                 |
+| Lint TS         | `bun run lint` (or `bun run lint:fix`)                    |
 | Lint Go         | `golangci-lint run` (CI: `golangci/golangci-lint-action`) |
 
 **Docker-first**: `docker compose --profile dev up` is the canonical dev path; native Bun/Go is optional convenience.
