@@ -1,0 +1,64 @@
+dn: ou=People,dc=netresearch,dc=local
+objectClass: organizationalUnit
+ou: People
+
+dn: ou=Groups,dc=netresearch,dc=local
+objectClass: organizationalUnit
+ou: Groups
+
+# Service account used by GopherPass for password RESET (admin rights on userPassword).
+# In production this maps to LDAP_RESET_USER — give it only the permissions it needs.
+# For the dev stack the standard cn=admin bind already has full write access.
+dn: uid=password-reset,ou=People,dc=netresearch,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: password-reset
+sn: Reset
+givenName: Password
+cn: Password Reset Service
+displayName: Password Reset Service
+uidNumber: 2000
+gidNumber: 1000
+homeDirectory: /home/password-reset
+loginShell: /sbin/nologin
+mail: password-reset@netresearch.local
+userPassword: reset-password
+
+dn: uid=jdoe,ou=People,dc=netresearch,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: jdoe
+sn: Doe
+givenName: John
+cn: John Doe
+displayName: John Doe
+uidNumber: 1001
+gidNumber: 1000
+homeDirectory: /home/jdoe
+loginShell: /bin/bash
+mail: john.doe@netresearch.local
+userPassword: password
+
+dn: uid=jsmith,ou=People,dc=netresearch,dc=local
+objectClass: inetOrgPerson
+objectClass: posixAccount
+objectClass: shadowAccount
+uid: jsmith
+sn: Smith
+givenName: Jane
+cn: Jane Smith
+displayName: Jane Smith
+uidNumber: 1002
+gidNumber: 1000
+homeDirectory: /home/jsmith
+loginShell: /bin/bash
+mail: jane.smith@netresearch.local
+userPassword: password
+
+dn: cn=developers,ou=Groups,dc=netresearch,dc=local
+objectClass: groupOfNames
+cn: developers
+member: uid=jdoe,ou=People,dc=netresearch,dc=local
+member: uid=jsmith,ou=People,dc=netresearch,dc=local

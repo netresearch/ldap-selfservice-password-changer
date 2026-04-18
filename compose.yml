@@ -1,36 +1,156 @@
 services:
-  # Main application service
+  # OpenLDAP server with seeded dev users.
+  # Pattern borrowed from netresearch/ldap-manager dev stack.
+  openldap:
+    image: osixia/openldap:1.5.0
+    container_name: gopherpass-openldap
+    hostname: openldap
+    ports:
+      - "389:389"
+      - "636:636"
+    environment:
+      LDAP_LOG_LEVEL: "256"
+      LDAP_ORGANISATION: "Netresearch"
+      LDAP_DOMAIN: "netresearch.local"
+      LDAP_BASE_DN: "dc=netresearch,dc=local"
+      LDAP_ADMIN_PASSWORD: "admin"
+      LDAP_CONFIG_PASSWORD: "config"
+      LDAP_READONLY_USER: "true"
+      LDAP_READONLY_USER_USERNAME: "readonly"
+      LDAP_READONLY_USER_PASSWORD: "readonly"
+      LDAP_RFC2307BIS_SCHEMA: "false"
+      LDAP_BACKEND: "mdb"
+      LDAP_TLS: "true"
+      LDAP_TLS_CRT_FILENAME: "ldap.crt"
+      LDAP_TLS_KEY_FILENAME: "ldap.key"
+      LDAP_TLS_DH_PARAM_FILENAME: "dhparam.pem"
+      LDAP_TLS_CA_CRT_FILENAME: "ca.crt"
+      LDAP_TLS_ENFORCE: "false"
+      LDAP_TLS_CIPHER_SUITE: "SECURE256:-VERS-SSL3.0"
+      LDAP_TLS_PROTOCOL_MIN: "3.1"
+      LDAP_TLS_VERIFY_CLIENT: "demand"
+      LDAP_REPLICATION: "false"
+      KEEP_EXISTING_CONFIG: "false"
+      LDAP_REMOVE_CONFIG_AFTER_SETUP: "true"
+      LDAP_SSL_HELPER_PREFIX: "ldap"
+    volumes:
+      - ldap_data:/var/lib/ldap
+      - ldap_config:/etc/ldap/slapd.d
+      - ./dev/seed.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/seed.ldif:ro
+    command: --copy-service
+    networks:
+      - ldap-network
+    restart: unless-stopped
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          'ldapsearch -x -H ldap://localhost -b "$$LDAP_BASE_DN" -D "cn=admin,$$LDAP_BASE_DN" -w "$$LDAP_ADMIN_PASSWORD" -LLL'
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+    profiles:
+      - dev
+      - test
+
+  # Applies an ACL that lets each user change their own userPassword,
+  # mirroring Active Directory's default behavior. Runs once, then exits.
+  openldap-init:
+    image: osixia/openldap:1.5.0
+    entrypoint: /bin/bash
+    command: /setup-acl.sh ldap://openldap:389
+    volumes:
+      - ./dev/setup-acl.sh:/setup-acl.sh:ro
+    depends_on:
+      openldap:
+        condition: service_healthy
+    networks:
+      - ldap-network
+    profiles:
+      - dev
+      - test
+
+  # Mailpit — modern MailHog replacement. Captures SMTP for local testing.
+  # Web UI: http://localhost:8025   SMTP (internal): mailpit:1025
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: gopherpass-mailpit
+    ports:
+      - "${MAILPIT_WEB_PORT:-8025}:8025"
+    # SMTP port 1025 is only reachable on the docker network — not exposed.
+    environment:
+      MP_MAX_MESSAGES: "500"
+      MP_SMTP_AUTH_ACCEPT_ANY: "true"
+      MP_SMTP_AUTH_ALLOW_INSECURE: "true"
+    networks:
+      - ldap-network
+    restart: unless-stopped
+    profiles:
+      - dev
+      - test
+
+  # Main application. Rebuilt from local Dockerfile so it picks up the
+  # current branch's templates and JS.
   app:
     build:
       context: .
       dockerfile: Dockerfile
+    container_name: gopherpass-app
     ports:
       - "${APP_PORT:-3000}:3000"
+    # Dev defaults — hermetic, point at the services above. Override anything
+    # via .env.local if needed (loaded after these defaults).
+    environment:
+      # LDAP
+      LDAP_SERVER: "ldap://openldap:389"
+      LDAP_IS_AD: "false"
+      LDAP_BASE_DN: "dc=netresearch,dc=local"
+      LDAP_READONLY_USER: "cn=admin,dc=netresearch,dc=local"
+      LDAP_READONLY_PASSWORD: "admin"
+      LDAP_RESET_USER: "cn=admin,dc=netresearch,dc=local"
+      LDAP_RESET_PASSWORD: "admin"
+      # Password policy
+      MIN_LENGTH: "10"
+      MIN_NUMBERS: "1"
+      MIN_SYMBOLS: "1"
+      MIN_UPPERCASE: "1"
+      MIN_LOWERCASE: "1"
+      PASSWORD_CAN_INCLUDE_USERNAME: "false"
+      # Reset feature
+      PASSWORD_RESET_ENABLED: "true"
+      RESET_TOKEN_EXPIRY_MINUTES: "15"
+      RESET_RATE_LIMIT_REQUESTS: "10"
+      RESET_RATE_LIMIT_WINDOW_MINUTES: "60"
+      # SMTP → mailpit
+      SMTP_HOST: "mailpit"
+      SMTP_PORT: "1025"
+      SMTP_USERNAME: ""
+      SMTP_PASSWORD: ""
+      SMTP_FROM_ADDRESS: "noreply@netresearch.local"
+      APP_BASE_URL: "http://localhost:3000"
     env_file:
-      - .env # Defaults and documentation
-      - .env.local # Local overrides (loaded second, takes precedence)
-    volumes:
-      # Mount SSL certs if using self-signed LDAPS certificates
-      - ${SSL_CERTS_PATH:-/etc/ssl/certs}:/etc/ssl/certs:ro
+      # Optional local override. Compose v2 treats missing files as empty
+      # when `required: false` is set.
+      - path: .env.local
+        required: false
     depends_on:
-      - mailhog
+      openldap-init:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+    networks:
+      - ldap-network
     profiles:
       - dev
       - test
-    networks:
-      - ldap-network
 
-  # Mailhog for email testing (dev/test only)
-  mailhog:
-    image: mailhog/mailhog:v1.0.1
-    ports:
-      - "${MAILHOG_WEB_PORT:-8025}:8025" # Web UI
-    # SMTP port 1025 only accessible within docker network, not exposed to host
-    profiles:
-      - dev
-      - test
-    networks:
-      - ldap-network
+volumes:
+  ldap_data:
+    driver: local
+  ldap_config:
+    driver: local
 
 networks:
   ldap-network:
