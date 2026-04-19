@@ -1,0 +1,23 @@
+name: Container Retention
+
+on:
+  schedule:
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      dry-run:
+        description: "List what would be deleted without actually deleting."
+        type: boolean
+        default: true
+
+permissions: {}
+
+jobs:
+  retention:
+    uses: netresearch/.github/.github/workflows/ghcr-retention.yml@main
+    with:
+      package-name: ${{ github.event.repository.name }}
+      dry-run: ${{ inputs.dry-run != false }}
+    permissions:
+      packages: write
+      attestations: read
