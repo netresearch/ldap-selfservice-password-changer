@@ -1,29 +1,17 @@
-# Solo-maintainer PR quality gates: size check + auto-approve for
-# collaborator PRs so required_approving_review_count >= 1 is satisfied
-# without manual review.
-#
-# SECURITY: uses pull_request_target which runs with base-branch perms.
-# The `@main` reference points at the org's own reusables repo
-# (netresearch/.github), which shares this repo's trust boundary and is
-# gated by its own branch protection + CI. The reusable is expected not
-# to check out PR code into this privileged context; changes there are
-# reviewed in-repo before landing on main.
-#
-# Bootstrap: the PR that introduces this file must be approved manually
-# (the workflow isn't on the base branch yet). All subsequent PRs
-# auto-approve.
-
 name: PR Quality Gates
 
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened]
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened, ready_for_review]
 
 permissions: {}
 
 jobs:
   quality:
     uses: netresearch/.github/.github/workflows/pr-quality.yml@main
+    with:
+      auto-approve-maintainers: true
     permissions:
       contents: read
       pull-requests: write
