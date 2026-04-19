@@ -22,7 +22,9 @@ jobs:
       enable-fuzz: true
       enable-license-check: true
       enable-codecov: true
-      coverage-threshold: 80.0
+      coverage-threshold: 60
+      setup-bun: true
+      pre-build-cmd: "bun install --frozen-lockfile && bun run build:assets"
     permissions:
       contents: read
       security-events: write

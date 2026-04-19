@@ -1,5 +1,8 @@
-# Managed by netresearch/.github/templates/go-app/
+# Managed by netresearch/.github/templates/
 # Drift from the template is blocking CI in this repo (check-template-drift.yml).
 # Record explicit exceptions under intentional-drift[] to unblock.
 template: go-app
-intentional-drift: []
+intentional-drift:
+- path: .github/workflows/ci.yml
+  reason: TypeScript frontend assets must be built via bun before go test; caller-level
+    setup-bun + pre-build-cmd required
