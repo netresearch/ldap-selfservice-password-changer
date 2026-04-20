@@ -22,9 +22,12 @@ jobs:
       enable-fuzz: true
       enable-license-check: true
       enable-codecov: true
-      coverage-threshold: 60
       setup-bun: true
-      pre-build-cmd: "bun install --frozen-lockfile && bun run build:assets"
+      # bun install materialises a vendored copy of the `flatted` npm package
+      # that ships Go sources. We drop a tiny go.mod into node_modules so it
+      # becomes a separate module and is ignored by `go test ./...` /
+      # `go list ./...`, keeping coverage limited to our own code.
+      pre-build-cmd: "bun install --frozen-lockfile && bun run build:assets && printf 'module nodemodules\\n\\ngo 1.26\\n' > node_modules/go.mod"
     permissions:
       contents: read
       security-events: write

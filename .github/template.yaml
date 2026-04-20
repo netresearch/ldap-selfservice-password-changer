@@ -5,4 +5,6 @@ template: go-app
 intentional-drift:
 - path: .github/workflows/ci.yml
   reason: TypeScript frontend assets must be built via bun before go test; caller-level
-    setup-bun + pre-build-cmd required
+    setup-bun + pre-build-cmd required (pre-build-cmd also drops a go.mod into
+    node_modules so the vendored `flatted` npm package's Go source does not
+    pollute `go test ./...`)
