@@ -7,3 +7,7 @@ intentional-drift:
   reason: TypeScript frontend assets must be built via bun before go test; caller-level
     setup-bun + pre-build-cmd required (pre-build-cmd also drops a go.mod into node_modules
     so the vendored `flatted` npm package's Go source does not pollute `go test ./...`)
+- path: .github/workflows/release.yml
+  reason: "binaries matrix and container platforms narrowed to amd64+arm64 — gofiber/fiber/v3
+    uses math.MaxUint32 which overflows int on 32-bit targets (linux/386, linux/arm/v6,
+    linux/arm/v7). Revisit when Fiber upstream ships a 32-bit-safe release."

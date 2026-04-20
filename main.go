@@ -269,6 +269,15 @@ func buildServer(opts *options.Opts) (*fiber.App, error) {
 	return app, nil
 }
 
+// Build-injected version metadata. Populated by the release.yml ldflags
+// (`-X main.version=<tag> -X main.build=<commit-sha>`); empty for local
+// `go run .` / `go build`. Log them on startup so operators can confirm
+// which artifact they're running.
+var (
+	version = "dev"
+	build   = ""
+)
+
 // healthCheckFunc is the indirection used by run() to invoke the health check.
 // Tests override this to assert that the --health-check branch is actually
 // taken and to control the outcome deterministically. Production code uses
@@ -304,7 +313,7 @@ func run(args []string) int {
 		return 1
 	}
 
-	slog.Info("starting server", "port", opts.Port)
+	slog.Info("starting server", "port", opts.Port, "version", version, "build", build)
 	if err := app.Listen(":" + opts.Port); err != nil {
 		slog.Error("failed to start web server", "error", err)
 		return 1
