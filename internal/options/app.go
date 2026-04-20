@@ -103,8 +103,20 @@ func envBoolOrDefault(name string, d bool, errs *ConfigError) bool {
 }
 
 // Parse parses command-line flags and environment variables into configuration options.
+// It is a convenience wrapper around ParseArgs that reads os.Args[1:].
 // Returns an error if required options are missing or values are invalid.
 func Parse() (*Opts, error) {
+	return ParseArgs(os.Args[1:])
+}
+
+// ParseArgs parses the given command-line arguments (without the program name)
+// and environment variables into configuration options.
+// Returns an error if required options are missing or values are invalid.
+//
+// Unlike Parse, this function does NOT read os.Args, so callers have full
+// control over the argument list. This makes it safe to use under `go test`,
+// where os.Args contains test-binary flags that would otherwise leak in.
+func ParseArgs(args []string) (*Opts, error) {
 	// Load .env files if they exist (native runs)
 	// When running in Docker Compose, env vars are already injected via env_file
 	//nolint:errcheck // .env files are optional in containerized environments
@@ -235,8 +247,8 @@ func Parse() (*Opts, error) {
 		)
 	)
 
-	// Parse command-line arguments (skip program name)
-	if err := fs.Parse(os.Args[1:]); err != nil {
+	// Parse the provided command-line arguments (caller passes args without program name)
+	if err := fs.Parse(args); err != nil {
 		errs.Add(fmt.Sprintf("flag parsing error: %v", err))
 	}
 

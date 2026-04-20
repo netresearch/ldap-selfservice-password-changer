@@ -551,3 +551,66 @@ func TestParseWithInvalidBoolValue(t *testing.T) {
 	require.True(t, ok, "error should be *ConfigError")
 	assert.Contains(t, configErr.Error(), "invalid value for LDAP_IS_AD")
 }
+
+// TestParseArgsFromFlags verifies that ParseArgs consumes its args parameter
+// instead of reading os.Args. This is what lets tests drive run() without
+// test-binary flag pollution.
+func TestParseArgsFromFlags(t *testing.T) {
+	// Ensure env vars do not interfere.
+	t.Setenv("LDAP_SERVER", "")
+	t.Setenv("LDAP_BASE_DN", "")
+	t.Setenv("LDAP_READONLY_USER", "")
+	t.Setenv("LDAP_READONLY_PASSWORD", "")
+
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	opts, err := ParseArgs([]string{
+		"-ldap-server", "ldap://example.com",
+		"-base-dn", "dc=example,dc=com",
+		"-readonly-user", "cn=readonly,dc=example,dc=com",
+		"-readonly-password", "secret",
+		"-port", "8080",
+	})
+	require.NoError(t, err)
+	require.NotNil(t, opts)
+	assert.Equal(t, "ldap://example.com", opts.LDAP.Server)
+	assert.Equal(t, "dc=example,dc=com", opts.LDAP.BaseDN)
+	assert.Equal(t, "cn=readonly,dc=example,dc=com", opts.ReadonlyUser)
+	assert.Equal(t, "secret", opts.ReadonlyPassword)
+	assert.Equal(t, "8080", opts.Port)
+}
+
+// TestParseArgsMissingRequired verifies ParseArgs reports missing required
+// options when neither flags nor env vars supply them.
+func TestParseArgsMissingRequired(t *testing.T) {
+	t.Setenv("LDAP_SERVER", "")
+	t.Setenv("LDAP_BASE_DN", "")
+	t.Setenv("LDAP_READONLY_USER", "")
+	t.Setenv("LDAP_READONLY_PASSWORD", "")
+	t.Chdir(t.TempDir())
+
+	_, err := ParseArgs(nil)
+	require.Error(t, err)
+
+	configErr, ok := errors.AsType[*ConfigError](err)
+	require.True(t, ok, "error should be *ConfigError")
+	assert.Contains(t, configErr.Error(), "required options missing")
+}
+
+// TestParseArgsUnknownFlag verifies ParseArgs records a flag parsing error
+// when given an unknown flag instead of silently ignoring it.
+func TestParseArgsUnknownFlag(t *testing.T) {
+	t.Setenv("LDAP_SERVER", "ldap://example.com")
+	t.Setenv("LDAP_BASE_DN", "dc=example,dc=com")
+	t.Setenv("LDAP_READONLY_USER", "cn=readonly")
+	t.Setenv("LDAP_READONLY_PASSWORD", "secret")
+	t.Chdir(t.TempDir())
+
+	_, err := ParseArgs([]string{"-definitely-not-a-real-flag"})
+	require.Error(t, err)
+
+	configErr, ok := errors.AsType[*ConfigError](err)
+	require.True(t, ok, "error should be *ConfigError")
+	assert.Contains(t, configErr.Error(), "flag parsing error")
+}
