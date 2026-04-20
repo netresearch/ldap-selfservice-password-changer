@@ -45,13 +45,15 @@ jobs:
     needs: create-release
     strategy:
       fail-fast: false
+      # INTENTIONAL DRIFT from netresearch/.github go-app template:
+      # 32-bit linux targets (386, arm/v6, arm/v7) cannot compile this
+      # repo because gofiber/fiber/v3 uses math.MaxUint32 which overflows
+      # int on 32-bit platforms. Recorded in .github/template.yaml
+      # intentional-drift; revisit when upstream Fiber ships a 32-bit fix.
       matrix:
         include:
-          - { target: linux-386,     goos: linux,   goarch: "386" }
           - { target: linux-amd64,   goos: linux,   goarch: amd64 }
           - { target: linux-arm64,   goos: linux,   goarch: arm64 }
-          - { target: linux-armv6,   goos: linux,   goarch: arm,   goarm: "6" }
-          - { target: linux-armv7,   goos: linux,   goarch: arm,   goarm: "7" }
           - { target: darwin-amd64,  goos: darwin,  goarch: amd64 }
           - { target: darwin-arm64,  goos: darwin,  goarch: arm64 }
           - { target: windows-amd64, goos: windows, goarch: amd64 }
@@ -70,7 +72,8 @@ jobs:
       main-package: auto
       goos: ${{ matrix.goos }}
       goarch: ${{ matrix.goarch }}
-      goarm: ${{ matrix.goarm || '' }}
+      # goarm intentionally omitted — narrowed matrix has no arm/v* entries
+      # (see INTENTIONAL DRIFT comment above).
       ldflags: "-s -w -X main.version=${{ needs.create-release.outputs.tag }} -X main.build=${{ needs.create-release.outputs.sha }}"
       ref: ${{ needs.create-release.outputs.tag }}
       release-tag: ${{ needs.create-release.outputs.tag }}
@@ -101,13 +104,14 @@ jobs:
     with:
       image-name: ${{ github.event.repository.name }}
       ref: ${{ needs.create-release.outputs.tag }}
-      platforms: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64"
+      # Narrowed to match the binaries matrix above (Fiber v3 32-bit).
+      platforms: "linux/amd64,linux/arm64"
       sign: true
       attest: true
       pre-build-command: |
         set -euo pipefail
         mkdir -p bin
-        for suffix in linux-386 linux-amd64 linux-arm64 linux-armv6 linux-armv7; do
+        for suffix in linux-amd64 linux-arm64; do
           gh release download "${{ needs.create-release.outputs.tag }}" \
             --pattern "${{ github.event.repository.name }}-${suffix}" --dir bin
           chmod +x "bin/${{ github.event.repository.name }}-${suffix}"
