@@ -22,6 +22,8 @@ jobs:
       enable-fuzz: true
       enable-license-check: true
       enable-codecov: true
+      enable-integration-tests: true
+      enable-e2e-tests: true
       setup-bun: true
       # bun install materialises a vendored copy of the `flatted` npm package
       # that ships Go sources. We drop a tiny go.mod into node_modules so it
