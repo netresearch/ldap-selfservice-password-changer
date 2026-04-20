@@ -61,7 +61,7 @@ func isLDAPEncrypted(server string) bool {
 // Extracted for testability.
 func buildEmailConfig(opts *options.Opts) email.Config {
 	// Safe conversion: SMTPPort is uint, typically 25/587/465 (well within int range)
-	smtpPort := int(opts.SMTPPort) //nolint:gosec // G115: SMTPPort is 0-65535, safe for int
+	smtpPort := int(opts.SMTPPort) //#nosec G115 -- SMTPPort is 0-65535, safe for int
 	return email.Config{
 		SMTPHost:     opts.SMTPHost,
 		SMTPPort:     smtpPort,
@@ -76,9 +76,9 @@ func buildEmailConfig(opts *options.Opts) email.Config {
 // Returns request count and the window duration.
 func resetRateLimitSettings(opts *options.Opts) (int, time.Duration) {
 	// Safe conversion: ResetRateLimitRequests is uint, typically small value (3-10)
-	resetRequests := int(opts.ResetRateLimitRequests) //nolint:gosec // G115: small config value, safe for int
+	resetRequests := int(opts.ResetRateLimitRequests) //#nosec G115 -- small config value, safe for int
 	// Safe conversion: ResetRateLimitWindowMinutes is uint, typically 60-120
-	//nolint:gosec // G115: small config value, safe for int64
+	//#nosec G115 -- small config value, safe for int64
 	resetWindowDuration := time.Duration(opts.ResetRateLimitWindowMinutes) * time.Minute
 	return resetRequests, resetWindowDuration
 }
