@@ -5,7 +5,7 @@ internal/web/static/styles.css
 # Claude Code temporary documentation
 claudedocs/
 vendor/
-ldap-selfservice-password-changer
+/ldap-selfservice-password-changer
 
 # Test coverage
 coverage.out
