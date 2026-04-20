@@ -1,50 +1,49 @@
-FROM oven/bun:1 AS frontend-builder
-WORKDIR /build
+# Binary-selector stage (production / CI) — release.yml's binaries matrix
+# (build-go-attest.yml) cross-compiles Go with frontend assets embedded
+# via go:embed, uploads to the release, and the container job downloads
+# them back into bin/. This stage picks the right pre-built binary per
+# TARGETARCH/TARGETVARIANT — no `go build` or `bun install` in Docker.
+FROM alpine:3.23 AS binary-selector
 
-# Disable Husky git hooks in Docker build (no .git directory in build context)
-ENV HUSKY=0
+ARG TARGETARCH
+ARG TARGETVARIANT
 
-# Copy dependency files first for better layer caching
-COPY package.json package-lock.json ./
-RUN bun install
+# CA certificates for LDAPS connections (copied into the scratch
+# runtime; alpine ships them already).
+RUN apk add --no-cache ca-certificates
 
-# Copy only necessary files for frontend build
-COPY postcss.config.js tailwind.config.js tsconfig.json ./
-COPY internal/web/ ./internal/web/
+COPY bin/ldap-selfservice-password-changer-linux-* /tmp/
 
-RUN bun run build:assets
+RUN set -eux; \
+    case "${TARGETARCH}" in \
+        arm)              BINARY="ldap-selfservice-password-changer-linux-arm${TARGETVARIANT}" ;; \
+        386|amd64|arm64)  BINARY="ldap-selfservice-password-changer-linux-${TARGETARCH}" ;; \
+        *) echo "Unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
+    esac; \
+    cp "/tmp/${BINARY}" /usr/bin/ldap-selfservice-password-changer; \
+    chmod +x /usr/bin/ldap-selfservice-password-changer
 
-FROM golang:1.26-alpine AS backend-builder
-WORKDIR /build
-
-# Copy dependency files
-COPY go.mod go.sum ./
-
-# Copy only Go source files
-COPY main.go ./
-COPY internal/ ./internal/
-
-# Copy frontend build artifacts
-COPY --from=frontend-builder /build/internal/web/static/styles.css /build/internal/web/static/styles.css
-COPY --from=frontend-builder /build/internal/web/static/js/*.js /build/internal/web/static/js/
-
-# Download dependencies and build with size optimization flags
-RUN go mod download && \
-    CGO_ENABLED=0 go build -ldflags="-w -s" -o /build/ldap-passwd
-
+# Runtime stage — scratch: zero packages, zero shell, zero attack surface.
 FROM scratch AS runner
 
-# Run as non-root user for defense-in-depth (nobody:nogroup = 65534:65534)
+LABEL org.opencontainers.image.title="LDAP Self-Service Password Changer" \
+      org.opencontainers.image.source="https://github.com/netresearch/ldap-selfservice-password-changer" \
+      org.opencontainers.image.vendor="Netresearch DTT GmbH" \
+      org.opencontainers.image.licenses="MIT"
+
+# Run as nobody:nogroup (65534:65534) for defense-in-depth.
 USER 65534:65534
 
-# Copy CA certificates for LDAPS connections
-COPY --from=backend-builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+# LDAPS TLS validation needs the system CA bundle.
+COPY --from=binary-selector /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 
-# Copy the static binary
-COPY --from=backend-builder /build/ldap-passwd /ldap-passwd
+COPY --from=binary-selector \
+     /usr/bin/ldap-selfservice-password-changer \
+     /ldap-selfservice-password-changer
 
-# Health check using built-in --health-check flag (works in scratch without shell)
+# Uses the binary's --health-check flag (works in scratch: no shell
+# needed).
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
-  CMD ["/ldap-passwd", "--health-check"]
+  CMD ["/ldap-selfservice-password-changer", "--health-check"]
 
-ENTRYPOINT [ "/ldap-passwd" ]
+ENTRYPOINT ["/ldap-selfservice-password-changer"]
