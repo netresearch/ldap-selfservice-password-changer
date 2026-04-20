@@ -5,6 +5,9 @@ template: go-app
 intentional-drift:
 - path: .github/workflows/ci.yml
   reason: TypeScript frontend assets must be built via bun before go test; caller-level
-    setup-bun + pre-build-cmd required (pre-build-cmd also drops a go.mod into
-    node_modules so the vendored `flatted` npm package's Go source does not
-    pollute `go test ./...`)
+    setup-bun + pre-build-cmd required (pre-build-cmd also drops a go.mod into node_modules
+    so the vendored `flatted` npm package's Go source does not pollute `go test ./...`)
+- path: .github/workflows/container.yml
+  reason: "platforms narrowed to linux/amd64,linux/arm64 \u2014 Dockerfile base images\
+    \ (oven/bun, golang-alpine) don't publish i386/arm-v6/arm-v7 variants, so a 5-platform\
+    \ build fails with 'no match for platform in manifest'"
