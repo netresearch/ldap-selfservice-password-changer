@@ -1,26 +1,117 @@
 name: Release
 
+# Single-build release pipeline for go-app.
+#
+# Go binaries are cross-compiled ONCE by the `binaries` matrix, uploaded
+# to the GitHub Release as user-facing artifacts, and then re-downloaded
+# into `bin/` where the Dockerfile's `COPY bin/<name>-linux-*` stage
+# picks the correct one per TARGETARCH/TARGETVARIANT. No `go build`
+# runs inside Docker.
+#
+# Convention for frontend-embedding repos: ship `bun run build:assets`
+# in package.json; this workflow invokes it before `go build` so assets
+# exist when `go:embed` resolves them. No-op when package.json is
+# absent, so non-frontend repos use this identical workflow unchanged.
+#
+# This file is template-managed — per-repo differences live in the
+# Dockerfile and (optionally) the package.json build:assets script.
+# Naming is derived from github.event.repository.name so the workflow
+# is byte-identical across consumers.
+
 on:
   push:
     tags: ['v*']
   workflow_dispatch:
     inputs:
       tag:
-        description: "Tag to (re)build."
+        description: "Tag to (re)build (e.g. v1.2.3)."
         required: true
         type: string
 
-permissions: {}
+permissions:
+  contents: read
 
 jobs:
-  # Creates the GitHub release shell. Consumers that ship binaries or images
-  # add their own caller of netresearch/.github/.github/workflows/build-go-attest.yml
-  # (matrix over goos/goarch) and/or build-container.yml in a separate PR —
-  # those need per-repo knowledge (binary name, platforms, pre-build-command
-  # for Bun/templ/etc.) that doesn't belong in a one-size-fits-all template.
-  create:
+  create-release:
+    name: Create GitHub Release
     uses: netresearch/.github/.github/workflows/create-release.yml@main
-    with:
-      tag: ${{ inputs.tag || github.ref_name }}
     permissions:
       contents: write
+    with:
+      tag: ${{ inputs.tag || github.ref_name }}
+
+  binaries:
+    name: Build ${{ matrix.target }}
+    needs: create-release
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { target: linux-386,     goos: linux,   goarch: "386" }
+          - { target: linux-amd64,   goos: linux,   goarch: amd64 }
+          - { target: linux-arm64,   goos: linux,   goarch: arm64 }
+          - { target: linux-armv6,   goos: linux,   goarch: arm,   goarm: "6" }
+          - { target: linux-armv7,   goos: linux,   goarch: arm,   goarm: "7" }
+          - { target: darwin-amd64,  goos: darwin,  goarch: amd64 }
+          - { target: darwin-arm64,  goos: darwin,  goarch: arm64 }
+          - { target: windows-amd64, goos: windows, goarch: amd64 }
+    uses: netresearch/.github/.github/workflows/build-go-attest.yml@main
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    with:
+      binary-name: ${{ github.event.repository.name }}-${{ matrix.target }}
+      # Fleet convention: main package lives at `./main.go` (repo root) OR
+      # `./cmd/<repo-name>/main.go`. Any other layout is non-conforming.
+      main-package: ${{ hashFiles(format('cmd/{0}/main.go', github.event.repository.name)) != '' && format('./cmd/{0}', github.event.repository.name) || '.' }}
+      goos: ${{ matrix.goos }}
+      goarch: ${{ matrix.goarch }}
+      goarm: ${{ matrix.goarm || '' }}
+      ldflags: "-s -w -X main.version=${{ needs.create-release.outputs.tag }} -X main.build=${{ needs.create-release.outputs.sha }}"
+      ref: ${{ needs.create-release.outputs.tag }}
+      release-tag: ${{ needs.create-release.outputs.tag }}
+      sbom: true
+      setup-bun: ${{ hashFiles('package.json') != '' }}
+      pre-build-command: |
+        if [ -f package.json ]; then
+          bun install --frozen-lockfile
+          bun run build:assets
+        fi
+
+  container:
+    name: Build container image
+    needs: [create-release, binaries]
+    uses: netresearch/.github/.github/workflows/build-container.yml@main
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
+      attestations: write
+    with:
+      image-name: ${{ github.event.repository.name }}
+      ref: ${{ needs.create-release.outputs.tag }}
+      platforms: "linux/386,linux/amd64,linux/arm/v6,linux/arm/v7,linux/arm64"
+      sign: true
+      attest: true
+      pre-build-command: |
+        set -euo pipefail
+        mkdir -p bin
+        for suffix in linux-386 linux-amd64 linux-arm64 linux-armv6 linux-armv7; do
+          gh release download "${{ needs.create-release.outputs.tag }}" \
+            --pattern "${{ github.event.repository.name }}-${suffix}" --dir bin
+          chmod +x "bin/${{ github.event.repository.name }}-${suffix}"
+        done
+
+  finalize:
+    name: Finalize release (checksums, cosign, notes)
+    needs: [create-release, binaries, container]
+    uses: netresearch/.github/.github/workflows/finalize-release.yml@main
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    with:
+      tag: ${{ needs.create-release.outputs.tag }}
+      image-ref: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
