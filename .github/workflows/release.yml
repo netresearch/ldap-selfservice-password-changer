@@ -13,19 +13,14 @@ on:
 permissions: {}
 
 jobs:
+  # Creates the GitHub release shell. Consumers that ship binaries or images
+  # add their own caller of netresearch/.github/.github/workflows/build-go-attest.yml
+  # (matrix over goos/goarch) and/or build-container.yml in a separate PR —
+  # those need per-repo knowledge (binary name, platforms, pre-build-command
+  # for Bun/templ/etc.) that doesn't belong in a one-size-fits-all template.
   create:
     uses: netresearch/.github/.github/workflows/create-release.yml@main
     with:
       tag: ${{ inputs.tag || github.ref_name }}
     permissions:
       contents: write
-
-  binaries:
-    needs: create
-    uses: netresearch/.github/.github/workflows/build-go-attest.yml@main
-    with:
-      tag: ${{ inputs.tag || github.ref_name }}
-    permissions:
-      contents: write
-      id-token: write
-      attestations: write
