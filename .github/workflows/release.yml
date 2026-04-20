@@ -72,7 +72,13 @@ jobs:
       ref: ${{ needs.create-release.outputs.tag }}
       release-tag: ${{ needs.create-release.outputs.tag }}
       sbom: true
-      setup-bun: ${{ hashFiles('package.json') != '' }}
+      # setup-bun runs unconditionally. `hashFiles()` in the caller's `with:`
+      # is evaluated BEFORE the reusable workflow's checkout, so the caller
+      # workspace is empty and any guard would have always returned false.
+      # The bun install/run commands below are `-f package.json`-gated, so
+      # non-frontend repos (ofelia, raybeam) pay only the ~10s Bun install
+      # overhead per matrix entry — no actual bun work happens.
+      setup-bun: true
       pre-build-command: |
         if [ -f package.json ]; then
           bun install --frozen-lockfile
