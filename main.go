@@ -85,10 +85,13 @@ func resetRateLimitSettings(opts *options.Opts) (int, time.Duration) {
 
 // newHandlerWithResetServices wires up all reset-related services and returns
 // a fully configured Handler. Any LDAP connection error is propagated.
+//
+// Background cleanup goroutines are started only AFTER handler initialisation
+// succeeds. This guarantees that a failed handler init leaks nothing — neither
+// the token store's cleanup goroutine nor the IP limiter's.
 func newHandlerWithResetServices(opts *options.Opts) (*rpchandler.Handler, error) {
-	// Initialize token store
+	// Initialize token store (cleanup started below, only on success).
 	tokenStore := resettoken.NewStore()
-	tokenStore.StartCleanup(cleanupIntervalMinutes)
 
 	// Initialize email service
 	emailConfig := buildEmailConfig(opts)
@@ -98,27 +101,38 @@ func newHandlerWithResetServices(opts *options.Opts) (*rpchandler.Handler, error
 	resetRequests, resetWindowDuration := resetRateLimitSettings(opts)
 	rateLimiter := ratelimit.NewLimiter(resetRequests, resetWindowDuration)
 
-	// Initialize IP-based rate limiter (DoS protection)
+	// Initialize IP-based rate limiter (cleanup started below, only on success).
 	ipLimiter := ratelimit.NewIPLimiter()
-	ipLimiter.StartCleanup(cleanupIntervalMinutes)
 
 	h, err := rpchandler.NewWithServices(opts, tokenStore, emailService, rateLimiter, ipLimiter)
 	if err != nil {
+		// Handler init failed — do NOT start background goroutines.
 		return nil, fmt.Errorf("build handler with reset services: %w", err)
 	}
+
+	// Success: start background cleanup goroutines now that ownership of the
+	// handler (and its dependencies) is being transferred to the caller.
+	tokenStore.StartCleanup(cleanupIntervalMinutes)
+	ipLimiter.StartCleanup(cleanupIntervalMinutes)
+
 	return h, nil
 }
 
 // newHandlerWithoutResetServices creates a Handler without password reset
 // services but still attaches an IP rate limiter for change-password.
+//
+// The IP limiter's cleanup goroutine is started only AFTER rpchandler.New
+// succeeds so that a failed handler init does not leak a goroutine.
 func newHandlerWithoutResetServices(opts *options.Opts) (*rpchandler.Handler, error) {
-	ipLimiter := ratelimit.NewIPLimiter()
-	ipLimiter.StartCleanup(cleanupIntervalMinutes)
-
 	baseHandler, err := rpchandler.New(opts)
 	if err != nil {
 		return nil, fmt.Errorf("build base handler: %w", err)
 	}
+
+	// Handler init succeeded — now safe to create the IP limiter and start
+	// its background cleanup goroutine.
+	ipLimiter := ratelimit.NewIPLimiter()
+	ipLimiter.StartCleanup(cleanupIntervalMinutes)
 	baseHandler.SetIPLimiter(ipLimiter)
 	return baseHandler, nil
 }
@@ -151,7 +165,8 @@ func logLDAPSecurityStatus(opts *options.Opts) {
 }
 
 // buildApp builds a Fiber app with middleware preconfigured for this service.
-// Routes are not registered; use registerRoutes for that.
+// Routes are not registered here; use registerCorePages (and optionally
+// registerResetPages when the reset feature is enabled) for that.
 func buildApp() *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName:      "netresearch/ldap-selfservice-password-changer",
@@ -254,14 +269,30 @@ func buildServer(opts *options.Opts) (*fiber.App, error) {
 	return app, nil
 }
 
+// healthCheckFunc is the indirection used by run() to invoke the health check.
+// Tests override this to assert that the --health-check branch is actually
+// taken and to control the outcome deterministically. Production code uses
+// the default value, which calls runHealthCheck.
+var healthCheckFunc = runHealthCheck
+
 // run is the testable entry point. It returns an exit code so main() only
 // needs to call os.Exit. run never calls os.Exit itself.
+//
+// args is the full argv slice, including the program name at index 0, so that
+// isHealthCheckInvocation can inspect args[1]. The remainder (args[1:]) is
+// threaded into options.ParseArgs so that run() fully honors the args
+// parameter and never falls back to os.Args.
 func run(args []string) int {
 	if isHealthCheckInvocation(args) {
-		return runHealthCheck()
+		return healthCheckFunc()
 	}
 
-	opts, err := options.Parse()
+	// Forward args[1:] so tests can drive run() without os.Args interference.
+	var flagArgs []string
+	if len(args) > 1 {
+		flagArgs = args[1:]
+	}
+	opts, err := options.ParseArgs(flagArgs)
 	if err != nil {
 		slog.Error("configuration error", "error", err)
 		return 1
@@ -285,20 +316,31 @@ func main() {
 	os.Exit(run(os.Args))
 }
 
-// runHealthCheck performs an HTTP health check against the running application.
+// runHealthCheck performs an HTTP health check against the running application
+// using the default Docker HEALTHCHECK endpoint and timeout.
 // Returns 0 if healthy (HTTP 200), 1 otherwise.
 // Used by Docker HEALTHCHECK to verify the application is running correctly.
 func runHealthCheck() int {
-	ctx, cancel := context.WithTimeout(context.Background(), healthCheckTimeout)
+	return runHealthCheckAt(healthCheckEndpoint, healthCheckTimeout)
+}
+
+// runHealthCheckAt performs an HTTP health check against an arbitrary endpoint
+// with a caller-supplied timeout. Returns 0 on HTTP 200, 1 otherwise.
+// Extracted so tests can exercise the real code path against an httptest server.
+func runHealthCheckAt(endpoint string, timeout time.Duration) int {
+	ctx, cancel := context.WithTimeout(context.Background(), timeout)
 	defer cancel()
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, healthCheckEndpoint, http.NoBody)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, http.NoBody)
 	if err != nil {
 		return 1
 	}
 
 	client := &http.Client{}
-	resp, err := client.Do(req) //nolint:gosec,nolintlint // G704: URL is a compile-time constant, not user-controlled
+	// G704: endpoint is either the compile-time constant healthCheckEndpoint
+	// (via runHealthCheck) or test-controlled (via runHealthCheckAt), never
+	// user-supplied.
+	resp, err := client.Do(req) //nolint:gosec,nolintlint
 	if err != nil {
 		return 1
 	}

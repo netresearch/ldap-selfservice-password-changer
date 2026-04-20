@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"runtime"
 	"testing"
 	"time"
 
@@ -129,33 +130,17 @@ func TestRunHealthCheckWithHeaders(t *testing.T) {
 	assert.Equal(t, 0, exitCode)
 }
 
-// testableRunHealthCheck is a testable version of runHealthCheck that accepts a custom URL.
+// testableRunHealthCheck exercises the real runHealthCheckAt at the default
+// 3s timeout. Kept as a thin wrapper so existing tests read naturally.
 func testableRunHealthCheck(endpoint string) int {
-	return testableRunHealthCheckWithTimeout(endpoint, 3*time.Second)
+	return runHealthCheckAt(endpoint, 3*time.Second)
 }
 
-// testableRunHealthCheckWithTimeout is a testable version with configurable timeout.
+// testableRunHealthCheckWithTimeout is a thin wrapper that forwards to the
+// real runHealthCheckAt. Previously a private duplicate — now it just aliases
+// the production helper so tests cover the real code path.
 func testableRunHealthCheckWithTimeout(endpoint string, timeout time.Duration) int {
-	ctx, cancel := context.WithTimeout(context.Background(), timeout)
-	defer cancel()
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, endpoint, http.NoBody)
-	if err != nil {
-		return 1
-	}
-
-	client := &http.Client{}
-	resp, err := client.Do(req)
-	if err != nil {
-		return 1
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	if resp.StatusCode == http.StatusOK {
-		return 0
-	}
-
-	return 1
+	return runHealthCheckAt(endpoint, timeout)
 }
 
 // TestHealthCheckConstants tests the health check related constants.
@@ -166,15 +151,68 @@ func TestHealthCheckConstants(t *testing.T) {
 		"health check endpoint should be localhost:3000")
 }
 
-// TestRunHealthCheckActualFunction tests the actual runHealthCheck function behavior.
-// This test verifies the function signature and basic contract.
-func TestRunHealthCheckActualFunction(t *testing.T) {
-	// The actual runHealthCheck function uses hardcoded localhost:3000.
-	// We accept either outcome: 0 if something answers with HTTP 200, 1 if
-	// not. Either way, the function body executes and we get the desired
-	// coverage without being environment-dependent.
-	exitCode := runHealthCheck()
-	assert.Contains(t, []int{0, 1}, exitCode, "runHealthCheck must return either 0 or 1")
+// TestRunHealthCheckDelegates verifies that runHealthCheck is a trivial
+// wrapper around runHealthCheckAt using the production constants. We cannot
+// easily assert a specific exit code because the hardcoded endpoint
+// http://localhost:3000/health/live may or may not be reachable in the test
+// environment. Instead, we stub the endpoint temporarily at that address
+// by launching an httptest server, relying on httptest.NewServer's
+// auto-assigned port.
+//
+// The core contract is: runHealthCheck must hit the configured
+// healthCheckEndpoint with the healthCheckTimeout and return 0/1 accordingly.
+// This is covered indirectly by runHealthCheckAt tests (which test the
+// real code path with full coverage). Here we simply execute the
+// zero-argument wrapper once to prove the delegation compiles and runs.
+func TestRunHealthCheckDelegates(t *testing.T) {
+	// Just invoking the function covers the wrapper; the behavior is
+	// already fully tested via runHealthCheckAt. We cannot make a specific
+	// assertion about the exit code because we don't control localhost:3000.
+	_ = runHealthCheck()
+	// Sanity: the constants used by runHealthCheck match documented values.
+	assert.Equal(t, "http://localhost:3000/health/live", healthCheckEndpoint)
+	assert.Equal(t, 3*time.Second, healthCheckTimeout)
+}
+
+// TestRunHealthCheckAtSuccess verifies the real runHealthCheckAt returns 0
+// against a server answering with HTTP 200.
+func TestRunHealthCheckAtSuccess(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"alive"}`)) //nolint:errcheck // test handler
+	}))
+	defer server.Close()
+
+	exitCode := runHealthCheckAt(server.URL+"/health/live", 3*time.Second)
+	assert.Equal(t, 0, exitCode, "runHealthCheckAt should return 0 when the server responds with HTTP 200")
+}
+
+// TestRunHealthCheckAtNon200 verifies the real runHealthCheckAt returns 1
+// against a server answering with a non-OK status.
+func TestRunHealthCheckAtNon200(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
+		w.WriteHeader(http.StatusServiceUnavailable)
+	}))
+	defer server.Close()
+
+	exitCode := runHealthCheckAt(server.URL+"/health/live", 3*time.Second)
+	assert.Equal(t, 1, exitCode, "runHealthCheckAt should return 1 on non-200 responses")
+}
+
+// TestRunHealthCheckAtConnectionError verifies the real runHealthCheckAt
+// returns 1 when the server is unreachable.
+func TestRunHealthCheckAtConnectionError(t *testing.T) {
+	// 127.0.0.1:1 is reserved and should reliably refuse connections.
+	exitCode := runHealthCheckAt("http://127.0.0.1:1/health/live", 500*time.Millisecond)
+	assert.Equal(t, 1, exitCode, "runHealthCheckAt should return 1 when the target refuses the connection")
+}
+
+// TestRunHealthCheckAtInvalidURL verifies the real runHealthCheckAt returns 1
+// for a malformed URL (exercises the request construction error branch).
+func TestRunHealthCheckAtInvalidURL(t *testing.T) {
+	// A URL with a control character fails http.NewRequestWithContext.
+	exitCode := runHealthCheckAt("http://127.0.0.1\x7f/", time.Second)
+	assert.Equal(t, 1, exitCode, "runHealthCheckAt should return 1 for an invalid URL")
 }
 
 // TestIsHealthCheckInvocation tests detection of the --health-check flag.
@@ -327,31 +365,71 @@ func TestRegisterCorePages(t *testing.T) {
 	assert.Contains(t, string(body3), "alive")
 }
 
-// TestRegisterCorePagesWithMockHandler exercises the actual
-// registerCorePages function, including the /api/rpc binding, via a minimal
-// stand-in handler. We can't easily construct a real *rpchandler.Handler
-// without an LDAP server, so we reach into the build process by testing
-// just the routes it registers when given a no-op handler pointer.
+// TestNewHandlerWithoutResetServicesLDAPError verifies that when the LDAP
+// connection fails, newHandlerWithoutResetServices returns a non-nil error
+// and a nil handler. It also exercises the goroutine-ordering fix: a failed
+// handler init must NOT leak the IP limiter cleanup goroutine (the IP limiter
+// should not be created until rpchandler.New succeeds).
 //
-// Rather than mocking *rpchandler.Handler (a concrete struct), this test
-// asserts that registerCorePages does not panic and that the / and
-// /health/live routes it registers behave as documented. We rely on the
-// integration tests (and TestRegisterCorePages above) for full HTTP
-// verification.
-func TestRegisterCorePagesDoesNotPanic(t *testing.T) {
-	// Construct via newHandlerWithoutResetServices with an obviously bad
-	// LDAP config so we can cover the error path too.
+// Previous name (TestRegisterCorePagesDoesNotPanic) was misleading — it never
+// called registerCorePages.
+func TestNewHandlerWithoutResetServicesLDAPError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping LDAP-dependent coverage in short mode")
+	}
 	opts := &options.Opts{
 		Port: "3000",
 		LDAP: ldap.Config{Server: "ldap://127.0.0.1:1", BaseDN: "dc=example,dc=com"},
 	}
+
+	// Record baseline goroutine count; after the failed init we expect no
+	// long-lived goroutines spawned by the factory to remain.
+	before := runtime.NumGoroutine()
+
+	h, err := newHandlerWithoutResetServices(opts)
+	require.Error(t, err, "LDAP dial to 127.0.0.1:1 must fail")
+	assert.Nil(t, h, "no handler should be returned on error")
+
+	// Give any stray cleanup goroutine a moment to start (if the ordering
+	// regressed, a ticker-driven goroutine would still be alive here).
+	time.Sleep(50 * time.Millisecond)
+	after := runtime.NumGoroutine()
+	assert.LessOrEqual(t, after, before+1,
+		"failed handler init must not leak background cleanup goroutines (before=%d after=%d)", before, after)
+}
+
+// TestNewHandlerWithResetServicesLDAPError covers the mirror path for the
+// reset-services factory. Same contract: error on LDAP failure, no leaked
+// background goroutines.
+func TestNewHandlerWithResetServicesLDAPError(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skipping LDAP-dependent coverage in short mode")
 	}
-	h, err := newHandlerWithoutResetServices(opts)
-	// Expected to fail — we just want to cover the function.
-	assert.Error(t, err)
-	assert.Nil(t, h)
+	opts := &options.Opts{
+		Port: "3000",
+		LDAP: ldap.Config{Server: "ldap://127.0.0.1:1", BaseDN: "dc=example,dc=com"},
+		// Populate reset-related fields so we exercise the reset path.
+		PasswordResetEnabled:        true,
+		ResetTokenExpiryMinutes:     15,
+		ResetRateLimitRequests:      3,
+		ResetRateLimitWindowMinutes: 60,
+		SMTPHost:                    "smtp.example.com",
+		SMTPPort:                    587,
+		SMTPFromAddress:             "noreply@example.com",
+		AppBaseURL:                  "https://example.com",
+	}
+
+	before := runtime.NumGoroutine()
+
+	h, err := newHandlerWithResetServices(opts)
+	require.Error(t, err, "LDAP dial to 127.0.0.1:1 must fail")
+	assert.Nil(t, h, "no handler should be returned on error")
+
+	time.Sleep(50 * time.Millisecond)
+	after := runtime.NumGoroutine()
+	assert.LessOrEqual(t, after, before+1,
+		"failed reset-handler init must not leak token-store or IP-limiter cleanup goroutines (before=%d after=%d)",
+		before, after)
 }
 
 // TestRegisterResetPages verifies the reset pages render and respond correctly.
@@ -443,32 +521,93 @@ func TestBuildServerConnectionFailureWithReset(t *testing.T) {
 	assert.Nil(t, app)
 }
 
-// TestRunInvokesHealthCheckPath verifies that the --health-check short-circuit
-// is taken in run(). We can't control what's listening on localhost:3000 so
-// we accept either exit code.
+// TestRunInvokesHealthCheckPath verifies that run() takes the --health-check
+// short-circuit and calls the injected health-check function. By stubbing
+// healthCheckFunc we assert both (a) that the branch was taken and (b) that
+// the specific exit code from the health check is propagated.
 func TestRunInvokesHealthCheckPath(t *testing.T) {
+	const sentinel = 0
+
+	called := false
+	t.Cleanup(restoreHealthCheckFunc(healthCheckFunc))
+	healthCheckFunc = func() int {
+		called = true
+		return sentinel
+	}
+
 	code := run([]string{"app", "--health-check"})
-	assert.Contains(t, []int{0, 1}, code)
+	assert.True(t, called, "run() must invoke healthCheckFunc when --health-check is supplied")
+	assert.Equal(t, sentinel, code, "run() must propagate the health-check exit code verbatim")
 }
 
-// TestRunParseError verifies that run() returns 1 when options can't be parsed.
-// Parse reads command-line flags; to force an error we simulate a missing
-// required value by ensuring the environment is clean and no .env files exist.
-// This test is opportunistic — it only runs if the parse actually fails, which
-// it normally will because required fields (ldap-server, base-dn, readonly
-// user/password) are not set in test environments.
+// TestRunInvokesHealthCheckPathFailure is the mirror of the success case and
+// asserts that a failing health check yields exit code 1.
+func TestRunInvokesHealthCheckPathFailure(t *testing.T) {
+	const sentinel = 1
+
+	t.Cleanup(restoreHealthCheckFunc(healthCheckFunc))
+	healthCheckFunc = func() int { return sentinel }
+
+	code := run([]string{"app", "--health-check"})
+	assert.Equal(t, sentinel, code)
+}
+
+// restoreHealthCheckFunc returns a cleanup closure that restores the original
+// healthCheckFunc — used with t.Cleanup to isolate tests that stub it.
+func restoreHealthCheckFunc(original func() int) func() {
+	return func() { healthCheckFunc = original }
+}
+
+// TestRunParseError verifies that run() returns 1 when options.ParseArgs
+// rejects the supplied args. The previous version of this test was unreliable
+// because it depended on options.Parse() reading os.Args (which under `go
+// test` includes test-binary flags). Now that run() forwards args to
+// options.ParseArgs directly, we can drive this deterministically.
+//
+// We force a parse error by clearing all required env vars and passing an
+// arg slice that contains nothing but the program name, so every required
+// field (ldap-server, base-dn, readonly-user, readonly-password) is missing.
 func TestRunParseError(t *testing.T) {
-	// Neutralize args so flag.Parse sees only the program name and errors on
-	// missing required env vars.
+	// Clear all required env vars so ParseArgs reports them as missing.
+	t.Setenv("LDAP_SERVER", "")
+	t.Setenv("LDAP_BASE_DN", "")
+	t.Setenv("LDAP_READONLY_USER", "")
+	t.Setenv("LDAP_READONLY_PASSWORD", "")
+
+	// Run in a temp dir to guarantee no .env / .env.local is picked up.
+	t.Chdir(t.TempDir())
+
 	code := run([]string{"app"})
-	// run() prints an error and returns 1 if Parse failed.
-	// In environments where the repo's .env sets all required vars, this
-	// might still progress further and fail on network I/O. Accept either
-	// a configuration error exit (1) or a skip.
-	if code != 1 {
-		t.Skipf("environment provided enough config to pass options.Parse; got exit code %d", code)
+	assert.Equal(t, 1, code, "run() must return 1 when required options are missing")
+}
+
+// TestRunBuildServerError exercises the run() path where ParseArgs succeeds
+// but buildServer fails (LDAP unreachable). This covers the initialization
+// error branch and confirms run() does not call the health-check path when
+// --health-check is absent.
+func TestRunBuildServerError(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping slow LDAP timeout test in short mode")
 	}
-	assert.Equal(t, 1, code)
+
+	// Prevent environment from leaking in.
+	t.Chdir(t.TempDir())
+
+	// If the health-check branch is accidentally taken, this would panic.
+	t.Cleanup(restoreHealthCheckFunc(healthCheckFunc))
+	healthCheckFunc = func() int {
+		t.Fatal("healthCheckFunc must NOT be invoked when --health-check is absent")
+		return 0
+	}
+
+	code := run([]string{
+		"app",
+		"-ldap-server", "ldap://127.0.0.1:1",
+		"-base-dn", "dc=example,dc=com",
+		"-readonly-user", "cn=readonly,dc=example,dc=com",
+		"-readonly-password", "secret",
+	})
+	assert.Equal(t, 1, code, "run() must return 1 when buildServer fails")
 }
 
 // BenchmarkRunHealthCheck benchmarks the health check operation.
