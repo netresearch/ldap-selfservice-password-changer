@@ -269,13 +269,21 @@ func buildServer(opts *options.Opts) (*fiber.App, error) {
 	return app, nil
 }
 
-// Build-injected version metadata. Populated by the release.yml ldflags
-// (`-X main.version=<tag> -X main.build=<commit-sha>`); empty for local
-// `go run .` / `go build`. Log them on startup so operators can confirm
-// which artifact they're running.
+// Build-injected version metadata. Populated by release.yml's ldflags:
+//
+//	-X main.version=<tag>
+//	-X main.build=<commit-sha>
+//	-X main.buildTime=<commit-timestamp>
+//
+// `version` defaults to "dev" so local `go run .` / `go build` logs
+// something meaningful; `build` and `buildTime` default to empty and
+// are kept as declared receivers so the fleet-uniform ldflag string
+// always has a target (no risk of unknown-symbol linker strictness).
+// Logged on startup so operators can confirm which artifact is live.
 var (
-	version = "dev"
-	build   = ""
+	version   = "dev"
+	build     = ""
+	buildTime = ""
 )
 
 // healthCheckFunc is the indirection used by run() to invoke the health check.
@@ -313,7 +321,7 @@ func run(args []string) int {
 		return 1
 	}
 
-	slog.Info("starting server", "port", opts.Port, "version", version, "build", build)
+	slog.Info("starting server", "port", opts.Port, "version", version, "build", build, "buildTime", buildTime)
 	if err := app.Listen(":" + opts.Port); err != nil {
 		slog.Error("failed to start web server", "error", err)
 		return 1
