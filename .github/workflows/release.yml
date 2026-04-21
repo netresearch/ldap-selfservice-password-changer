@@ -74,17 +74,19 @@ jobs:
       goarch: ${{ matrix.goarch }}
       # goarm intentionally omitted — narrowed matrix has no arm/v* entries
       # (see INTENTIONAL DRIFT comment above).
-      # Fleet ldflag convention (netresearch/.github#74). main.buildTime
-      # is surfaced only via the `build_time` attribute in main.go's
-      # server-startup slog call — no dedicated timestamp subcommand is
-      # wired. Keeping the ldflag aligned with the template means this
-      # release.yml only drifts on the Fiber-32-bit-ignored matrix,
-      # nothing else.
+      # Fleet ldflag convention (netresearch/.github#74, #77).
+      # main.buildTime is injected via auto-build-timestamp below
+      # (resolved from git inside build-go-attest.yml so both tag
+      # pushes and workflow_dispatch backfills get a real value).
+      # Surfaced via the `build_time` attribute in main.go's
+      # server-startup slog call. Keeping the ldflag aligned with the
+      # template means this release.yml only drifts on the
+      # Fiber-32-bit-ignored matrix, nothing else.
       ldflags: >-
         -s -w
         -X main.version=${{ needs.create-release.outputs.tag }}
         -X main.build=${{ needs.create-release.outputs.sha }}
-        -X main.buildTime=${{ github.event.head_commit.timestamp }}
+      auto-build-timestamp: true
       ref: ${{ needs.create-release.outputs.tag }}
       release-tag: ${{ needs.create-release.outputs.tag }}
       sbom: true
