@@ -74,7 +74,15 @@ jobs:
       goarch: ${{ matrix.goarch }}
       # goarm intentionally omitted — narrowed matrix has no arm/v* entries
       # (see INTENTIONAL DRIFT comment above).
-      ldflags: "-s -w -X main.version=${{ needs.create-release.outputs.tag }} -X main.build=${{ needs.create-release.outputs.sha }}"
+      # Fleet ldflag convention (netresearch/.github#74) — main.buildTime
+      # is a silent no-op here (no BuildTimestamp consumer yet) but kept
+      # aligned so this release.yml only drifts from the template on the
+      # Fiber-32-bit-ignored matrix, nothing else.
+      ldflags: >-
+        -s -w
+        -X main.version=${{ needs.create-release.outputs.tag }}
+        -X main.build=${{ needs.create-release.outputs.sha }}
+        -X main.buildTime=${{ github.event.head_commit.timestamp }}
       ref: ${{ needs.create-release.outputs.tag }}
       release-tag: ${{ needs.create-release.outputs.tag }}
       sbom: true
