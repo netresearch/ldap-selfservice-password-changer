@@ -321,7 +321,7 @@ func run(args []string) int {
 		return 1
 	}
 
-	slog.Info("starting server", "port", opts.Port, "version", version, "build", build, "buildTime", buildTime)
+	slog.Info("starting server", "port", opts.Port, "version", version, "build", build, "build_time", buildTime)
 	if err := app.Listen(":" + opts.Port); err != nil {
 		slog.Error("failed to start web server", "error", err)
 		return 1
