@@ -8,6 +8,10 @@ import (
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 )
 
+// msgResetEmailSent is the enumeration-safe success message always returned
+// for password reset requests, regardless of whether the account exists.
+const msgResetEmailSent = "If an account exists, a reset email has been sent"
+
 // EmailService interface for sending password reset emails.
 type EmailService interface {
 	SendResetEmail(to, token string) error
@@ -48,7 +52,7 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 	emailOrUsername := params[0]
 
 	// Generic success message (always returned to prevent enumeration)
-	genericSuccess := []string{"If an account exists, a reset email has been sent"}
+	genericSuccess := []string{msgResetEmailSent}
 
 	// Validate email length (RFC 5321 maximum)
 	const MaxEmailLength = 254

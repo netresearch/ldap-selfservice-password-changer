@@ -6,6 +6,9 @@ import (
 	"log/slog"
 )
 
+// msgPasswordChanged is the success message returned after a password change.
+const msgPasswordChanged = "password changed successfully"
+
 // changePasswordWithIP handles password change requests with IP-based rate limiting.
 func (c *Handler) changePasswordWithIP(params []string, clientIP string) ([]string, error) {
 	if len(params) != 3 {
@@ -49,5 +52,5 @@ func (c *Handler) changePasswordWithIP(params []string, clientIP string) ([]stri
 	}
 
 	slog.Info("password_changed", "username", sAMAccountName)
-	return []string{"password changed successfully"}, nil
+	return []string{msgPasswordChanged}, nil
 }
