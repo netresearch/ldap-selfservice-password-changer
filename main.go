@@ -46,10 +46,13 @@ const (
 		"form-action 'self'"
 )
 
+// healthCheckFlag is the CLI flag that triggers a standalone health-check run.
+const healthCheckFlag = "--health-check"
+
 // isHealthCheckInvocation returns true when the given args list asks for a
 // standalone health-check run (used by the Docker HEALTHCHECK).
 func isHealthCheckInvocation(args []string) bool {
-	return len(args) == 2 && args[1] == "--health-check"
+	return len(args) == 2 && args[1] == healthCheckFlag
 }
 
 // isLDAPEncrypted reports whether the configured LDAP server URL uses ldaps://.

@@ -64,6 +64,13 @@ var rawSuccessMessage string
 //go:embed molecules/page-title.html
 var rawPageTitle string
 
+// HTML input types accepted by MakeInputOpts.
+const (
+	inputTypePassword = "password"
+	inputTypeText     = "text"
+	inputTypeEmail    = "email"
+)
+
 // InputOpts holds configuration for rendering HTML input fields with validation and accessibility attributes.
 type InputOpts struct {
 	Name         string
@@ -75,7 +82,7 @@ type InputOpts struct {
 
 // MakeInputOpts creates an InputOpts configuration for rendering form input fields.
 func MakeInputOpts(name, placeholder, inputType, autocomplete, help string) InputOpts {
-	if inputType != "password" && inputType != "text" && inputType != "email" {
+	if inputType != inputTypePassword && inputType != inputTypeText && inputType != inputTypeEmail {
 		panic("InputOpts type must be one of `password`, `text`, or `email`")
 	}
 
