@@ -1,4 +1,9 @@
 node_modules
+# bun is the single source of truth (bun.lock); never commit other lockfiles
+package-lock.json
+pnpm-lock.yaml
+yarn.lock
+bun.lockb
 internal/web/static/js/*.js
 internal/web/static/styles.css
 .env.local
