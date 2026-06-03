@@ -1,3 +1,12 @@
+# Self-managed — intentional-drift from netresearch/.github templates/go-app.
+# Core ecosystems (gomod, github-actions, docker) track the go-app template;
+# the bun block is kept here because this repo has a package.json + text-based
+# bun.lock (Bun/TypeScript frontend) the trimmed template no longer declares
+# (see netresearch/.github#166). Dependabot has a dedicated `bun` ecosystem that
+# reads package.json + bun.lock, so it is used here instead of `npm`.
+# This file is listed under intentional-drift in .github/template.yaml so the
+# template sync leaves it alone — keep the core blocks in step with the template
+# manually.
 version: 2
 updates:
   - package-ecosystem: gomod
@@ -36,26 +45,14 @@ updates:
     cooldown:
       default-days: 7
 
-  - package-ecosystem: npm
+  - package-ecosystem: bun
     directory: /
     schedule:
       interval: weekly
       day: monday
     open-pull-requests-limit: 5
     groups:
-      npm:
-        patterns: ['*']
-    cooldown:
-      default-days: 7
-
-  - package-ecosystem: devcontainers
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    open-pull-requests-limit: 2
-    groups:
-      devcontainers:
+      bun:
         patterns: ['*']
     cooldown:
       default-days: 7
