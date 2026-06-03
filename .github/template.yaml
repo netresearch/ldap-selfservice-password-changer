@@ -12,4 +12,4 @@ intentional-drift:
     uses math.MaxUint32 which overflows int on 32-bit targets (linux/386, linux/arm/v6,
     linux/arm/v7). Revisit when Fiber upstream ships a 32-bit-safe release."
 - path: .github/dependabot.yml
-  reason: "Opt-in npm ecosystem. The trimmed go-app template (netresearch/.github#166) declares only gomod/github-actions/docker; this repo has a package.json (bun/TypeScript frontend) so it self-manages dependabot.yml to keep npm updates. Core blocks are kept in step with the template manually."
+  reason: "Opt-in bun ecosystem. The trimmed go-app template (netresearch/.github#166) declares only gomod/github-actions/docker; this repo has a package.json + bun.lock (Bun/TypeScript frontend) so it self-manages dependabot.yml to keep bun updates via Dependabot's dedicated bun ecosystem. Core blocks are kept in step with the template manually."
