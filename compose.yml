@@ -83,7 +83,7 @@ services:
   mailpit:
     # Pinned for a reproducible dev stack. Bump deliberately — Mailpit minor
     # releases can change the SMTP/API surface.
-    image: axllent/mailpit:v1.30.3
+    image: axllent/mailpit:v1.30.4
     container_name: gopherpass-mailpit
     ports:
       - "${MAILPIT_WEB_PORT:-8025}:8025"
