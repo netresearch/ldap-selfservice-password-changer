@@ -26,10 +26,7 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 	token, err := h.tokenStore.Get(tokenString)
 	if err != nil {
 		// Safely log token prefix (handle tokens shorter than 8 chars)
-		prefix := tokenString
-		if len(tokenString) > 8 {
-			prefix = tokenString[:8]
-		}
+		prefix := tokenString[:min(8, len(tokenString))]
 		slog.Warn("password_reset_invalid_token", "token_prefix", prefix)
 		return nil, errors.New("invalid or expired token")
 	}
