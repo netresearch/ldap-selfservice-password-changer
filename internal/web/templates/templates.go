@@ -164,9 +164,12 @@ func RenderIndex(opts *options.Opts) ([]byte, error) {
 	return renderTemplate("index", rawIndex, data)
 }
 
-// RenderForgotPassword renders the password reset request page.
-func RenderForgotPassword() ([]byte, error) {
-	return renderTemplate("forgot-password", rawForgotPassword, nil)
+// RenderForgotPassword renders the password reset request page with the provided configuration options.
+func RenderForgotPassword(opts *options.Opts) ([]byte, error) {
+	data := map[string]any{
+		"opts": opts,
+	}
+	return renderTemplate("forgot-password", rawForgotPassword, data)
 }
 
 // RenderResetPassword renders the password reset completion page with the provided configuration options.

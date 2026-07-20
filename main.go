@@ -223,7 +223,7 @@ func registerCorePages(app *fiber.App, index []byte, rpcHandle rpcHandleFunc) {
 // registerResetPages registers the password reset pages when the feature is
 // enabled. Returns any template rendering errors.
 func registerResetPages(app *fiber.App, opts *options.Opts) error {
-	forgotPasswordPage, err := templates.RenderForgotPassword()
+	forgotPasswordPage, err := templates.RenderForgotPassword(opts)
 	if err != nil {
 		return fmt.Errorf("render forgot-password page: %w", err)
 	}

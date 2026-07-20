@@ -201,7 +201,7 @@ func TestRenderIndex(t *testing.T) {
 
 // TestRenderForgotPassword tests the RenderForgotPassword function.
 func TestRenderForgotPassword(t *testing.T) {
-	result, err := RenderForgotPassword()
+	result, err := RenderForgotPassword(&options.Opts{})
 	require.NoError(t, err)
 	require.NotEmpty(t, result)
 
@@ -314,10 +314,10 @@ func TestRenderIndexIdempotent(t *testing.T) {
 
 // TestRenderForgotPasswordIdempotent tests that RenderForgotPassword produces consistent output.
 func TestRenderForgotPasswordIdempotent(t *testing.T) {
-	result1, err1 := RenderForgotPassword()
+	result1, err1 := RenderForgotPassword(&options.Opts{})
 	require.NoError(t, err1)
 
-	result2, err2 := RenderForgotPassword()
+	result2, err2 := RenderForgotPassword(&options.Opts{})
 	require.NoError(t, err2)
 
 	assert.Equal(t, result1, result2, "RenderForgotPassword should produce identical output")
@@ -402,7 +402,9 @@ func TestRenderTemplateValidHTML(t *testing.T) {
 		},
 		{
 			name:   "forgot-password",
-			render: RenderForgotPassword,
+			render: func() ([]byte, error) {
+				return RenderForgotPassword(opts)
+			},
 		},
 		{
 			name: "reset-password",
@@ -478,7 +480,7 @@ func BenchmarkRenderIndex(b *testing.B) {
 func BenchmarkRenderForgotPassword(b *testing.B) {
 	b.ResetTimer()
 	for b.Loop() {
-		_, _ = RenderForgotPassword() //nolint:errcheck // benchmark
+		_, _ = RenderForgotPassword(&options.Opts{}) //nolint:errcheck // benchmark
 	}
 }
 
