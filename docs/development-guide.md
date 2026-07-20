@@ -401,7 +401,6 @@ ldap-selfservice-password-changer/
 ├── package.json                     # Node.js dependencies
 ├── pnpm-lock.yaml                   # pnpm lock file
 ├── tsconfig.json                    # TypeScript configuration
-├── tailwind.config.js               # Tailwind CSS configuration
 ├── postcss.config.js                # PostCSS configuration
 ├── .prettierrc.mjs                  # Prettier configuration
 ├── .prettierignore                  # Prettier ignore patterns
