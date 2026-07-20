@@ -8,7 +8,9 @@ import (
 	"log/slog"
 	"net/http"
 	"os"
+	"os/signal"
 	"strings"
+	"syscall"
 	"time"
 
 	"github.com/gofiber/fiber/v3"
@@ -324,8 +326,16 @@ func run(args []string) int {
 		return 1
 	}
 
+	// Shut down gracefully on SIGINT/SIGTERM so in-flight requests (e.g.
+	// password resets) complete before the container stops.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
 	slog.Info("starting server", "port", opts.Port, "version", version, "build", build, "build_time", buildTime)
-	if err := app.Listen(":" + opts.Port); err != nil {
+	if err := app.Listen(":"+opts.Port, fiber.ListenConfig{
+		GracefulContext: ctx,
+		ShutdownTimeout: 10 * time.Second,
+	}); err != nil {
 		slog.Error("failed to start web server", "error", err)
 		return 1
 	}
