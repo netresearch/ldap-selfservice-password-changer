@@ -2,6 +2,7 @@ package rpchandler
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
 	"strings"
 	"time"
@@ -178,7 +179,7 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 //
 // An empty or unrecognized mode defaults to email-only, matching the behavior
 // before this option existed.
-func (h *Handler) resolveResetUser(identifier string) (user *ldap.User, viaEmail bool, err error) {
+func (h *Handler) resolveResetUser(identifier string) (*ldap.User, bool, error) {
 	looksLikeEmail := strings.Contains(identifier, "@")
 
 	mode := h.opts.ResetIdentifierMode
@@ -186,26 +187,27 @@ func (h *Handler) resolveResetUser(identifier string) (user *ldap.User, viaEmail
 		mode = options.ResetIdentifierEmail
 	}
 
-	switch mode {
-	case options.ResetIdentifierUsername:
-		user, err = h.ldap.FindUserBySAMAccountName(identifier)
-		return user, false, err
-	case options.ResetIdentifierBoth:
-		if looksLikeEmail {
-			user, err = h.ldap.FindUserByMail(identifier)
-			return user, true, err
+	// Username lookup applies in username-only mode, and in "both" mode when
+	// the input does not look like an email address.
+	if mode == options.ResetIdentifierUsername ||
+		(mode == options.ResetIdentifierBoth && !looksLikeEmail) {
+		user, err := h.ldap.FindUserBySAMAccountName(identifier)
+		if err != nil {
+			return nil, false, fmt.Errorf("find user by sAMAccountName: %w", err)
 		}
-		user, err = h.ldap.FindUserBySAMAccountName(identifier)
-		return user, false, err
-	case options.ResetIdentifierEmail:
-		fallthrough
-	default:
-		if !looksLikeEmail {
-			return nil, false, errIdentifierRejected
-		}
-		user, err = h.ldap.FindUserByMail(identifier)
-		return user, true, err
+		return user, false, nil
 	}
+
+	// Email lookup: in email-only mode a bare username (no "@") is rejected
+	// without an LDAP round-trip.
+	if !looksLikeEmail {
+		return nil, false, errIdentifierRejected
+	}
+	user, err := h.ldap.FindUserByMail(identifier)
+	if err != nil {
+		return nil, true, fmt.Errorf("find user by mail: %w", err)
+	}
+	return user, true, nil
 }
 
 // ErrSMTPFailure is a placeholder error for SMTP failures in testing scenarios.

@@ -401,7 +401,7 @@ func TestRenderTemplateValidHTML(t *testing.T) {
 			},
 		},
 		{
-			name:   "forgot-password",
+			name: "forgot-password",
 			render: func() ([]byte, error) {
 				return RenderForgotPassword(opts)
 			},
