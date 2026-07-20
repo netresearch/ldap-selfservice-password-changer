@@ -8,7 +8,9 @@
 
 import { init } from "./forgot-password.js";
 
-const currentScript = document.querySelector<HTMLScriptElement>('script[src*="forgot-password-init.js"]');
+// Selected by its config attribute (always rendered by the template) rather
+// than by src, so renaming or cache-busting the bundle cannot break it.
+const currentScript = document.querySelector<HTMLScriptElement>("script[data-reset-identifier-mode]");
 const mode = currentScript?.dataset["resetIdentifierMode"] ?? "email";
 
 // Initialize forgot password functionality
