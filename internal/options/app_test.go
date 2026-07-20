@@ -614,3 +614,74 @@ func TestParseArgsUnknownFlag(t *testing.T) {
 	require.True(t, ok, "error should be *ConfigError")
 	assert.Contains(t, configErr.Error(), "flag parsing error")
 }
+
+// TestResetIdentifierModeValid tests the Valid method including unknown values.
+func TestResetIdentifierModeValid(t *testing.T) {
+	tests := []struct {
+		name string
+		mode ResetIdentifierMode
+		want bool
+	}{
+		{"email", ResetIdentifierEmail, true},
+		{"username", ResetIdentifierUsername, true},
+		{"both", ResetIdentifierBoth, true},
+		{"empty", ResetIdentifierMode(""), false},
+		{"unknown", ResetIdentifierMode("bogus"), false},
+		{"uppercase not normalized here", ResetIdentifierMode("EMAIL"), false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			assert.Equal(t, tt.want, tt.mode.Valid())
+		})
+	}
+}
+
+// TestParseArgsResetIdentifierMode tests parsing, normalization, defaulting,
+// and rejection of the reset identifier mode.
+func TestParseArgsResetIdentifierMode(t *testing.T) {
+	setRequired := func(t *testing.T) {
+		t.Helper()
+		t.Setenv("LDAP_SERVER", "ldap://example.com")
+		t.Setenv("LDAP_BASE_DN", "dc=example,dc=com")
+		t.Setenv("LDAP_READONLY_USER", "cn=readonly")
+		t.Setenv("LDAP_READONLY_PASSWORD", "secret")
+		t.Chdir(t.TempDir())
+	}
+
+	valid := []struct {
+		name  string
+		value string // empty string = unset (envStringOrDefault falls back)
+		want  ResetIdentifierMode
+	}{
+		{"default is email", "", ResetIdentifierEmail},
+		{"email", "email", ResetIdentifierEmail},
+		{"username", "username", ResetIdentifierUsername},
+		{"both", "both", ResetIdentifierBoth},
+		{"uppercase normalized", "BOTH", ResetIdentifierBoth},
+		{"whitespace trimmed", "  username  ", ResetIdentifierUsername},
+	}
+
+	for _, tt := range valid {
+		t.Run(tt.name, func(t *testing.T) {
+			setRequired(t)
+			t.Setenv("RESET_IDENTIFIER_MODE", tt.value)
+
+			opts, err := ParseArgs(nil)
+			require.NoError(t, err)
+			assert.Equal(t, tt.want, opts.ResetIdentifierMode)
+		})
+	}
+
+	t.Run("invalid value rejected", func(t *testing.T) {
+		setRequired(t)
+		t.Setenv("RESET_IDENTIFIER_MODE", "bogus")
+
+		_, err := ParseArgs(nil)
+		require.Error(t, err)
+
+		configErr, ok := errors.AsType[*ConfigError](err)
+		require.True(t, ok, "error should be *ConfigError")
+		assert.Contains(t, configErr.Error(), "invalid value for reset-identifier-mode")
+	})
+}

@@ -25,6 +25,10 @@ func (m *mockResetLDAPClient) FindUserByMail(_ string) (*ldap.User, error) {
 	return &ldap.User{SAMAccountName: "testuser"}, nil
 }
 
+func (m *mockResetLDAPClient) FindUserBySAMAccountName(_ string) (*ldap.User, error) {
+	return &ldap.User{SAMAccountName: "testuser"}, nil
+}
+
 func (m *mockResetLDAPClient) ChangePasswordForSAMAccountName(_, _, _ string) error {
 	return m.changePasswordError
 }

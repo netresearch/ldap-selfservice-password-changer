@@ -35,7 +35,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("render index: %v", err)
 	}
-	forgot, err := templates.RenderForgotPassword()
+	forgot, err := templates.RenderForgotPassword(opts)
 	if err != nil {
 		log.Fatalf("render forgot: %v", err)
 	}

@@ -260,7 +260,7 @@ Response: {
 ```typescript
 Request: {
   method: "request-password-reset",
-  params: [email]
+  params: [emailOrUsername]
 }
 Response: {
   success: true
@@ -270,10 +270,17 @@ Response: {
 **Handler**: `internal/rpchandler/request_password_reset.go`
 
 - Rate limiting check (3 requests/hour per IP)
-- Lookup user by email in LDAP
+- Resolve the account per `RESET_IDENTIFIER_MODE` (`email` default, `username`, or `both`).
+  In `both`, an input containing `@` is looked up by email, otherwise by username.
 - Generate secure reset token
-- Send reset email with token link
-- Always returns success (prevents email enumeration)
+- Send reset email with token link — always to the account's LDAP-registered
+  address, never to the typed identifier
+- Always returns success (prevents account enumeration)
+
+**`RESET_IDENTIFIER_MODE`**: `username` / `both` exist because Active Directory does
+not enforce a unique `mail` attribute; an email shared by multiple accounts is
+ambiguous and yields the generic success without sending mail (those users reset via
+their unique username).
 
 #### `reset-password`
 

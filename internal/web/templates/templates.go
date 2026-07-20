@@ -71,6 +71,9 @@ const (
 	inputTypeEmail    = "email"
 )
 
+// optsKey is the template data key exposing configuration options.
+const optsKey = "opts"
+
 // InputOpts holds configuration for rendering HTML input fields with validation and accessibility attributes.
 type InputOpts struct {
 	Name         string
@@ -159,20 +162,23 @@ func renderTemplate(templateName, rawTemplate string, data any) ([]byte, error) 
 // RenderIndex renders the main password change page with the provided configuration options.
 func RenderIndex(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
-		"opts": opts,
+		optsKey: opts,
 	}
 	return renderTemplate("index", rawIndex, data)
 }
 
-// RenderForgotPassword renders the password reset request page.
-func RenderForgotPassword() ([]byte, error) {
-	return renderTemplate("forgot-password", rawForgotPassword, nil)
+// RenderForgotPassword renders the password reset request page with the provided configuration options.
+func RenderForgotPassword(opts *options.Opts) ([]byte, error) {
+	data := map[string]any{
+		optsKey: opts,
+	}
+	return renderTemplate("forgot-password", rawForgotPassword, data)
 }
 
 // RenderResetPassword renders the password reset completion page with the provided configuration options.
 func RenderResetPassword(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
-		"opts": opts,
+		optsKey: opts,
 	}
 	return renderTemplate("reset-password", rawResetPassword, data)
 }

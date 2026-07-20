@@ -365,6 +365,10 @@ func (m *mockHandlerLDAP) FindUserByMail(_ string) (*ldap.User, error) {
 	return &ldap.User{SAMAccountName: "testuser", Mail: &email}, nil
 }
 
+func (m *mockHandlerLDAP) FindUserBySAMAccountName(sAMAccountName string) (*ldap.User, error) {
+	return m.FindUserByMail(sAMAccountName)
+}
+
 func (m *mockHandlerLDAP) ChangePasswordForSAMAccountName(_, _, _ string) error {
 	if m.changePasswordError != "" {
 		return ldap.NewLDAPError("ChangePassword", "ldap://localhost", errors.New(m.changePasswordError))

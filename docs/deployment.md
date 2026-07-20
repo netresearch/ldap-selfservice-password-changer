@@ -165,6 +165,12 @@ PASSWORD_CAN_INCLUDE_USERNAME=false
 # Enable password reset functionality (default: true)
 PASSWORD_RESET_ENABLED=true
 
+# Identifier accepted by the reset form: email, username, or both (default: email)
+# Use username/both when several accounts share one email address (AD does not
+# enforce a unique mail attribute). The reset link always goes to the account's
+# registered email address.
+RESET_IDENTIFIER_MODE=email
+
 # Token expiry in minutes (default: 15)
 RESET_TOKEN_EXPIRY_MINUTES=15
 

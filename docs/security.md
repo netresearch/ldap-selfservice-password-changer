@@ -95,15 +95,15 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 
 ---
 
-#### 3. Email Enumeration
+#### 3. Account Enumeration
 
-**Attack**: Attacker discovers valid email addresses by testing reset requests.
+**Attack**: Attacker discovers valid email addresses or usernames by testing reset requests (the form accepts email and/or username per `RESET_IDENTIFIER_MODE`).
 
 **Mitigations**:
 
-- Always return success response regardless of email validity
+- Always return success response regardless of identifier validity
 - Rate limiting prevents mass enumeration (3 requests/hour per IP)
-- No timing differences between valid/invalid emails
+- No timing differences between valid/invalid identifiers
 
 **Residual Risk**: Medium - rate limiting can be circumvented with distributed IPs
 
@@ -252,11 +252,11 @@ Result: Library escapes parentheses, preventing injection
 
 **Password Reset Flow**:
 
-1. User provides email address
-2. Application rate-limits request (3/hour per IP)
-3. Lookup user by email in LDAP (read-only account)
+1. User provides email address or username (per `RESET_IDENTIFIER_MODE`, default email-only)
+2. Application rate-limits request (per IP, per typed identifier, and per resolved account)
+3. Lookup user by email or username in LDAP (read-only account)
 4. Generate 256-bit cryptographic token
-5. Store token in memory with email and expiration
+5. Store token in memory with the account's registered email and expiration
 6. Send token link via email (out-of-band)
 7. User clicks link, submits token + new password
 8. Application validates token, retrieves email

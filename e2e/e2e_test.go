@@ -42,7 +42,7 @@ func createTestApp(t *testing.T) *fiber.App {
 	indexPage, err := templates.RenderIndex(opts)
 	require.NoError(t, err)
 
-	forgotPasswordPage, err := templates.RenderForgotPassword()
+	forgotPasswordPage, err := templates.RenderForgotPassword(opts)
 	require.NoError(t, err)
 
 	resetPasswordPage, err := templates.RenderResetPassword(opts)

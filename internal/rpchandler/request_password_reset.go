@@ -2,11 +2,22 @@ package rpchandler
 
 import (
 	"errors"
+	"fmt"
 	"log/slog"
+	"strings"
 	"time"
 
+	ldap "github.com/netresearch/simple-ldap-go"
+
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/resettoken"
 )
+
+// errIdentifierRejected is returned by resolveResetUser when the supplied
+// identifier does not match the configured mode (e.g. a username entered while
+// the form only accepts email addresses). It is treated as "no user" by the
+// caller to preserve the enumeration-safe generic response.
+var errIdentifierRejected = errors.New("identifier rejected for configured reset mode")
 
 // msgResetEmailSent is the enumeration-safe success message always returned
 // for password reset requests, regardless of whether the account exists.
@@ -70,8 +81,12 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 		return genericSuccess, nil
 	}
 
-	// SECOND: Check email-based rate limit (per-user protection)
-	if !h.rateLimiter.AllowRequest(emailOrUsername) {
+	// SECOND: Check the rate limit for the typed identifier (per-user
+	// protection). The "typed:" prefix keeps these buckets disjoint from the
+	// post-resolution "account:" buckets below — without it, an attacker could
+	// pre-exhaust a victim's account bucket by literally typing
+	// "account:<username>" into the form.
+	if !h.rateLimiter.AllowRequest("typed:" + emailOrUsername) {
 		// User is rate limited - return success but don't proceed
 		slog.Warn("password_reset_rate_limited", "email", emailOrUsername)
 		return genericSuccess, nil
@@ -85,16 +100,44 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 		return genericSuccess, nil
 	}
 
-	// Look up user in LDAP by email to get SAMAccountName/username
-	// This validates the user exists and retrieves their username for the token
-	user, err := h.ldap.FindUserByMail(emailOrUsername)
-	if err != nil {
-		// User not found or LDAP error - return generic success (don't reveal)
-		slog.Info("password_reset_user_not_found", "email", emailOrUsername, "error", err)
+	// Resolve the target account according to the configured identifier mode.
+	// The lookup is authoritative server-side; a mismatch, an ambiguous email,
+	// or any LDAP error all collapse to the generic success below.
+	// The nil-user guard protects against LDAPClient implementations that
+	// return (nil, nil); dereferencing would otherwise panic and break the
+	// enumeration-safe generic response.
+	user, viaEmail, err := h.resolveResetUser(emailOrUsername)
+	if err != nil || user == nil {
+		slog.Info("password_reset_user_not_resolved", "identifier", emailOrUsername, "error", err)
 		return genericSuccess, nil
 	}
 
 	username := user.SAMAccountName
+
+	// THIRD: Check the rate limit for the RESOLVED account. The pre-lookup
+	// check above is keyed on the typed string, so one mailbox reachable via
+	// several identifiers (email and username in "both" mode, or an account
+	// with multiple mail values) would otherwise get one bucket per spelling,
+	// multiplying the reset emails deliverable to it. The "account:"/"typed:"
+	// prefixes keep the two bucket namespaces disjoint, so no typed input can
+	// address an account bucket.
+	if !h.rateLimiter.AllowRequest("account:" + username) {
+		slog.Warn("password_reset_account_rate_limited", "username", username)
+		return genericSuccess, nil
+	}
+
+	// The reset link is always sent to the account's LDAP-registered address,
+	// never to an arbitrary string typed by the requester. When the user was
+	// found by email, the typed value IS a registered address (LDAP matched a
+	// single account on it); otherwise use the address stored in the directory.
+	recipient := emailOrUsername
+	if !viaEmail {
+		if user.Mail == nil || *user.Mail == "" {
+			slog.Warn("password_reset_no_registered_mail", "username", username)
+			return genericSuccess, nil
+		}
+		recipient = *user.Mail
+	}
 
 	// Create token metadata
 	now := time.Now()
@@ -105,7 +148,7 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 	token := &resettoken.ResetToken{
 		Token:            tokenString,
 		Username:         username,
-		Email:            emailOrUsername,
+		Email:            recipient,
 		CreatedAt:        now,
 		ExpiresAt:        now.Add(expiryDuration),
 		Used:             false,
@@ -120,19 +163,58 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 		return genericSuccess, nil
 	}
 
-	// Send reset email
-	err = h.emailService.SendResetEmail(emailOrUsername, tokenString)
+	// Send reset email to the LDAP-registered address
+	err = h.emailService.SendResetEmail(recipient, tokenString)
 	if err != nil {
 		// Log error internally but return success to user
 		// Token remains in store for potential retry
-		slog.Error("password_reset_email_failed", "username", username, "email", emailOrUsername, "error", err)
+		slog.Error("password_reset_email_failed", "username", username, "email", recipient, "error", err)
 		return genericSuccess, nil
 	}
 
-	slog.Info("password_reset_requested", "username", username, "email", emailOrUsername)
+	slog.Info("password_reset_requested", "username", username, "email", recipient)
 
 	// Return generic success message
 	return genericSuccess, nil
+}
+
+// resolveResetUser looks up the account for a password reset request according
+// to the configured identifier mode. It returns the resolved user, whether the
+// lookup was performed by email (true) or by username (false), and any lookup
+// error. Callers treat every error as "no user" to keep the response
+// enumeration-safe.
+//
+// An empty or unrecognized mode defaults to email-only, matching the behavior
+// before this option existed.
+func (h *Handler) resolveResetUser(identifier string) (*ldap.User, bool, error) {
+	looksLikeEmail := strings.Contains(identifier, "@")
+
+	mode := h.opts.ResetIdentifierMode
+	if !mode.Valid() {
+		mode = options.ResetIdentifierEmail
+	}
+
+	// Username lookup applies in username-only mode, and in "both" mode when
+	// the input does not look like an email address.
+	if mode == options.ResetIdentifierUsername ||
+		(mode == options.ResetIdentifierBoth && !looksLikeEmail) {
+		user, err := h.ldap.FindUserBySAMAccountName(identifier)
+		if err != nil {
+			return nil, false, fmt.Errorf("find user by sAMAccountName: %w", err)
+		}
+		return user, false, nil
+	}
+
+	// Email lookup: in email-only mode a bare username (no "@") is rejected
+	// without an LDAP round-trip.
+	if !looksLikeEmail {
+		return nil, false, errIdentifierRejected
+	}
+	user, err := h.ldap.FindUserByMail(identifier)
+	if err != nil {
+		return nil, true, fmt.Errorf("find user by mail: %w", err)
+	}
+	return user, true, nil
 }
 
 // ErrSMTPFailure is a placeholder error for SMTP failures in testing scenarios.

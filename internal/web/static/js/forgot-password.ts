@@ -2,7 +2,27 @@ import { mustNotBeEmpty, isValidEmail } from "./validators.js";
 import { initThemeToggle, initDensityToggle } from "./toggles.js";
 import { type FieldError, setFieldErrors, setSubmitError, updateErrorSummary } from "./error-utils.js";
 
-export const init = () => {
+type IdentifierMode = "email" | "username" | "both";
+
+const asMode = (raw: string): IdentifierMode => (raw === "username" || raw === "both" ? raw : "email");
+
+// Only validate the email format when the value looks like an email; a bare
+// username is accepted as-is. Server-side lookup is authoritative.
+const isValidEmailOrUsername = (v: string): string => (v.includes("@") ? isValidEmail(v) : "");
+
+const identifierField = (mode: IdentifierMode): { label: string; validators: ((v: string) => string)[] } => {
+  switch (mode) {
+    case "username":
+      return { label: "Username", validators: [mustNotBeEmpty("Username")] };
+    case "both":
+      return { label: "Email or Username", validators: [mustNotBeEmpty("Email or username"), isValidEmailOrUsername] };
+    default:
+      return { label: "Email Address", validators: [mustNotBeEmpty("Email"), isValidEmail] };
+  }
+};
+
+export const init = (rawMode: string) => {
+  const mode = asMode(rawMode);
   initThemeToggle();
   initDensityToggle();
 
@@ -30,7 +50,8 @@ export const init = () => {
 
   type Field = [string, string, ((v: string) => string)[]];
 
-  const fieldsWithValidators = [["email", "Email Address", [mustNotBeEmpty("Email"), isValidEmail]]] satisfies Field[];
+  const { label, validators } = identifierField(mode);
+  const fieldsWithValidators = [["email", label, validators]] satisfies Field[];
 
   const fields = fieldsWithValidators.map(([name, label, validators]) => {
     const f = form.querySelector<HTMLDivElement>(`#${name}`);

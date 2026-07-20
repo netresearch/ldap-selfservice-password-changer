@@ -13,6 +13,28 @@ import (
 	ldap "github.com/netresearch/simple-ldap-go"
 )
 
+// ResetIdentifierMode selects which identifier types the password reset form accepts.
+type ResetIdentifierMode string
+
+const (
+	// ResetIdentifierEmail accepts only email addresses (default, backward compatible).
+	ResetIdentifierEmail ResetIdentifierMode = "email"
+	// ResetIdentifierUsername accepts only usernames (sAMAccountName / uid).
+	ResetIdentifierUsername ResetIdentifierMode = "username"
+	// ResetIdentifierBoth accepts either an email address or a username in one field.
+	ResetIdentifierBoth ResetIdentifierMode = "both"
+)
+
+// Valid reports whether the mode is a recognized value.
+func (m ResetIdentifierMode) Valid() bool {
+	switch m {
+	case ResetIdentifierEmail, ResetIdentifierUsername, ResetIdentifierBoth:
+		return true
+	default:
+		return false
+	}
+}
+
 // Opts holds application configuration from environment variables and command-line flags.
 type Opts struct {
 	Port             string
@@ -29,6 +51,7 @@ type Opts struct {
 
 	// Password Reset Configuration
 	PasswordResetEnabled        bool
+	ResetIdentifierMode         ResetIdentifierMode
 	ResetTokenExpiryMinutes     uint
 	ResetRateLimitRequests      uint
 	ResetRateLimitWindowMinutes uint
@@ -191,6 +214,11 @@ func ParseArgs(args []string) (*Opts, error) {
 			envBoolOrDefault("PASSWORD_RESET_ENABLED", false, errs),
 			"Enable password reset feature.",
 		)
+		fResetIdentifierMode = fs.String(
+			"reset-identifier-mode",
+			envStringOrDefault("RESET_IDENTIFIER_MODE", string(ResetIdentifierEmail)),
+			"Which identifier the password reset form accepts: `email`, `username`, or `both`.",
+		)
 		fResetTokenExpiryMinutes = fs.Uint(
 			"reset-token-expiry-minutes",
 			envIntOrDefault("RESET_TOKEN_EXPIRY_MINUTES", 15, errs),
@@ -252,6 +280,15 @@ func ParseArgs(args []string) (*Opts, error) {
 		errs.Add(fmt.Sprintf("flag parsing error: %v", err))
 	}
 
+	// Normalize and validate the password reset identifier mode
+	resetIdentifierMode := ResetIdentifierMode(strings.ToLower(strings.TrimSpace(*fResetIdentifierMode)))
+	if !resetIdentifierMode.Valid() {
+		errs.Add(fmt.Sprintf(
+			"invalid value for reset-identifier-mode: %q (expected email, username, or both)",
+			*fResetIdentifierMode,
+		))
+	}
+
 	// Collect all missing required options
 	var missing []string
 	checkRequired("ldap-server", fLdapServer, &missing)
@@ -287,6 +324,7 @@ func ParseArgs(args []string) (*Opts, error) {
 		PasswordCanIncludeUsername: *fPasswordCanIncludeUsername,
 
 		PasswordResetEnabled:        *fPasswordResetEnabled,
+		ResetIdentifierMode:         resetIdentifierMode,
 		ResetTokenExpiryMinutes:     *fResetTokenExpiryMinutes,
 		ResetRateLimitRequests:      *fResetRateLimitRequests,
 		ResetRateLimitWindowMinutes: *fResetRateLimitWindowMinutes,
