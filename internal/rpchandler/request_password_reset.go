@@ -81,8 +81,12 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 		return genericSuccess, nil
 	}
 
-	// SECOND: Check email-based rate limit (per-user protection)
-	if !h.rateLimiter.AllowRequest(emailOrUsername) {
+	// SECOND: Check the rate limit for the typed identifier (per-user
+	// protection). The "typed:" prefix keeps these buckets disjoint from the
+	// post-resolution "account:" buckets below — without it, an attacker could
+	// pre-exhaust a victim's account bucket by literally typing
+	// "account:<username>" into the form.
+	if !h.rateLimiter.AllowRequest("typed:" + emailOrUsername) {
 		// User is rate limited - return success but don't proceed
 		slog.Warn("password_reset_rate_limited", "email", emailOrUsername)
 		return genericSuccess, nil
@@ -111,9 +115,9 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 	// check above is keyed on the typed string, so one mailbox reachable via
 	// several identifiers (email and username in "both" mode, or an account
 	// with multiple mail values) would otherwise get one bucket per spelling,
-	// multiplying the reset emails deliverable to it. The "account:" prefix
-	// keeps this bucket disjoint from typed-identifier buckets (":" cannot
-	// occur in a sAMAccountName).
+	// multiplying the reset emails deliverable to it. The "account:"/"typed:"
+	// prefixes keep the two bucket namespaces disjoint, so no typed input can
+	// address an account bucket.
 	if !h.rateLimiter.AllowRequest("account:" + username) {
 		slog.Warn("password_reset_account_rate_limited", "username", username)
 		return genericSuccess, nil

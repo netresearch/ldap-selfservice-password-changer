@@ -188,6 +188,44 @@ func TestRequestPasswordResetAccountRateLimitAcrossIdentifiers(t *testing.T) {
 	require.Equal(t, 3, tokenStore.Count(), "no additional token past the account budget")
 }
 
+// TestRequestPasswordResetAccountBucketNotPoisonableViaTypedInput: typing the
+// literal string "account:<username>" must NOT consume the victim's per-account
+// budget — the typed and account bucket namespaces are disjoint.
+func TestRequestPasswordResetAccountBucketNotPoisonableViaTypedInput(t *testing.T) {
+	tokenStore := resettoken.NewStore()
+	mockEmail := &mockEmailService{}
+	mockLDAP := &mockLDAPClient{
+		usersBySAM: map[string]*ldap.User{
+			"jdoe": {SAMAccountName: "jdoe", Mail: strptr("john.doe@example.com")},
+		},
+	}
+	handler := &Handler{
+		ldap:         mockLDAP,
+		tokenStore:   tokenStore,
+		emailService: mockEmail,
+		rateLimiter:  ratelimit.NewLimiter(3, 60*time.Minute),
+		opts: &options.Opts{
+			ResetIdentifierMode:     options.ResetIdentifierUsername,
+			ResetTokenExpiryMinutes: 15,
+		},
+	}
+
+	// Attacker tries to pre-exhaust the victim's account bucket by typing the
+	// raw bucket key. Resolution fails (no such username), generic success.
+	for range 3 {
+		result, err := handler.requestPasswordReset([]string{"account:jdoe"})
+		require.NoError(t, err)
+		require.Equal(t, []string{msgResetEmailSent}, result)
+	}
+	require.Zero(t, tokenStore.Count())
+
+	// The victim's own request must still go through.
+	_, err := handler.requestPasswordReset([]string{"jdoe"})
+	require.NoError(t, err)
+	require.Equal(t, "john.doe@example.com", mockEmail.lastTo, "victim's reset must not be denied")
+	require.Equal(t, 1, tokenStore.Count())
+}
+
 // TestRequestPasswordResetEmptyModeDefaultsToEmail: an unset mode behaves like
 // email-only (backward compatible).
 func TestRequestPasswordResetEmptyModeDefaultsToEmail(t *testing.T) {
