@@ -106,6 +106,7 @@ GopherPass is configured via environment variables or command-line flags. Key se
 - `SMTP_USERNAME` / `SMTP_PASSWORD` - SMTP authentication
 - `SMTP_FROM_ADDRESS` - Sender email address
 - `APP_BASE_URL` - Base URL for reset links
+- `RESET_IDENTIFIER_MODE` - Identifier the reset form accepts: `email`, `username`, or `both` (default: `email`)
 - `RESET_TOKEN_EXPIRY_MINUTES` - Token validity (default: 15)
 - `RESET_RATE_LIMIT_REQUESTS` - Max requests per window (default: 3)
 
@@ -123,11 +124,11 @@ The password reset feature allows users to reset forgotten passwords via secure 
 - **Token Expiration**: Tokens expire after 15 minutes (configurable)
 - **Single-Use Tokens**: Tokens cannot be reused after password reset
 - **No User Enumeration**: Generic responses prevent account discovery
-- **Directory Integration**: Automatic email-to-username lookup
+- **Directory Integration**: Automatic identifier-to-account lookup (email and/or username, see `RESET_IDENTIFIER_MODE`)
 
 ### How It Works
 
-1. User navigates to `/forgot-password` and enters their email
+1. User navigates to `/forgot-password` and enters their email address or username (per `RESET_IDENTIFIER_MODE`; the reset link always goes to the account's registered email address)
 2. System looks up user in directory and generates secure token
 3. Reset email sent with link: `https://your-domain.com/reset-password?token=XXX`
 4. User clicks link, enters new password with real-time validation
