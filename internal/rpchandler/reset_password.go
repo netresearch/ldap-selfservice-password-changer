@@ -3,6 +3,7 @@ package rpchandler
 import (
 	"errors"
 	"log/slog"
+	"strings"
 
 	ldap "github.com/netresearch/simple-ldap-go"
 )
@@ -25,8 +26,10 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 	// Get token from store
 	token, err := h.tokenStore.Get(tokenString)
 	if err != nil {
-		// Safely log token prefix (handle tokens shorter than 8 chars)
-		prefix := tokenString[:min(8, len(tokenString))]
+		// Safely log token prefix (handle tokens shorter than 8 chars and
+		// user-supplied bytes: the byte slice may split a multi-byte rune,
+		// so strip any resulting invalid UTF-8 before logging)
+		prefix := strings.ToValidUTF8(tokenString[:min(8, len(tokenString))], "")
 		slog.Warn("password_reset_invalid_token", "token_prefix", prefix)
 		return nil, errors.New("invalid or expired token")
 	}

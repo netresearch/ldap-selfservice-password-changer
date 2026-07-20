@@ -101,10 +101,10 @@ func (l *Limiter) cleanupExpiredLocked(cutoff time.Time) int {
 	count := 0
 
 	for identifier, entry := range l.entries {
-		// Check if all timestamps are expired
-		allExpired := !slices.ContainsFunc(entry.timestamps, func(ts time.Time) bool {
-			return ts.After(cutoff)
-		})
+		// Timestamps are appended chronologically, so the entry is fully
+		// expired iff its newest (last) timestamp is expired.
+		n := len(entry.timestamps)
+		allExpired := n == 0 || !entry.timestamps[n-1].After(cutoff)
 
 		if allExpired {
 			delete(l.entries, identifier)
