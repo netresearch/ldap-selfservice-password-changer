@@ -150,6 +150,44 @@ func TestRequestPasswordResetDuplicatedMail(t *testing.T) {
 	require.Zero(t, tokenStore.Count())
 }
 
+// TestRequestPasswordResetAccountRateLimitAcrossIdentifiers: in "both" mode
+// the email and username spellings of one account must share a rate-limit
+// budget — the typed-string buckets alone would double the reset emails
+// deliverable to a single mailbox.
+func TestRequestPasswordResetAccountRateLimitAcrossIdentifiers(t *testing.T) {
+	tokenStore := resettoken.NewStore()
+	mockEmail := &mockEmailService{}
+	user := &ldap.User{SAMAccountName: "jdoe", Mail: strptr("john.doe@example.com")}
+	mockLDAP := &mockLDAPClient{
+		users:      map[string]*ldap.User{"john.doe@example.com": user},
+		usersBySAM: map[string]*ldap.User{"jdoe": user},
+	}
+	handler := &Handler{
+		ldap:         mockLDAP,
+		tokenStore:   tokenStore,
+		emailService: mockEmail,
+		rateLimiter:  ratelimit.NewLimiter(3, 60*time.Minute),
+		opts: &options.Opts{
+			ResetIdentifierMode:     options.ResetIdentifierBoth,
+			ResetTokenExpiryMinutes: 15,
+		},
+	}
+
+	// Exhaust the account's budget via the email spelling.
+	for i := range 3 {
+		_, err := handler.requestPasswordReset([]string{"john.doe@example.com"})
+		require.NoError(t, err, "request %d", i+1)
+	}
+	require.Equal(t, 3, tokenStore.Count())
+
+	// The username spelling hits a fresh typed-string bucket but must be
+	// stopped by the shared per-account bucket: no fourth email.
+	result, err := handler.requestPasswordReset([]string{"jdoe"})
+	require.NoError(t, err)
+	require.Equal(t, []string{msgResetEmailSent}, result, "response stays enumeration-safe")
+	require.Equal(t, 3, tokenStore.Count(), "no additional token past the account budget")
+}
+
 // TestRequestPasswordResetEmptyModeDefaultsToEmail: an unset mode behaves like
 // email-only (backward compatible).
 func TestRequestPasswordResetEmptyModeDefaultsToEmail(t *testing.T) {

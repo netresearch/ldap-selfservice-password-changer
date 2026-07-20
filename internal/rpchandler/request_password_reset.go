@@ -106,6 +106,18 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 
 	username := user.SAMAccountName
 
+	// THIRD: Check the rate limit for the RESOLVED account. The pre-lookup
+	// check above is keyed on the typed string, so one mailbox reachable via
+	// several identifiers (email and username in "both" mode, or an account
+	// with multiple mail values) would otherwise get one bucket per spelling,
+	// multiplying the reset emails deliverable to it. The "account:" prefix
+	// keeps this bucket disjoint from typed-identifier buckets (":" cannot
+	// occur in a sAMAccountName).
+	if !h.rateLimiter.AllowRequest("account:" + username) {
+		slog.Warn("password_reset_account_rate_limited", "username", username)
+		return genericSuccess, nil
+	}
+
 	// The reset link is always sent to the account's LDAP-registered address,
 	// never to an arbitrary string typed by the requester. When the user was
 	// found by email, the typed value IS a registered address (LDAP matched a
