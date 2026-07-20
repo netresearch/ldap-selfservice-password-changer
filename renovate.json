@@ -16,11 +16,11 @@
       "automerge": true
     },
     {
-      "description": "typescript-eslint peers cap at <6.1.0; lift once TS 7 is supported (typescript-eslint#12518)",
+      "description": "typescript-eslint 8.x peers cap at <6.1.0 (breaks bun run lint above it); lift when TS 7 is supported (typescript-eslint#12518)",
       "matchPackageNames": [
         "typescript"
       ],
-      "allowedVersions": "<7"
+      "allowedVersions": "<6.1.0"
     }
   ]
 }
