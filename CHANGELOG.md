@@ -9,6 +9,41 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.4.0] - 2026-07-21
+
+### Added
+
+- **Password reset by username or email** — new `RESET_IDENTIFIER_MODE` (`email`, the default; `username`; or `both`) lets users request a reset with a username when a shared email address is ambiguous (Active Directory permits non-unique `mail`). Reset links are always sent to the account's registered email address; per-IP, per-typed-identifier, and per-resolved-account rate limits apply ([#620](https://github.com/netresearch/ldap-selfservice-password-changer/pull/620))
+- **Graceful shutdown** on SIGINT/SIGTERM so in-flight requests complete before the process exits ([#622](https://github.com/netresearch/ldap-selfservice-password-changer/pull/622))
+- **Live password-policy checklist** and a linked, screen-reader-friendly error summary on the password-change form
+- **Self-contained Docker dev stack** (OpenLDAP + Mailpit) via Compose profiles
+
+### Changed
+
+- CSS build reduced to `@tailwindcss/postcss` (Lightning CSS handles nesting, prefixing, and minification); removed `autoprefixer`, `postcss-nested`, and `cssnano` ([#622](https://github.com/netresearch/ldap-selfservice-password-changer/pull/622))
+- Frontend modernized: `Element.replaceChildren()`, ESLint flat-config `defineConfig`, stricter `tsconfig` (`verbatimModuleSyntax`, `erasableSyntaxOnly`)
+- Go: adopted 1.26 idioms (`slices` helpers, `min`) and `testing/synctest` for deterministic time-based tests
+- Release pipeline: per-archive SBOMs, cosign signing, and SLSA build provenance/attestation
+
+### Fixed
+
+- Password reset guards against an LDAP client returning a nil user (previously would panic) ([#620](https://github.com/netresearch/ldap-selfservice-password-changer/pull/620))
+- `bun run lint` no longer breaks under TypeScript 7 — TypeScript pinned to 6.0.x until `typescript-eslint` supports TS 7
+
+### Security
+
+- Resolved transitive advisory [GHSA-jxxr-4gwj-5jf2](https://github.com/advisories/GHSA-jxxr-4gwj-5jf2) (`brace-expansion`) via a package override
+
+### Dependencies
+
+- `gofiber/fiber/v3` → v3.4.0
+- `netresearch/simple-ldap-go` → v1.12.0
+- `valyala/fasthttp` → v1.72.0
+- `alpine` → 3.24.1
+- Routine Renovate/Dependabot updates across Go, Bun, and Docker
+
+---
+
 ## [v1.3.0] - 2026-04-16
 
 ### Fixed
