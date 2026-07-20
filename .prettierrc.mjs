@@ -5,6 +5,7 @@ const config = {
   tabWidth: 2,
   semi: true,
   singleQuote: false,
+  tailwindStylesheet: "./internal/web/tailwind.css",
   plugins: ["prettier-plugin-tailwindcss", "prettier-plugin-go-template"]
 };
 
