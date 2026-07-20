@@ -3,6 +3,7 @@ package ratelimit_test
 import (
 	"fmt"
 	"testing"
+	"testing/synctest"
 	"time"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
@@ -50,45 +51,49 @@ func TestAllowRequestDifferentUsers(t *testing.T) {
 }
 
 func TestSlidingWindow(t *testing.T) {
-	limiter := ratelimit.NewLimiter(2, 100*time.Millisecond)
-	identifier := "user@example.com"
+	synctest.Test(t, func(t *testing.T) {
+		limiter := ratelimit.NewLimiter(2, 100*time.Millisecond)
+		identifier := "user@example.com"
 
-	// Make 2 requests (limit reached).
-	limiter.AllowRequest(identifier)
-	limiter.AllowRequest(identifier)
+		// Make 2 requests (limit reached).
+		limiter.AllowRequest(identifier)
+		limiter.AllowRequest(identifier)
 
-	// 3rd request should be blocked.
-	allowed := limiter.AllowRequest(identifier)
-	if allowed {
-		t.Error("Request should be blocked immediately")
-	}
+		// 3rd request should be blocked.
+		allowed := limiter.AllowRequest(identifier)
+		if allowed {
+			t.Error("Request should be blocked immediately")
+		}
 
-	// Wait for window to pass.
-	time.Sleep(150 * time.Millisecond)
+		// Wait for window to pass.
+		time.Sleep(150 * time.Millisecond)
 
-	// Should be allowed again.
-	allowed = limiter.AllowRequest(identifier)
-	if !allowed {
-		t.Error("Request should be allowed after window expired")
-	}
+		// Should be allowed again.
+		allowed = limiter.AllowRequest(identifier)
+		if !allowed {
+			t.Error("Request should be allowed after window expired")
+		}
+	})
 }
 
 func TestCleanupExpired(t *testing.T) {
-	limiter := ratelimit.NewLimiter(3, 100*time.Millisecond)
+	synctest.Test(t, func(t *testing.T) {
+		limiter := ratelimit.NewLimiter(3, 100*time.Millisecond)
 
-	// Make requests from multiple users.
-	limiter.AllowRequest("user1@example.com")
-	limiter.AllowRequest("user2@example.com")
-	limiter.AllowRequest("user3@example.com")
+		// Make requests from multiple users.
+		limiter.AllowRequest("user1@example.com")
+		limiter.AllowRequest("user2@example.com")
+		limiter.AllowRequest("user3@example.com")
 
-	// Wait for entries to expire.
-	time.Sleep(150 * time.Millisecond)
+		// Wait for entries to expire.
+		time.Sleep(150 * time.Millisecond)
 
-	// Run cleanup.
-	count := limiter.CleanupExpired()
-	if count != 3 {
-		t.Errorf("CleanupExpired() removed %d entries, want 3", count)
-	}
+		// Run cleanup.
+		count := limiter.CleanupExpired()
+		if count != 3 {
+			t.Errorf("CleanupExpired() removed %d entries, want 3", count)
+		}
+	})
 }
 
 func TestCount(t *testing.T) {
@@ -151,76 +156,82 @@ func TestIsFull(t *testing.T) {
 
 // TestStartCleanup tests the StartCleanup goroutine lifecycle.
 func TestStartCleanup(t *testing.T) {
-	limiter := ratelimit.NewLimiter(3, 50*time.Millisecond)
+	synctest.Test(t, func(t *testing.T) {
+		limiter := ratelimit.NewLimiter(3, 50*time.Millisecond)
 
-	// Add some entries.
-	limiter.AllowRequest("user1@example.com")
-	limiter.AllowRequest("user2@example.com")
+		// Add some entries.
+		limiter.AllowRequest("user1@example.com")
+		limiter.AllowRequest("user2@example.com")
 
-	if limiter.Count() != 2 {
-		t.Errorf("Count = %d, want 2", limiter.Count())
-	}
+		if limiter.Count() != 2 {
+			t.Errorf("Count = %d, want 2", limiter.Count())
+		}
 
-	// Start cleanup goroutine with short interval.
-	stop := limiter.StartCleanup(60 * time.Millisecond)
-	defer close(stop)
+		// Start cleanup goroutine with short interval.
+		stop := limiter.StartCleanup(60 * time.Millisecond)
+		defer close(stop)
 
-	// Wait for entries to expire.
-	time.Sleep(80 * time.Millisecond)
+		// Wait for entries to expire.
+		time.Sleep(80 * time.Millisecond)
 
-	// Wait for cleanup to run.
-	time.Sleep(80 * time.Millisecond)
+		// Wait for cleanup to run.
+		time.Sleep(80 * time.Millisecond)
 
-	// Entries should be cleaned up.
-	count := limiter.Count()
-	if count != 0 {
-		t.Errorf("Count after cleanup = %d, want 0", count)
-	}
+		// Entries should be cleaned up.
+		count := limiter.Count()
+		if count != 0 {
+			t.Errorf("Count after cleanup = %d, want 0", count)
+		}
+	})
 }
 
 // TestStartCleanupStop tests that stop channel properly terminates cleanup.
 func TestStartCleanupStop(t *testing.T) {
-	limiter := ratelimit.NewLimiter(3, 60*time.Minute)
+	synctest.Test(t, func(t *testing.T) {
+		limiter := ratelimit.NewLimiter(3, 60*time.Minute)
 
-	// Start cleanup with short interval.
-	stop := limiter.StartCleanup(10 * time.Millisecond)
+		// Start cleanup with short interval.
+		stop := limiter.StartCleanup(10 * time.Millisecond)
 
-	// Let it run a few times.
-	time.Sleep(50 * time.Millisecond)
+		// Let it run a few times.
+		time.Sleep(50 * time.Millisecond)
 
-	// Stop the goroutine.
-	close(stop)
+		// Stop the goroutine.
+		close(stop)
 
-	// Wait briefly to ensure goroutine terminates.
-	time.Sleep(20 * time.Millisecond)
+		// Wait briefly to ensure goroutine terminates.
+		time.Sleep(20 * time.Millisecond)
 
-	// Test passed if no panic/hang - goroutine properly terminated.
+		// Test passed if no panic/hang - goroutine properly terminated.
+	})
 }
 
 // TestStartCleanupWithActivity tests cleanup doesn't remove active entries.
 func TestStartCleanupWithActivity(t *testing.T) {
-	limiter := ratelimit.NewLimiter(3, 200*time.Millisecond)
+	synctest.Test(t, func(t *testing.T) {
+		limiter := ratelimit.NewLimiter(3, 200*time.Millisecond)
 
-	stop := limiter.StartCleanup(50 * time.Millisecond)
-	defer close(stop)
+		stop := limiter.StartCleanup(50 * time.Millisecond)
+		defer close(stop)
 
-	// Add entries and keep refreshing one of them.
-	limiter.AllowRequest("active@example.com")
-	limiter.AllowRequest("inactive@example.com")
-
-	// Keep "active" user active by making requests.
-	for i := range 4 {
-		time.Sleep(60 * time.Millisecond)
+		// Add entries and keep refreshing one of them.
 		limiter.AllowRequest("active@example.com")
-		if i < 3 {
-			// After first few iterations, inactive should still be there.
-			if limiter.Count() == 0 {
-				t.Error("entries removed too early")
+		limiter.AllowRequest("inactive@example.com")
+
+		// Keep "active" user active by making requests.
+		for i := range 4 {
+			time.Sleep(60 * time.Millisecond)
+			limiter.AllowRequest("active@example.com")
+			if i < 3 {
+				// After first few iterations, inactive should still be there.
+				if limiter.Count() == 0 {
+					t.Error("entries removed too early")
+				}
 			}
 		}
-	}
 
-	// After window expires, cleanup should have run.
-	// Active user should still be tracked (has recent activity).
-	// This test verifies cleanup only removes truly expired entries.
+		// After window expires, cleanup should have run.
+		// Active user should still be tracked (has recent activity).
+		// This test verifies cleanup only removes truly expired entries.
+	})
 }
