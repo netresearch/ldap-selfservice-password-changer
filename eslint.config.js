@@ -1,11 +1,12 @@
 // ESLint flat config for TypeScript/JavaScript
 // https://eslint.org/docs/latest/use/configure/configuration-files
 
+import { defineConfig } from "eslint/config";
 import js from "@eslint/js";
 import tseslint from "typescript-eslint";
 import prettierConfig from "eslint-config-prettier";
 
-export default tseslint.config(
+export default defineConfig(
   // Global ignores
   {
     ignores: [
@@ -29,15 +30,10 @@ export default tseslint.config(
   },
 
   // TypeScript strict type-checked configuration (only for TS files)
-  ...tseslint.configs.strictTypeChecked.map((config) => ({
-    ...config,
-    files: ["**/*.ts", "**/*.tsx"]
-  })),
-
-  ...tseslint.configs.stylisticTypeChecked.map((config) => ({
-    ...config,
-    files: ["**/*.ts", "**/*.tsx"]
-  })),
+  {
+    files: ["**/*.ts", "**/*.tsx"],
+    extends: [tseslint.configs.strictTypeChecked, tseslint.configs.stylisticTypeChecked]
+  },
 
   // Project-specific TypeScript settings
   {

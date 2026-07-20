@@ -51,7 +51,7 @@ function makeCheckIcon(): SVGSVGElement {
  * state on each <li> based on the current input value.
  */
 export function renderPolicyList(list: HTMLElement, rules: PolicyRule[]): (value: string) => void {
-  while (list.firstChild) list.removeChild(list.firstChild);
+  list.replaceChildren();
 
   const items = rules.map((rule) => {
     const li = document.createElement("li");
@@ -92,7 +92,7 @@ export function renderPolicyList(list: HTMLElement, rules: PolicyRule[]): (value
       iconWrap.classList.toggle("text-gray-500", !met);
       iconWrap.classList.toggle("dark:text-gray-400", !met);
 
-      while (iconWrap.firstChild) iconWrap.removeChild(iconWrap.firstChild);
+      iconWrap.replaceChildren();
       iconWrap.appendChild(met ? makeCheckIcon() : makeDotIcon());
     }
   };

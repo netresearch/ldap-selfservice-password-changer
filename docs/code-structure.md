@@ -469,8 +469,7 @@ uglify-js             # Minify for production
 
 ```bash
 postcss               # Process Tailwind directives
-autoprefixer          # Add vendor prefixes
-cssnano              # Minify for production
+@tailwindcss/postcss  # Prefixing, nesting, minification via Lightning CSS
 ```
 
 **Build Scripts** (`package.json`):
@@ -520,8 +519,7 @@ var staticFS embed.FS
 - `typescript` - Type-safe JavaScript
 - `@tailwindcss/postcss` - CSS framework
 - `uglify-js` - JavaScript minification
-- `postcss` - CSS processing
-- `cssnano` - CSS minification
+- `postcss` - CSS processing (minification via @tailwindcss/postcss / Lightning CSS)
 
 **Development**:
 
@@ -588,7 +586,7 @@ var staticFS embed.FS
 
 ### Frontend
 
-- **Asset minification**: UglifyJS and cssnano
+- **Asset minification**: Lightning CSS via `@tailwindcss/postcss` (no JS minifier configured)
 - **HTTP/2**: Parallel asset loading
 - **Lazy loading**: Module imports for page-specific code
 - **PWA**: Offline capability with service worker

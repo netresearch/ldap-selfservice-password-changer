@@ -623,3 +623,54 @@ func BenchmarkRunHealthCheck(b *testing.B) {
 		_ = testableRunHealthCheck(server.URL + "/health/live")
 	}
 }
+
+// restoreRunSeams returns a cleanup closure restoring the buildServerFunc and
+// shutdownContextFunc indirections after a test overrides them.
+func restoreRunSeams(
+	bs func(*options.Opts) (*fiber.App, error),
+	sc func() (context.Context, context.CancelFunc),
+) func() {
+	return func() {
+		buildServerFunc = bs
+		shutdownContextFunc = sc
+	}
+}
+
+// TestRunGracefulShutdown drives run() through the successful listen path with
+// an already-canceled shutdown context, so fiber.Listen shuts down gracefully
+// and run() returns 0. buildServerFunc is stubbed to avoid a real LDAP backend
+// and shutdownContextFunc to avoid process signals.
+func TestRunGracefulShutdown(t *testing.T) {
+	t.Cleanup(restoreRunSeams(buildServerFunc, shutdownContextFunc))
+
+	// Minimal app with no LDAP dependency.
+	buildServerFunc = func(_ *options.Opts) (*fiber.App, error) {
+		return fiber.New(), nil
+	}
+	// Cancel shortly after listen starts so the graceful-shutdown watcher,
+	// which arms once the listener is bound, observes it and returns.
+	shutdownContextFunc = func() (context.Context, context.CancelFunc) {
+		ctx, cancel := context.WithTimeout(context.Background(), 300*time.Millisecond)
+		return ctx, cancel
+	}
+
+	done := make(chan int, 1)
+	go func() {
+		// Port 0 => an ephemeral free port, so the test never collides.
+		done <- run([]string{
+			"app",
+			"-ldap-server", "ldap://127.0.0.1:389",
+			"-base-dn", "dc=example,dc=com",
+			"-readonly-user", "cn=readonly,dc=example,dc=com",
+			"-readonly-password", "secret",
+			"-port", "0",
+		})
+	}()
+
+	select {
+	case code := <-done:
+		assert.Equal(t, 0, code, "run() must return 0 after a graceful shutdown")
+	case <-time.After(10 * time.Second):
+		t.Fatal("run() did not return after the shutdown context was canceled")
+	}
+}

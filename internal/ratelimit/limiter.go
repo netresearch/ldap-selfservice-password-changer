@@ -1,6 +1,7 @@
 package ratelimit
 
 import (
+	"slices"
 	"sync"
 	"time"
 )
@@ -69,13 +70,9 @@ func (l *Limiter) AllowRequest(identifier string) bool {
 	}
 
 	// Remove timestamps outside the window (sliding window)
-	validTimestamps := []time.Time{}
-	for _, ts := range entry.timestamps {
-		if ts.After(cutoff) {
-			validTimestamps = append(validTimestamps, ts)
-		}
-	}
-	entry.timestamps = validTimestamps
+	entry.timestamps = slices.DeleteFunc(entry.timestamps, func(ts time.Time) bool {
+		return !ts.After(cutoff)
+	})
 
 	// Check if rate limit exceeded
 	if len(entry.timestamps) >= l.maxRequests {
@@ -104,14 +101,10 @@ func (l *Limiter) cleanupExpiredLocked(cutoff time.Time) int {
 	count := 0
 
 	for identifier, entry := range l.entries {
-		// Check if all timestamps are expired
-		allExpired := true
-		for _, ts := range entry.timestamps {
-			if ts.After(cutoff) {
-				allExpired = false
-				break
-			}
-		}
+		// Timestamps are appended chronologically, so the entry is fully
+		// expired iff its newest (last) timestamp is expired.
+		n := len(entry.timestamps)
+		allExpired := n == 0 || !entry.timestamps[n-1].After(cutoff)
 
 		if allExpired {
 			delete(l.entries, identifier)

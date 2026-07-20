@@ -357,7 +357,7 @@ console.log(items[0].toUpperCase()); // ❌ may crash if empty array
 **Performance checklist**:
 
 - [ ] TypeScript compiled cleanly (`bun run js:build`; no minification step is configured today — if added, reference it here)
-- [ ] CSS optimized (cssnano via PostCSS)
+- [ ] CSS optimized (Lightning CSS via @tailwindcss/postcss)
 - [ ] No unused Tailwind classes (purged automatically)
 - [ ] No console.log in production code
 

@@ -1,8 +1,5 @@
 export default {
   plugins: {
-    "@tailwindcss/postcss": {},
-    "postcss-nested": {},
-    autoprefixer: {},
-    cssnano: {}
+    "@tailwindcss/postcss": { optimize: { minify: true } }
   }
 };

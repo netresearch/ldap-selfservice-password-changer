@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sync"
 	"testing"
+	"testing/synctest"
 	"time"
 )
 
@@ -58,61 +59,65 @@ func TestAllowRequestDifferentUsers(t *testing.T) {
 }
 
 func TestSlidingWindow(t *testing.T) {
-	limiter := NewLimiter(2, 100*time.Millisecond)
-	identifier := testUserEmail
+	synctest.Test(t, func(t *testing.T) {
+		limiter := NewLimiter(2, 100*time.Millisecond)
+		identifier := testUserEmail
 
-	// Make 2 requests (limit reached)
-	limiter.AllowRequest(identifier)
-	limiter.AllowRequest(identifier)
+		// Make 2 requests (limit reached)
+		limiter.AllowRequest(identifier)
+		limiter.AllowRequest(identifier)
 
-	// 3rd request should be blocked
-	allowed := limiter.AllowRequest(identifier)
-	if allowed {
-		t.Error("Request should be blocked immediately")
-	}
+		// 3rd request should be blocked
+		allowed := limiter.AllowRequest(identifier)
+		if allowed {
+			t.Error("Request should be blocked immediately")
+		}
 
-	// Wait for window to pass
-	time.Sleep(150 * time.Millisecond)
+		// Wait for window to pass
+		time.Sleep(150 * time.Millisecond)
 
-	// Should be allowed again
-	allowed = limiter.AllowRequest(identifier)
-	if !allowed {
-		t.Error("Request should be allowed after window expired")
-	}
+		// Should be allowed again
+		allowed = limiter.AllowRequest(identifier)
+		if !allowed {
+			t.Error("Request should be allowed after window expired")
+		}
+	})
 }
 
 func TestCleanupExpiredEntries(t *testing.T) {
-	limiter := NewLimiter(3, 100*time.Millisecond)
+	synctest.Test(t, func(t *testing.T) {
+		limiter := NewLimiter(3, 100*time.Millisecond)
 
-	// Make requests from multiple users
-	limiter.AllowRequest("user1@example.com")
-	limiter.AllowRequest("user2@example.com")
-	limiter.AllowRequest("user3@example.com")
+		// Make requests from multiple users
+		limiter.AllowRequest("user1@example.com")
+		limiter.AllowRequest("user2@example.com")
+		limiter.AllowRequest("user3@example.com")
 
-	// Verify entries exist
-	limiter.mu.RLock()
-	initialCount := len(limiter.entries)
-	limiter.mu.RUnlock()
-	if initialCount != 3 {
-		t.Errorf("Expected 3 entries, got %d", initialCount)
-	}
+		// Verify entries exist
+		limiter.mu.RLock()
+		initialCount := len(limiter.entries)
+		limiter.mu.RUnlock()
+		if initialCount != 3 {
+			t.Errorf("Expected 3 entries, got %d", initialCount)
+		}
 
-	// Wait for entries to expire
-	time.Sleep(150 * time.Millisecond)
+		// Wait for entries to expire
+		time.Sleep(150 * time.Millisecond)
 
-	// Run cleanup
-	count := limiter.CleanupExpired()
-	if count != 3 {
-		t.Errorf("CleanupExpired() removed %d entries, want 3", count)
-	}
+		// Run cleanup
+		count := limiter.CleanupExpired()
+		if count != 3 {
+			t.Errorf("CleanupExpired() removed %d entries, want 3", count)
+		}
 
-	// Verify entries are gone
-	limiter.mu.RLock()
-	finalCount := len(limiter.entries)
-	limiter.mu.RUnlock()
-	if finalCount != 0 {
-		t.Errorf("Expected 0 entries after cleanup, got %d", finalCount)
-	}
+		// Verify entries are gone
+		limiter.mu.RLock()
+		finalCount := len(limiter.entries)
+		limiter.mu.RUnlock()
+		if finalCount != 0 {
+			t.Errorf("Expected 0 entries after cleanup, got %d", finalCount)
+		}
+	})
 }
 
 func TestConcurrentAccess(t *testing.T) {
@@ -149,26 +154,28 @@ func TestConcurrentAccess(t *testing.T) {
 }
 
 func TestRateLimitReset(t *testing.T) {
-	limiter := NewLimiter(1, 50*time.Millisecond)
-	identifier := "reset@example.com"
+	synctest.Test(t, func(t *testing.T) {
+		limiter := NewLimiter(1, 50*time.Millisecond)
+		identifier := "reset@example.com"
 
-	// Make first request (allowed)
-	if !limiter.AllowRequest(identifier) {
-		t.Error("First request should be allowed")
-	}
+		// Make first request (allowed)
+		if !limiter.AllowRequest(identifier) {
+			t.Error("First request should be allowed")
+		}
 
-	// Second request blocked
-	if limiter.AllowRequest(identifier) {
-		t.Error("Second request should be blocked")
-	}
+		// Second request blocked
+		if limiter.AllowRequest(identifier) {
+			t.Error("Second request should be blocked")
+		}
 
-	// Wait for window
-	time.Sleep(60 * time.Millisecond)
+		// Wait for window
+		time.Sleep(60 * time.Millisecond)
 
-	// Should be allowed again
-	if !limiter.AllowRequest(identifier) {
-		t.Error("Request should be allowed after window reset")
-	}
+		// Should be allowed again
+		if !limiter.AllowRequest(identifier) {
+			t.Error("Request should be allowed after window reset")
+		}
+	})
 }
 
 func TestCount(t *testing.T) {
@@ -217,29 +224,31 @@ func TestCapacityEnforcement(t *testing.T) {
 }
 
 func TestCapacityCleanupMakesRoom(t *testing.T) {
-	// Create limiter with short window
-	limiter := NewLimiterWithCapacity(1, 50*time.Millisecond, 50)
+	synctest.Test(t, func(t *testing.T) {
+		// Create limiter with short window
+		limiter := NewLimiterWithCapacity(1, 50*time.Millisecond, 50)
 
-	// Fill to capacity with requests that will expire soon
-	for i := range 50 {
-		identifier := fmt.Sprintf("user%d@example.com", i)
-		limiter.AllowRequest(identifier)
-	}
+		// Fill to capacity with requests that will expire soon
+		for i := range 50 {
+			identifier := fmt.Sprintf("user%d@example.com", i)
+			limiter.AllowRequest(identifier)
+		}
 
-	// Wait for entries to expire
-	time.Sleep(60 * time.Millisecond)
+		// Wait for entries to expire
+		time.Sleep(60 * time.Millisecond)
 
-	// New request should trigger cleanup and succeed
-	allowed := limiter.AllowRequest("new@example.com")
-	if !allowed {
-		t.Error("Request should be allowed after expired entries are cleaned up")
-	}
+		// New request should trigger cleanup and succeed
+		allowed := limiter.AllowRequest("new@example.com")
+		if !allowed {
+			t.Error("Request should be allowed after expired entries are cleaned up")
+		}
 
-	// Verify cleanup occurred
-	count := limiter.Count()
-	if count > 10 {
-		t.Errorf("Count after cleanup = %d, should be much smaller", count)
-	}
+		// Verify cleanup occurred
+		count := limiter.Count()
+		if count > 10 {
+			t.Errorf("Count after cleanup = %d, should be much smaller", count)
+		}
+	})
 }
 
 func TestCapacityFailClosedBehavior(t *testing.T) {
