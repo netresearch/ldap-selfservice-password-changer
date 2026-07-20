@@ -103,8 +103,11 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 	// Resolve the target account according to the configured identifier mode.
 	// The lookup is authoritative server-side; a mismatch, an ambiguous email,
 	// or any LDAP error all collapse to the generic success below.
+	// The nil-user guard protects against LDAPClient implementations that
+	// return (nil, nil); dereferencing would otherwise panic and break the
+	// enumeration-safe generic response.
 	user, viaEmail, err := h.resolveResetUser(emailOrUsername)
-	if err != nil {
+	if err != nil || user == nil {
 		slog.Info("password_reset_user_not_resolved", "identifier", emailOrUsername, "error", err)
 		return genericSuccess, nil
 	}

@@ -226,6 +226,34 @@ func TestRequestPasswordResetAccountBucketNotPoisonableViaTypedInput(t *testing.
 	require.Equal(t, 1, tokenStore.Count())
 }
 
+// nilUserLDAPClient returns (nil, nil) from lookups — a contract violation a
+// third-party LDAPClient implementation could commit.
+type nilUserLDAPClient struct{ mockLDAPClient }
+
+func (m *nilUserLDAPClient) FindUserByMail(_ string) (*ldap.User, error) {
+	return nil, nil //nolint:nilnil // the contract violation under test
+}
+
+func (m *nilUserLDAPClient) FindUserBySAMAccountName(_ string) (*ldap.User, error) {
+	return nil, nil //nolint:nilnil // the contract violation under test
+}
+
+// TestRequestPasswordResetNilUserNoPanic: an LDAP client returning (nil, nil)
+// must yield the generic success, not a nil-dereference panic.
+func TestRequestPasswordResetNilUserNoPanic(t *testing.T) {
+	tokenStore := resettoken.NewStore()
+	mockEmail := &mockEmailService{}
+	handler := newResetHandler(options.ResetIdentifierBoth, &nilUserLDAPClient{}, mockEmail, tokenStore)
+
+	for _, identifier := range []string{"john.doe@example.com", "jdoe"} {
+		result, err := handler.requestPasswordReset([]string{identifier})
+		require.NoError(t, err)
+		require.Equal(t, []string{msgResetEmailSent}, result)
+	}
+	require.Empty(t, mockEmail.lastTo)
+	require.Zero(t, tokenStore.Count())
+}
+
 // TestRequestPasswordResetEmptyModeDefaultsToEmail: an unset mode behaves like
 // email-only (backward compatible).
 func TestRequestPasswordResetEmptyModeDefaultsToEmail(t *testing.T) {
