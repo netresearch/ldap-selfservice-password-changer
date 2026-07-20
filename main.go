@@ -297,6 +297,17 @@ var (
 // the default value, which calls runHealthCheck.
 var healthCheckFunc = runHealthCheck
 
+// buildServerFunc and shutdownContextFunc are indirections used by run() so the
+// listen/graceful-shutdown path can be exercised without a real LDAP backend or
+// process signals. Production uses the defaults; tests override them (see the
+// healthCheckFunc pattern above).
+var (
+	buildServerFunc     = buildServer
+	shutdownContextFunc = func() (context.Context, context.CancelFunc) {
+		return signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	}
+)
+
 // run is the testable entry point. It returns an exit code so main() only
 // needs to call os.Exit. run never calls os.Exit itself.
 //
@@ -320,7 +331,7 @@ func run(args []string) int {
 		return 1
 	}
 
-	app, err := buildServer(opts)
+	app, err := buildServerFunc(opts)
 	if err != nil {
 		slog.Error("initialization failed", "error", err)
 		return 1
@@ -328,7 +339,7 @@ func run(args []string) int {
 
 	// Shut down gracefully on SIGINT/SIGTERM so in-flight requests (e.g.
 	// password resets) complete before the container stops.
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	ctx, stop := shutdownContextFunc()
 	defer stop()
 
 	slog.Info("starting server", "port", opts.Port, "version", version, "build", build, "build_time", buildTime)
