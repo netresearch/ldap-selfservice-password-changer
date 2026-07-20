@@ -65,7 +65,7 @@ export function updateErrorSummary(
     list.className = "mt-2 ml-5 list-decimal space-y-1 text-sm text-error-dark dark:text-error-light";
     errorSummary.appendChild(list);
   }
-  while (list.firstChild) list.removeChild(list.firstChild);
+  list.replaceChildren();
 
   for (const fe of fieldErrors) {
     const li = document.createElement("li");
@@ -96,7 +96,7 @@ export function updateErrorSummary(
  * matches the inline field errors (icon + text).
  */
 export function setSubmitError(container: HTMLElement, message: string): void {
-  while (container.firstChild) container.removeChild(container.firstChild);
+  container.replaceChildren();
   if (message) container.appendChild(createErrorElement(message));
 }
 
@@ -125,9 +125,7 @@ export function setFieldErrors(
   errors: string[]
 ): void {
   // Clear existing errors using safe DOM method
-  while (errorContainer.firstChild) {
-    errorContainer.removeChild(errorContainer.firstChild);
-  }
+  errorContainer.replaceChildren();
 
   setFieldInvalidStyle(inputContainer, input, errors.length > 0);
 

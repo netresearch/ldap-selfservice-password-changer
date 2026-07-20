@@ -101,7 +101,7 @@ export const init = (opts: Opts) => {
     };
     const paintBorderOnly = (invalid: boolean) => {
       // Strip any inline text from previous full paints, keep border state.
-      while (errorContainer.firstChild) errorContainer.removeChild(errorContainer.firstChild);
+      errorContainer.replaceChildren();
       setFieldInvalidStyle(inputContainer, input, invalid);
     };
 

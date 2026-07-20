@@ -104,7 +104,7 @@ export const init = (opts: Opts) => {
       setFieldErrors(errorContainer, inputContainer, input, errors);
     };
     const paintBorderOnly = (invalid: boolean) => {
-      while (errorContainer.firstChild) errorContainer.removeChild(errorContainer.firstChild);
+      errorContainer.replaceChildren();
       setFieldInvalidStyle(inputContainer, input, invalid);
     };
 
