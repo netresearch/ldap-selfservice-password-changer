@@ -279,6 +279,10 @@ func (m *mockChangePasswordLDAP) FindUserByMail(_ string) (*ldap.User, error) {
 	return &ldap.User{SAMAccountName: "testuser"}, nil
 }
 
+func (m *mockChangePasswordLDAP) FindUserBySAMAccountName(_ string) (*ldap.User, error) {
+	return &ldap.User{SAMAccountName: "testuser"}, nil
+}
+
 func (m *mockChangePasswordLDAP) ChangePasswordForSAMAccountName(_, _, _ string) error {
 	return m.changePasswordError
 }

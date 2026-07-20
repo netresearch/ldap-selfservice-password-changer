@@ -16,6 +16,7 @@ type Func = func(params []string) ([]string, error)
 // LDAPClient interface for LDAP operations (enables testing).
 type LDAPClient interface {
 	FindUserByMail(mail string) (*ldap.User, error)
+	FindUserBySAMAccountName(sAMAccountName string) (*ldap.User, error)
 	ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword string) error
 	ResetPasswordForSAMAccountName(sAMAccountName, newPassword string) error
 }

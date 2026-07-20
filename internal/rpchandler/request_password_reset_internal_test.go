@@ -31,7 +31,9 @@ func (m *mockEmailService) SendResetEmail(to, token string) error {
 // Mock LDAP client for testing.
 type mockLDAPClient struct {
 	findUserByMailError error
-	users               map[string]*ldap.User
+	findUserBySAMError  error
+	users               map[string]*ldap.User // keyed by email
+	usersBySAM          map[string]*ldap.User // keyed by sAMAccountName
 }
 
 func (m *mockLDAPClient) FindUserByMail(mail string) (*ldap.User, error) {
@@ -39,6 +41,16 @@ func (m *mockLDAPClient) FindUserByMail(mail string) (*ldap.User, error) {
 		return nil, m.findUserByMailError
 	}
 	if user, ok := m.users[mail]; ok {
+		return user, nil
+	}
+	return nil, errors.New("user not found")
+}
+
+func (m *mockLDAPClient) FindUserBySAMAccountName(sAMAccountName string) (*ldap.User, error) {
+	if m.findUserBySAMError != nil {
+		return nil, m.findUserBySAMError
+	}
+	if user, ok := m.usersBySAM[sAMAccountName]; ok {
 		return user, nil
 	}
 	return nil, errors.New("user not found")
