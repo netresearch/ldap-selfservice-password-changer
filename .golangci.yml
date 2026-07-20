@@ -40,7 +40,7 @@ linters:
     - gocyclo # Compute cyclomatic complexities
     - godot # Check comment sentences end with period
     - gomoddirectives # Manage replace/retract directives in go.mod
-    - gomodguard # Control allowed modules
+    - gomodguard_v2 # Control allowed modules
     - goprintffuncname # Check printf-like function names
     - gosec # Security problems (G*)
     - intrange # Find places where for loops could use Go 1.22+ integer range
