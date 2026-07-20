@@ -1,22 +1,19 @@
 name: Release
 
-# Single-build release pipeline for go-app.
+# Atomic-release pipeline for go-app consumers. Delegates the entire
+# release lifecycle (preflight -> binaries -> container -> atomic publish)
+# to the release-go-app.yml reusable orchestrator.
 #
-# Go binaries are cross-compiled ONCE by the `binaries` matrix, uploaded
-# to the GitHub Release as user-facing artifacts, and then re-downloaded
-# into `bin/` where the Dockerfile's `COPY bin/<name>-linux-*` stage
-# picks the correct one per TARGETARCH/TARGETVARIANT. No `go build`
-# runs inside Docker.
+# INTENTIONAL DRIFT from the netresearch/.github go-app template:
+# 32-bit linux targets (386, arm/v6, arm/v7) are removed from BOTH the
+# binary matrix and the container platforms because gofiber/fiber/v3 uses
+# math.MaxUint32, which overflows int on 32-bit platforms. Recorded in
+# .github/template.yaml intentional-drift; revisit when upstream Fiber
+# ships a 32-bit-safe release.
 #
-# Convention for frontend-embedding repos: ship `bun run build:assets`
-# in package.json; this workflow invokes it before `go build` so assets
-# exist when `go:embed` resolves them. No-op when package.json is
-# absent, so non-frontend repos use this identical workflow unchanged.
-#
-# This file is template-managed — per-repo differences live in the
-# Dockerfile and (optionally) the package.json build:assets script.
-# Naming is derived from github.event.repository.name so the workflow
-# is byte-identical across consumers.
+# This file is template-managed -- naming derives from
+# github.event.repository.name so the workflow is byte-identical across
+# consumers except for the drift above.
 
 on:
   push:
@@ -28,115 +25,37 @@ on:
         required: true
         type: string
 
-permissions:
-  contents: read
+permissions: {}
 
 jobs:
-  create-release:
-    name: Create GitHub Release
-    uses: netresearch/.github/.github/workflows/create-release.yml@main
+  release:
+    uses: netresearch/.github/.github/workflows/release-go-app.yml@main
     permissions:
       contents: write
-    with:
-      tag: ${{ inputs.tag || github.ref_name }}
-
-  binaries:
-    name: Build ${{ matrix.target }}
-    needs: create-release
-    strategy:
-      fail-fast: false
-      # INTENTIONAL DRIFT from netresearch/.github go-app template:
-      # 32-bit linux targets (386, arm/v6, arm/v7) cannot compile this
-      # repo because gofiber/fiber/v3 uses math.MaxUint32 which overflows
-      # int on 32-bit platforms. Recorded in .github/template.yaml
-      # intentional-drift; revisit when upstream Fiber ships a 32-bit fix.
-      matrix:
-        include:
-          - { target: linux-amd64,   goos: linux,   goarch: amd64 }
-          - { target: linux-arm64,   goos: linux,   goarch: arm64 }
-          - { target: darwin-amd64,  goos: darwin,  goarch: amd64 }
-          - { target: darwin-arm64,  goos: darwin,  goarch: arm64 }
-          - { target: windows-amd64, goos: windows, goarch: amd64 }
-    uses: netresearch/.github/.github/workflows/build-go-attest.yml@main
-    permissions:
-      contents: write
+      packages: write
       id-token: write
       attestations: write
+      security-events: write
     with:
-      binary-name: ${{ github.event.repository.name }}-${{ matrix.target }}
-      # Resolve after checkout (see build-go-attest.yml). `auto` picks
-      # `.` when ./main.go exists, else `./cmd/<repo-name>` when that
-      # main.go exists, else fails. Keeps this template file byte-
-      # identical regardless of whether the consumer uses a root-main
-      # or cmd/ layout.
-      main-package: auto
-      goos: ${{ matrix.goos }}
-      goarch: ${{ matrix.goarch }}
-      # goarm intentionally omitted — narrowed matrix has no arm/v* entries
-      # (see INTENTIONAL DRIFT comment above).
-      # Fleet ldflag convention (netresearch/.github#74, #77).
-      # main.buildTime is injected via auto-build-timestamp below
-      # (resolved from git inside build-go-attest.yml so both tag
-      # pushes and workflow_dispatch backfills get a real value).
-      # Surfaced via the `build_time` attribute in main.go's
-      # server-startup slog call. Keeping the ldflag aligned with the
-      # template means this release.yml only drifts on the
-      # Fiber-32-bit-ignored matrix, nothing else.
-      ldflags: >-
-        -s -w
-        -X main.version=${{ needs.create-release.outputs.tag }}
-        -X main.build=${{ needs.create-release.outputs.sha }}
-      auto-build-timestamp: true
-      ref: ${{ needs.create-release.outputs.tag }}
-      release-tag: ${{ needs.create-release.outputs.tag }}
-      sbom: true
-      # setup-bun runs unconditionally. `hashFiles()` in the caller's `with:`
-      # is evaluated BEFORE the reusable workflow's checkout, so the caller
-      # workspace is empty and any guard would have always returned false.
-      # The bun install/run commands below are `-f package.json`-gated, so
-      # non-frontend repos (ofelia, raybeam) pay only the ~10s Bun install
-      # overhead per matrix entry — no actual bun work happens.
+      app-name: ${{ github.event.repository.name }}
+      tag: ${{ inputs.tag || github.ref_name }}
+      # INTENTIONAL DRIFT: 32-bit targets excluded (Fiber v3 math.MaxUint32
+      # overflows int on 32-bit). Standard 8-platform default minus
+      # linux-386, linux-armv6, linux-armv7.
+      goos-goarch-matrix: >-
+        [
+          {"target":"linux-amd64","goos":"linux","goarch":"amd64"},
+          {"target":"linux-arm64","goos":"linux","goarch":"arm64"},
+          {"target":"darwin-amd64","goos":"darwin","goarch":"amd64"},
+          {"target":"darwin-arm64","goos":"darwin","goarch":"arm64"},
+          {"target":"windows-amd64","goos":"windows","goarch":"amd64"}
+        ]
+      # INTENTIONAL DRIFT: container platforms narrowed to match the matrix.
+      container-platforms: "linux/amd64,linux/arm64"
+      # Bun builds the embedded frontend assets before `go build`.
       setup-bun: true
       pre-build-command: |
         if [ -f package.json ]; then
           bun install --frozen-lockfile
           bun run build:assets
         fi
-
-  container:
-    name: Build container image
-    needs: [create-release, binaries]
-    uses: netresearch/.github/.github/workflows/build-container.yml@main
-    permissions:
-      contents: read
-      packages: write
-      security-events: write
-      id-token: write
-      attestations: write
-    with:
-      image-name: ${{ github.event.repository.name }}
-      ref: ${{ needs.create-release.outputs.tag }}
-      # Narrowed to match the binaries matrix above (Fiber v3 32-bit).
-      platforms: "linux/amd64,linux/arm64"
-      sign: true
-      attest: true
-      pre-build-command: |
-        set -euo pipefail
-        mkdir -p bin
-        for suffix in linux-amd64 linux-arm64; do
-          gh release download "${{ needs.create-release.outputs.tag }}" \
-            --pattern "${{ github.event.repository.name }}-${suffix}" --dir bin
-          chmod +x "bin/${{ github.event.repository.name }}-${suffix}"
-        done
-
-  finalize:
-    name: Finalize release (checksums, cosign, notes)
-    needs: [create-release, binaries, container]
-    uses: netresearch/.github/.github/workflows/finalize-release.yml@main
-    permissions:
-      contents: write
-      id-token: write
-      attestations: write
-    with:
-      tag: ${{ needs.create-release.outputs.tag }}
-      image-ref: ghcr.io/${{ github.repository_owner }}/${{ github.event.repository.name }}
