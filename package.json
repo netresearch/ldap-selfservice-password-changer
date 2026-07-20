@@ -20,16 +20,16 @@
     "@tailwindcss/postcss": "^4.3.2",
     "autoprefixer": "^10.5.2",
     "cssnano": "^8.0.2",
-    "eslint": "^10.6.0",
+    "eslint": "^10.7.0",
     "eslint-config-prettier": "^10.1.8",
-    "postcss": "^8.5.16",
+    "postcss": "^8.5.19",
     "postcss-cli": "^11.0.1",
     "postcss-nested": "^7.0.2",
-    "prettier": "^3.9.4",
+    "prettier": "^3.9.5",
     "prettier-plugin-go-template": "^0.0.15",
     "prettier-plugin-tailwindcss": "^0.8.0",
     "tailwindcss": "^4.3.2",
     "typescript": "^7.0.0",
-    "typescript-eslint": "^8.62.1"
+    "typescript-eslint": "^8.63.0"
   }
 }
