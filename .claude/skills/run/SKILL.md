@@ -52,6 +52,10 @@ host-mapped.
 
 ```bash
 docker compose up -d openldap openldap-init mailpit
+# Assets are go:embed'd, so build them before `go run .` (a clean checkout
+# otherwise fails with "pattern *.css: no matching files found").
+bun install --frozen-lockfile
+bun run build:assets
 go run . -ldap-server ldap://127.0.0.1:389 -base-dn dc=netresearch,dc=local \
   -readonly-user cn=admin,dc=netresearch,dc=local -readonly-password admin -port 39443
 ```
@@ -74,7 +78,7 @@ Mailpit received the mail addressed to the account's **registered** address, not
 the typed identifier:
 
 ```bash
-printf 'RESET_IDENTIFIER_MODE=both\n' > .env.local
+printf 'RESET_IDENTIFIER_MODE=both\n' >> .env.local  # append — never clobber an existing .env.local
 APP_PORT=3140 MAILPIT_WEB_PORT=8125 docker compose --profile dev up -d --force-recreate app
 curl -s -X DELETE http://localhost:8125/api/v1/messages
 curl -s -X POST http://localhost:3140/api/rpc -H 'Content-Type: application/json' \
