@@ -17,12 +17,15 @@ type Config struct {
 	SMTPPort     int    // SMTP server port (e.g., 587 for STARTTLS)
 	SMTPUsername string // SMTP authentication username
 	SMTPPassword string // SMTP authentication password
-	FromAddress  string // Email sender address
+	FromAddress  string // Email sender address (also the SMTP envelope sender)
+	FromName     string // Optional From display name
+	ReplyTo      string // Optional Reply-To address
 	BaseURL      string // Base URL for reset links (e.g., https://password.example.com)
 
-	SubjectTemplate  string // Inline subject template; empty => default
-	TemplateHTMLPath string // Path to custom HTML body template; empty => embedded default
-	TemplateTextPath string // Path to custom text body template; empty => embedded default
+	SubjectTemplate  string            // Inline subject template; empty => default
+	TemplateHTMLPath string            // Path to custom HTML body template; empty => embedded default
+	TemplateTextPath string            // Path to custom text body template; empty => embedded default
+	HeaderOverrides  map[string]string // Raw header overrides (name => verbatim value)
 }
 
 // Service handles sending password reset emails.
