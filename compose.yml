@@ -108,8 +108,9 @@ services:
     container_name: gopherpass-app
     ports:
       - "${APP_PORT:-3000}:3000"
-    # Dev defaults — hermetic, point at the services above. Override anything
-    # via .env.local if needed (loaded after these defaults).
+    # Dev defaults — hermetic, point at the services above. These inline values
+    # take precedence over env_file, so .env.local can only supply variables
+    # that are NOT listed here; to change one of these, edit it below.
     environment:
       # LDAP — least-privilege accounts (reflects production wiring).
       LDAP_SERVER: "ldap://openldap:389"
@@ -140,8 +141,8 @@ services:
       SMTP_FROM_ADDRESS: "noreply@netresearch.local"
       APP_BASE_URL: "http://localhost:3000"
     env_file:
-      # Optional local override. Compose v2 treats missing files as empty
-      # when `required: false` is set.
+      # Optional fallback for variables absent from `environment:` above.
+      # Compose v2 treats missing files as empty when `required: false` is set.
       - path: .env.local
         required: false
     depends_on:
