@@ -1,6 +1,7 @@
 package email
 
 import (
+	"errors"
 	"fmt"
 	"mime"
 	"net/mail"
@@ -12,14 +13,17 @@ import (
 
 // headerNameRegex matches an RFC 5322 field name: 1*ftext, where ftext is any
 // printable US-ASCII char (33-126) except ':' (58). No spaces, no controls.
-// Simple character class + '+', so no catastrophic backtracking (Sonar S5852).
-var headerNameRegex = regexp.MustCompile(`^[!-9;-~]+$`)
+// The bounds are spelled as hex escapes so the two sub-ranges read as the
+// deliberate "0x21..0x39, 0x3b..0x7e" split around ':' (0x3a) rather than as an
+// accidental mixed-class range. Simple character class + '+', so no
+// catastrophic backtracking (Sonar S5852).
+var headerNameRegex = regexp.MustCompile(`^[\x21-\x39\x3b-\x7e]+$`)
 
 // ValidateHeaderName reports whether name is a syntactically valid RFC 5322
 // header field name.
 func ValidateHeaderName(name string) error {
 	if name == "" {
-		return fmt.Errorf("empty header name")
+		return errors.New("empty header name")
 	}
 	if !headerNameRegex.MatchString(name) {
 		return fmt.Errorf("invalid header name %q: must be printable ASCII without spaces or ':'", name)
@@ -33,7 +37,7 @@ func ValidateHeaderName(name string) error {
 // too: MTA handling of them is undefined (truncation at NUL, or a 5xx for the
 // whole message). HTAB is allowed — it is legal folding whitespace.
 func ValidateHeaderValue(value string) error {
-	for i := 0; i < len(value); i++ {
+	for i := range len(value) {
 		c := value[i]
 		if c == '\t' {
 			continue
@@ -56,7 +60,7 @@ func encodeSubject(subject string) string {
 
 // formatFrom builds the From header value. With a display name it uses
 // net/mail so the name is quoted/RFC 2047-encoded correctly; without one it
-// emits the bare address (unchanged from prior behaviour).
+// emits the bare address (unchanged from prior behavior).
 func formatFrom(name, address string) string {
 	if name == "" {
 		return address

@@ -28,13 +28,19 @@ type resetEmailData struct {
 	ExpiryMinutes uint
 }
 
+// Placeholder values for the startup dry-run. They never reach a real message.
+const (
+	sampleBaseURL   = "https://example.com"
+	sampleRecipient = "user@example.com"
+)
+
 // sampleResetData dry-runs templates at construction so a broken template
 // fails at startup, not when the first reset email is sent.
 var sampleResetData = resetEmailData{
-	ResetLink:     "https://example.com/reset-password?token=sample",
+	ResetLink:     sampleBaseURL + "/reset-password?token=sample",
 	Token:         "sample",
-	BaseURL:       "https://example.com",
-	Recipient:     "user@example.com",
+	BaseURL:       sampleBaseURL,
+	Recipient:     sampleRecipient,
 	ExpiryMinutes: 15,
 }
 
@@ -124,18 +130,21 @@ func loadTemplateSource(path, fallback string) (string, error) {
 	return string(b), nil
 }
 
-// render executes all three templates against data.
-func (r *renderer) render(data resetEmailData) (subject, text, html string, err error) {
+// render executes all three templates against data and returns, in order, the
+// rendered subject, plain-text body and HTML body.
+//
+//nolint:gocritic // unnamedResult directly contradicts nonamedreturns here; the result order is documented above.
+func (r *renderer) render(data resetEmailData) (string, string, string, error) {
 	var sb bytes.Buffer
-	if err = r.subject.Execute(&sb, data); err != nil {
+	if err := r.subject.Execute(&sb, data); err != nil {
 		return "", "", "", fmt.Errorf("render subject: %w", err)
 	}
 	var tb bytes.Buffer
-	if err = r.text.Execute(&tb, data); err != nil {
+	if err := r.text.Execute(&tb, data); err != nil {
 		return "", "", "", fmt.Errorf("render text body: %w", err)
 	}
 	var hb bytes.Buffer
-	if err = r.html.Execute(&hb, data); err != nil {
+	if err := r.html.Execute(&hb, data); err != nil {
 		return "", "", "", fmt.Errorf("render html body: %w", err)
 	}
 	return sb.String(), tb.String(), hb.String(), nil

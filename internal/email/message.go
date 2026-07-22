@@ -8,12 +8,29 @@ import (
 	"net/textproto"
 )
 
+// Header field names written by the message builder, plus the MIME-Version
+// value. headerMIMEVersion is the wire spelling; textproto canonicalizes it to
+// "Mime-Version", which is what reservedMIMEHeader is keyed by.
+const (
+	headerFrom                    = "From"
+	headerTo                      = "To"
+	headerSubject                 = "Subject"
+	headerReplyTo                 = "Reply-To"
+	headerMIMEVersion             = "MIME-Version"
+	headerContentType             = "Content-Type"
+	headerContentTransferEncoding = "Content-Transfer-Encoding"
+
+	mimeVersionValue = "1.0"
+)
+
 // reservedMIMEHeader lists structural headers the message builder owns; an
-// override of these would duplicate or corrupt the MIME structure.
+// override of these would duplicate or corrupt the MIME structure. Keys are
+// canonicalized so lookups against textproto.CanonicalMIMEHeaderKey output
+// match ("MIME-Version" canonicalizes to "Mime-Version").
 var reservedMIMEHeader = map[string]bool{
-	"Mime-Version":              true,
-	"Content-Type":              true,
-	"Content-Transfer-Encoding": true,
+	textproto.CanonicalMIMEHeaderKey(headerMIMEVersion):             true,
+	textproto.CanonicalMIMEHeaderKey(headerContentType):             true,
+	textproto.CanonicalMIMEHeaderKey(headerContentTransferEncoding): true,
 }
 
 // buildMIMEMessage assembles a multipart/alternative message (plain-text part
@@ -35,14 +52,14 @@ func (s *Service) buildMIMEMessage(to, subject, textBody, htmlBody string) ([]by
 	}
 
 	fields := []headerField{
-		{key: "From", value: formatFrom(s.config.FromName, s.config.FromAddress)},
-		{key: "To", value: to},
-		{key: "Subject", value: encodeSubject(subject)},
+		{key: headerFrom, value: formatFrom(s.config.FromName, s.config.FromAddress)},
+		{key: headerTo, value: to},
+		{key: headerSubject, value: encodeSubject(subject)},
 	}
 	if s.config.ReplyTo != "" {
-		fields = append(fields, headerField{key: "Reply-To", value: s.config.ReplyTo})
+		fields = append(fields, headerField{key: headerReplyTo, value: s.config.ReplyTo})
 	}
-	// Defence in depth: the email package must not depend on the options layer
+	// Defense in depth: the email package must not depend on the options layer
 	// for correctness. A reserved structural header is dropped (the builder
 	// owns those, and the wired path already hard-errors on them); a malformed
 	// name or a value carrying CR/LF or other control bytes is a header
@@ -64,8 +81,8 @@ func (s *Service) buildMIMEMessage(to, subject, textBody, htmlBody string) ([]by
 
 	fields = applyHeaderOverrides(fields, overrides)
 	fields = append(fields,
-		headerField{key: "MIME-Version", value: "1.0"},
-		headerField{key: "Content-Type", value: `multipart/alternative; boundary="` + mw.Boundary() + `"`},
+		headerField{key: headerMIMEVersion, value: mimeVersionValue},
+		headerField{key: headerContentType, value: `multipart/alternative; boundary="` + mw.Boundary() + `"`},
 	)
 
 	var msg bytes.Buffer
@@ -81,15 +98,18 @@ func (s *Service) buildMIMEMessage(to, subject, textBody, htmlBody string) ([]by
 // writeQPPart writes one quoted-printable-encoded MIME part.
 func writeQPPart(mw *multipart.Writer, contentType, content string) error {
 	h := textproto.MIMEHeader{}
-	h.Set("Content-Type", contentType)
-	h.Set("Content-Transfer-Encoding", "quoted-printable")
+	h.Set(headerContentType, contentType)
+	h.Set(headerContentTransferEncoding, "quoted-printable")
 	pw, err := mw.CreatePart(h)
 	if err != nil {
-		return err
+		return fmt.Errorf("create %s part: %w", contentType, err)
 	}
 	qw := quotedprintable.NewWriter(pw)
 	if _, err := qw.Write([]byte(content)); err != nil {
-		return err
+		return fmt.Errorf("write quoted-printable body of %s part: %w", contentType, err)
 	}
-	return qw.Close()
+	if err := qw.Close(); err != nil {
+		return fmt.Errorf("flush quoted-printable body of %s part: %w", contentType, err)
+	}
+	return nil
 }
