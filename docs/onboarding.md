@@ -32,7 +32,7 @@ Before starting, ensure you have:
 
 - [ ] Clone repository: `git clone https://github.com/netresearch/ldap-selfservice-password-changer.git`
 - [ ] Install dependencies: `bun install`
-- [ ] Create `.env.local` with LDAP credentials (see [Development Guide](development-guide.md#4-configure-ldap-connection))
+- [ ] Create `.env.local` with LDAP credentials (see [Development Guide](development-guide.md#3-configure-ldap-connection))
 - [ ] Build project: `bun run build`
 - [ ] Verify build output: `./ldap-selfservice-password-changer --help`
 

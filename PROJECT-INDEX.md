@@ -114,7 +114,7 @@ LDAP Selfservice Password Changer provides:
 | Web Framework | Fiber          | v2.52+  |
 | Frontend      | TypeScript     | 5.9+    |
 | CSS           | Tailwind CSS   | v4.1+   |
-| Build         | Bun            | 1.3+    |
+| Build         | Bun            | latest  |
 | Testing       | testcontainers | Latest  |
 
 ---

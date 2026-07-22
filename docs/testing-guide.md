@@ -622,23 +622,36 @@ jobs:
 
 ### Pre-Commit Checks
 
-The repository does not use a Git hook framework — there is no hook manager configured, and
-`package.json` has no install-time hook script. Run the checks manually before committing:
+The repository ships its hooks in [`githooks/`](../githooks/). There is no hook manager and no
+install-time hook script in `package.json`, so a fresh clone has no hooks until you copy them in:
 
 ```bash
-# Tests
-go test ./...
-bunx vitest run
-
-# Linters and formatting
-bunx prettier --check .
-bun run lint
-gofmt -l .
+make hooks   # cp githooks/* .git/hooks/ && chmod +x .git/hooks/{pre-commit,commit-msg}
 ```
 
-The same checklist is in the root [`AGENTS.md`](../AGENTS.md). If you want it enforced
-automatically, wire it into your own local `.git/hooks/pre-commit`; nothing in the repository
-installs one for you.
+`githooks/pre-commit` runs, in order:
+
+1. `bunx prettier --check .` (blocking)
+2. `bun run js:build` — TypeScript type check (blocking)
+3. `bun run lint` — ESLint (warning only, does not block)
+4. `golangci-lint run --timeout=2m` if installed, otherwise `go vet ./...` (vet is blocking)
+5. `go test -short ./...` (blocking)
+
+`githooks/commit-msg` rejects messages that do not match Conventional Commits.
+
+Note that the hook runs `go test -short ./...`, not the full suite, and does not run Vitest or
+Playwright. Run those yourself before pushing:
+
+```bash
+go test ./...
+bunx vitest run
+bunx playwright test
+```
+
+Re-run `make hooks` after changing anything in `githooks/` — the copies in `.git/hooks/` do not
+update themselves. Bypass with `git commit --no-verify` for emergencies only. The same checklist
+is in the root [`AGENTS.md`](../AGENTS.md) and in
+[`docs/development-guide.md`](development-guide.md#pre-commit-hooks).
 
 ## Coverage Analysis
 

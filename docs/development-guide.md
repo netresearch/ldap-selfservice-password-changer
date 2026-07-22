@@ -5,7 +5,7 @@
 ### Required Tools
 
 - **Go**: 1.26+ (tested with 1.26.0)
-- **Bun**: 1.3+ (tested with 1.3.12) — runs the TypeScript and Tailwind toolchain
+- **Bun**: no version pinned; CI installs the latest — runs the TypeScript and Tailwind toolchain
 - **Git**: For version control
 
 Bun and Go are installed **separately**, each with its own installer or package
@@ -710,7 +710,10 @@ docker rm -f gopherpass-openldap gopherpass-mailpit gopherpass-app
 Only if you don't want to rebuild the image. Note that Mailpit's SMTP port (1025)
 is **internal-only** — it is deliberately not host-mapped — so a natively running
 app **cannot send reset mail**. Use Route A if you need to exercise the reset
-email. LDAP (389) and the Mailpit web UI (8125) _are_ host-mapped.
+email. LDAP (389) and the Mailpit web UI _are_ host-mapped. The command below sets
+no `MAILPIT_WEB_PORT`, so compose falls back to the default
+(`"${MAILPIT_WEB_PORT:-8025}:8025"`) and the UI is on `http://localhost:8025`.
+Prefix the command with `MAILPIT_WEB_PORT=<port>` to move it (Route A uses 8125).
 
 ```bash
 docker compose up -d openldap openldap-init mailpit
