@@ -5,12 +5,15 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net/textproto"
 	"os"
 	"strconv"
 	"strings"
 
 	"github.com/joho/godotenv"
 	ldap "github.com/netresearch/simple-ldap-go"
+
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/email"
 )
 
 // ResetIdentifierMode selects which identifier types the password reset form accepts.
@@ -61,6 +64,13 @@ type Opts struct {
 	SMTPPassword                string
 	SMTPFromAddress             string
 	AppBaseURL                  string
+
+	SMTPFromName         string
+	EmailReplyTo         string
+	EmailTemplateHTML    string
+	EmailTemplateText    string
+	EmailTemplateSubject string
+	SMTPHeaderOverrides  map[string]string
 
 	// Optional dedicated service account for password reset operations
 	// If not set, falls back to ReadonlyUser for backward compatibility
@@ -123,6 +133,54 @@ func envBoolOrDefault(name string, d bool, errs *ConfigError) bool {
 	}
 
 	return v
+}
+
+const headerOverridePrefix = "SMTP_HEADER_OVERRIDE_"
+
+// reservedHeaderOverride lists structural MIME headers that must not be
+// overridden, keyed by canonical form.
+var reservedHeaderOverride = map[string]bool{
+	"Mime-Version":              true,
+	"Content-Type":              true,
+	"Content-Transfer-Encoding": true,
+}
+
+// parseHeaderOverrides scans environ for SMTP_HEADER_OVERRIDE_* entries and
+// builds a header map (suffix "_" => "-"). Invalid names/values and reserved
+// structural headers are reported into errs (fail-fast). The map key is the
+// hyphenated header name; the email layer canonicalizes on use.
+func parseHeaderOverrides(environ []string, errs *ConfigError) map[string]string {
+	overrides := map[string]string{}
+	for _, kv := range environ {
+		name, value, found := strings.Cut(kv, "=")
+		if !found {
+			continue
+		}
+		if !strings.HasPrefix(name, headerOverridePrefix) {
+			continue
+		}
+		suffix := name[len(headerOverridePrefix):]
+		if suffix == "" {
+			errs.Add(fmt.Sprintf("invalid %s: header name is empty", name))
+			continue
+		}
+		headerName := strings.ReplaceAll(suffix, "_", "-")
+
+		if err := email.ValidateHeaderName(headerName); err != nil {
+			errs.Add(fmt.Sprintf("invalid %s: %v", name, err))
+			continue
+		}
+		if err := email.ValidateHeaderValue(value); err != nil {
+			errs.Add(fmt.Sprintf("invalid value for %s: %v", name, err))
+			continue
+		}
+		if reservedHeaderOverride[textproto.CanonicalMIMEHeaderKey(headerName)] {
+			errs.Add(name + ": cannot override structural MIME header")
+			continue
+		}
+		overrides[headerName] = value
+	}
+	return overrides
 }
 
 // Parse parses command-line flags and environment variables into configuration options.
@@ -260,6 +318,31 @@ func ParseArgs(args []string) (*Opts, error) {
 			envStringOrDefault("APP_BASE_URL", ""),
 			"Base URL for password reset links (e.g., https://pwd.example.com).",
 		)
+		fSMTPFromName = fs.String(
+			"smtp-from-name",
+			envStringOrDefault("SMTP_FROM_NAME", ""),
+			"Optional display name for the From header (e.g. \"ACME IT\").",
+		)
+		fEmailReplyTo = fs.String(
+			"email-reply-to",
+			envStringOrDefault("EMAIL_REPLY_TO", ""),
+			"Optional Reply-To address for reset emails.",
+		)
+		fEmailTemplateHTML = fs.String(
+			"email-template-html",
+			envStringOrDefault("EMAIL_TEMPLATE_HTML", ""),
+			"Path to a custom HTML email body template (Go template). Empty uses the built-in default.",
+		)
+		fEmailTemplateText = fs.String(
+			"email-template-text",
+			envStringOrDefault("EMAIL_TEMPLATE_TEXT", ""),
+			"Path to a custom plain-text email body template (Go template). Empty uses the built-in default.",
+		)
+		fEmailTemplateSubject = fs.String(
+			"email-template-subject",
+			envStringOrDefault("EMAIL_TEMPLATE_SUBJECT", ""),
+			"Subject line template (Go template). Empty uses \"Password Reset Request\".",
+		)
 
 		// Optional dedicated service account for password reset (recommended for security)
 		fResetUser = fs.String(
@@ -288,6 +371,38 @@ func ParseArgs(args []string) (*Opts, error) {
 			*fResetIdentifierMode,
 		))
 	}
+
+	if *fSMTPFromName != "" {
+		if err := email.ValidateHeaderValue(*fSMTPFromName); err != nil {
+			errs.Add(fmt.Sprintf("invalid value for SMTP_FROM_NAME: %v", err))
+		}
+	}
+
+	// Address checks apply only when the reset feature is on: these values are
+	// unused otherwise, and refusing to boot over a setting the deployment does
+	// not exercise is a regression for anyone upgrading with a stale placeholder.
+	//
+	// They also use the permissive RFC parser rather than ValidateEmailAddress.
+	// That regex demands a dotted TLD and so rejects noreply@localhost and
+	// gopherpass@intranet — senders a local MTA delivers fine, and which booted
+	// on every previous release. A malformed value is still caught; a merely
+	// internal one is not treated as malformed.
+	//
+	// An EMPTY sender stays non-fatal for the same upgrade reason; main.go warns.
+	if *fPasswordResetEnabled {
+		if *fSMTPFromAddress != "" {
+			if err := email.ValidateConfiguredAddress(*fSMTPFromAddress); err != nil {
+				errs.Add(fmt.Sprintf("invalid value for SMTP_FROM_ADDRESS: %q is %v", *fSMTPFromAddress, err))
+			}
+		}
+		if *fEmailReplyTo != "" {
+			if err := email.ValidateConfiguredAddress(*fEmailReplyTo); err != nil {
+				errs.Add(fmt.Sprintf("invalid value for EMAIL_REPLY_TO: %q is %v", *fEmailReplyTo, err))
+			}
+		}
+	}
+
+	headerOverrides := parseHeaderOverrides(os.Environ(), errs)
 
 	// Collect all missing required options
 	var missing []string
@@ -334,6 +449,13 @@ func ParseArgs(args []string) (*Opts, error) {
 		SMTPPassword:                *fSMTPPassword,
 		SMTPFromAddress:             *fSMTPFromAddress,
 		AppBaseURL:                  *fAppBaseURL,
+
+		SMTPFromName:         *fSMTPFromName,
+		EmailReplyTo:         *fEmailReplyTo,
+		EmailTemplateHTML:    *fEmailTemplateHTML,
+		EmailTemplateText:    *fEmailTemplateText,
+		EmailTemplateSubject: *fEmailTemplateSubject,
+		SMTPHeaderOverrides:  headerOverrides,
 
 		ResetUser:     *fResetUser,
 		ResetPassword: *fResetPassword,

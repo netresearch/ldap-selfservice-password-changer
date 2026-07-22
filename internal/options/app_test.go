@@ -3,6 +3,7 @@ package options
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -683,5 +684,210 @@ func TestParseArgsResetIdentifierMode(t *testing.T) {
 		configErr, ok := errors.AsType[*ConfigError](err)
 		require.True(t, ok, "error should be *ConfigError")
 		assert.Contains(t, configErr.Error(), "invalid value for reset-identifier-mode")
+	})
+}
+
+func requiredArgs() []string {
+	return []string{
+		"--ldap-server", "ldaps://ldap.example.com",
+		"--base-dn", "dc=example,dc=com",
+		"--readonly-user", "cn=ro,dc=example,dc=com",
+		"--readonly-password", "secret",
+	}
+}
+
+func TestParseArgs_EmailTemplateOptions(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	t.Setenv("SMTP_FROM_NAME", "ACME IT")
+	t.Setenv("EMAIL_REPLY_TO", "help@acme.com")
+	t.Setenv("EMAIL_TEMPLATE_SUBJECT", "[ACME] Reset")
+	t.Setenv("EMAIL_TEMPLATE_HTML", "/config/reset.html")
+	t.Setenv("EMAIL_TEMPLATE_TEXT", "/config/reset.txt")
+
+	opts, err := ParseArgs(requiredArgs())
+	if err != nil {
+		t.Fatalf("ParseArgs: %v", err)
+	}
+	if opts.SMTPFromName != "ACME IT" {
+		t.Errorf("SMTPFromName = %q", opts.SMTPFromName)
+	}
+	if opts.EmailReplyTo != "help@acme.com" {
+		t.Errorf("EmailReplyTo = %q", opts.EmailReplyTo)
+	}
+	if opts.EmailTemplateSubject != "[ACME] Reset" {
+		t.Errorf("EmailTemplateSubject = %q", opts.EmailTemplateSubject)
+	}
+	if opts.EmailTemplateHTML != "/config/reset.html" || opts.EmailTemplateText != "/config/reset.txt" {
+		t.Errorf("template paths = %q / %q", opts.EmailTemplateHTML, opts.EmailTemplateText)
+	}
+}
+
+func TestParseArgs_InvalidReplyTo(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	t.Setenv("EMAIL_REPLY_TO", "not-an-email")
+	_, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+	if err == nil || !strings.Contains(err.Error(), "EMAIL_REPLY_TO") {
+		t.Fatalf("expected EMAIL_REPLY_TO validation error, got %v", err)
+	}
+}
+
+// TestParseArgs_InternalSenderDomains is a regression test. The sender and
+// Reply-To checks originally used ValidateEmailAddress, whose regex demands a
+// dotted TLD. That rejected addresses SMTP delivers fine and which booted on
+// every previous release, so upgrading could stop a working deployment from
+// starting — the opposite of what the empty-value carve-out was protecting.
+func TestParseArgs_InternalSenderDomains(t *testing.T) {
+	for _, addr := range []string{"noreply@localhost", "gopherpass@intranet", "noreply@mailhost"} {
+		t.Run(addr, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			t.Setenv("SMTP_FROM_ADDRESS", addr)
+			t.Setenv("EMAIL_REPLY_TO", addr)
+
+			opts, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+			if err != nil {
+				t.Fatalf("internal sender domain %q must be accepted, got: %v", addr, err)
+			}
+			if opts.SMTPFromAddress != addr {
+				t.Errorf("SMTPFromAddress = %q, want %q", opts.SMTPFromAddress, addr)
+			}
+		})
+	}
+}
+
+func TestParseArgs_HeaderOverrides(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	t.Setenv("SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC", "password-reset")
+	t.Setenv("SMTP_HEADER_OVERRIDE_LIST_UNSUBSCRIBE", "<mailto:unsub@acme.com>")
+
+	opts, err := ParseArgs(requiredArgs())
+	if err != nil {
+		t.Fatalf("ParseArgs: %v", err)
+	}
+	if opts.SMTPHeaderOverrides["X-HELPDESK-TOPIC"] != "password-reset" {
+		t.Errorf("override map = %#v", opts.SMTPHeaderOverrides)
+	}
+	if opts.SMTPHeaderOverrides["LIST-UNSUBSCRIBE"] != "<mailto:unsub@acme.com>" {
+		t.Errorf("override map = %#v", opts.SMTPHeaderOverrides)
+	}
+}
+
+func TestParseArgs_HeaderOverrideRejectsCRLFAndReserved(t *testing.T) {
+	t.Run("crlf", func(t *testing.T) {
+		// Run from a temp dir so no .env is loaded from the repo.
+		t.Chdir(t.TempDir())
+
+		t.Setenv("SMTP_HEADER_OVERRIDE_X_EVIL", "a\r\nInjected: yes")
+		if _, err := ParseArgs(requiredArgs()); err == nil {
+			t.Fatal("expected CRLF rejection")
+		}
+	})
+	t.Run("reserved", func(t *testing.T) {
+		// Run from a temp dir so no .env is loaded from the repo.
+		t.Chdir(t.TempDir())
+
+		t.Setenv("SMTP_HEADER_OVERRIDE_CONTENT_TYPE", "text/plain")
+		if _, err := ParseArgs(requiredArgs()); err == nil {
+			t.Fatal("expected reserved-header rejection")
+		}
+	})
+}
+
+// TestParseArgs_HeaderOverrideRejectsInvalidName exercises email.ValidateHeaderName
+// through parseHeaderOverrides: a space is not valid ftext, so the whole config
+// must be rejected rather than the override silently dropped.
+func TestParseArgs_HeaderOverrideRejectsInvalidName(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	t.Setenv("SMTP_HEADER_OVERRIDE_X BAD", "v")
+
+	_, err := ParseArgs(requiredArgs())
+	require.Error(t, err, "expected invalid header name rejection")
+	assert.Contains(t, err.Error(), "SMTP_HEADER_OVERRIDE_X BAD")
+	assert.Contains(t, err.Error(), "invalid header name")
+}
+
+// TestParseHeaderOverridesEmptySuffix verifies that SMTP_HEADER_OVERRIDE_= is
+// reported instead of silently skipped — every other rejection path in
+// parseHeaderOverrides fails fast, and so must this one.
+func TestParseHeaderOverridesEmptySuffix(t *testing.T) {
+	errs := &ConfigError{}
+	overrides := parseHeaderOverrides([]string{"SMTP_HEADER_OVERRIDE_=value"}, errs)
+
+	assert.Empty(t, overrides)
+	require.True(t, errs.HasErrors(), "empty header-override suffix must be reported")
+	assert.Contains(t, errs.Error(), "SMTP_HEADER_OVERRIDE_")
+}
+
+// TestParseArgs_InvalidFromName verifies a CR/LF-bearing SMTP_FROM_NAME is
+// rejected at startup instead of being smuggled into the From header.
+func TestParseArgs_InvalidFromName(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	t.Setenv("SMTP_FROM_NAME", "a\r\nInjected: yes")
+
+	_, err := ParseArgs(requiredArgs())
+	require.Error(t, err, "expected CRLF rejection for SMTP_FROM_NAME")
+	assert.Contains(t, err.Error(), "SMTP_FROM_NAME")
+}
+
+// TestParseArgs_SMTPFromAddress covers sender-address handling. A malformed
+// address is rejected at startup, but an empty one is deliberately NOT an
+// error: it was accepted before the email-template feature existed, and
+// failing here would stop existing deployments from booting. main.go logs a
+// warning for the empty case instead.
+func TestParseArgs_SMTPFromAddress(t *testing.T) {
+	t.Run("empty is accepted when reset enabled (pre-feature behavior)", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		t.Setenv("SMTP_FROM_ADDRESS", "")
+
+		opts, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+		require.NoError(t, err)
+		assert.Empty(t, opts.SMTPFromAddress)
+	})
+
+	t.Run("malformed is rejected when reset enabled", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		t.Setenv("SMTP_FROM_ADDRESS", "not-an-email")
+
+		_, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid value for SMTP_FROM_ADDRESS")
+	})
+
+	t.Run("not validated when reset is disabled", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		t.Setenv("SMTP_FROM_ADDRESS", "changeme")
+
+		// The value is unused with the feature off, so a stale placeholder must
+		// not block boot for someone upgrading.
+		opts, err := ParseArgs(requiredArgs())
+		require.NoError(t, err)
+		assert.Equal(t, "changeme", opts.SMTPFromAddress)
+	})
+
+	t.Run("accepted when reset enabled and valid", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		t.Setenv("SMTP_FROM_ADDRESS", "noreply@acme.com")
+
+		opts, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+		require.NoError(t, err)
+		assert.Equal(t, "noreply@acme.com", opts.SMTPFromAddress)
+	})
+
+	t.Run("empty accepted when reset disabled", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		t.Setenv("SMTP_FROM_ADDRESS", "")
+
+		opts, err := ParseArgs(requiredArgs())
+		require.NoError(t, err)
+		assert.Empty(t, opts.SMTPFromAddress)
 	})
 }

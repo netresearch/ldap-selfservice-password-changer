@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Password reset request</title>
+  </head>
+  <body style="margin:0;padding:0;background:#ffffff;color:#1a1a1a;font-family:Arial,Helvetica,sans-serif;">
+    <div style="max-width:600px;margin:0 auto;padding:24px;">
+      <h1 style="font-size:20px;margin:0 0 16px;color:#1a1a1a;">Password reset request</h1>
+      <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">Hi,</p>
+      <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+        We received a request to reset the password for your account. If you made this request, use the button below to
+        continue:
+      </p>
+      <p style="margin:0 0 16px;">
+        <a
+          href="{{.ResetLink}}"
+          style="display:inline-block;padding:12px 20px;background:#073763;color:#ffffff;text-decoration:none;border-radius:4px;font-size:16px;"
+          >Reset your password</a
+        >
+      </p>
+      <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+        Or paste this link into your browser:<br />
+        <a href="{{.ResetLink}}" style="color:#073763;">{{.ResetLink}}</a>
+      </p>
+      <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+        This link will expire in {{.ExpiryMinutes}} minutes.
+      </p>
+      <p style="font-size:14px;line-height:1.5;color:#4d4d4d;margin:24px 0 0;">
+        If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
+      </p>
+    </div>
+  </body>
+</html>

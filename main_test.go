@@ -1,11 +1,16 @@
 package main
 
 import (
+	"bytes"
 	"context"
+	"encoding/json"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"runtime"
+	"strings"
 	"testing"
 	"time"
 
@@ -15,6 +20,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpchandler"
 )
 
 // TestRunHealthCheckSuccess tests runHealthCheck with a successful health endpoint.
@@ -255,14 +261,26 @@ func TestIsLDAPEncrypted(t *testing.T) {
 }
 
 // TestBuildEmailConfig verifies that options are mapped to the email config.
+// Every field of email.Config gets a distinct sentinel value so a crossed
+// mapping (e.g. TemplateHTMLPath fed from EmailTemplateText) fails here.
 func TestBuildEmailConfig(t *testing.T) {
 	opts := &options.Opts{
-		SMTPHost:        "smtp.example.com",
-		SMTPPort:        587,
-		SMTPUsername:    "user",
-		SMTPPassword:    "pass",
-		SMTPFromAddress: "noreply@example.com",
-		AppBaseURL:      "https://example.com",
+		SMTPHost:                "smtp.example.com",
+		SMTPPort:                587,
+		SMTPUsername:            "user",
+		SMTPPassword:            "pass",
+		SMTPFromAddress:         "noreply@example.com",
+		SMTPFromName:            "Sentinel From Name",
+		EmailReplyTo:            "sentinel-replyto@example.com",
+		AppBaseURL:              "https://example.com",
+		ResetTokenExpiryMinutes: 42,
+		EmailTemplateSubject:    "Sentinel subject {{.Recipient}}",
+		EmailTemplateHTML:       "/sentinel-html.html",
+		EmailTemplateText:       "/sentinel-text.txt",
+		SMTPHeaderOverrides: map[string]string{
+			"X-Helpdesk-Topic":  "sentinel-topic",
+			"X-Sentinel-Tenant": "sentinel-tenant",
+		},
 	}
 	got := buildEmailConfig(opts)
 	assert.Equal(t, "smtp.example.com", got.SMTPHost)
@@ -270,7 +288,17 @@ func TestBuildEmailConfig(t *testing.T) {
 	assert.Equal(t, "user", got.SMTPUsername)
 	assert.Equal(t, "pass", got.SMTPPassword)
 	assert.Equal(t, "noreply@example.com", got.FromAddress)
+	assert.Equal(t, "Sentinel From Name", got.FromName)
+	assert.Equal(t, "sentinel-replyto@example.com", got.ReplyTo)
 	assert.Equal(t, "https://example.com", got.BaseURL)
+	assert.Equal(t, uint(42), got.ExpiryMinutes)
+	assert.Equal(t, "Sentinel subject {{.Recipient}}", got.SubjectTemplate)
+	assert.Equal(t, "/sentinel-html.html", got.TemplateHTMLPath)
+	assert.Equal(t, "/sentinel-text.txt", got.TemplateTextPath)
+	assert.Equal(t, map[string]string{
+		"X-Helpdesk-Topic":  "sentinel-topic",
+		"X-Sentinel-Tenant": "sentinel-tenant",
+	}, got.HeaderOverrides)
 }
 
 // TestResetRateLimitSettings verifies the rate limit setting extraction.
@@ -290,6 +318,84 @@ func TestResetRateLimitSettingsZero(t *testing.T) {
 	req, window := resetRateLimitSettings(opts)
 	assert.Equal(t, 0, req)
 	assert.Equal(t, time.Duration(0), window)
+}
+
+// captureWarn runs fn with the default slog logger swapped for a JSON handler
+// writing to a buffer, and returns the captured records.
+func captureWarn(t *testing.T, fn func()) []map[string]any {
+	t.Helper()
+
+	var buf bytes.Buffer
+	previous := slog.Default()
+	slog.SetDefault(slog.New(slog.NewJSONHandler(&buf, &slog.HandlerOptions{Level: slog.LevelWarn})))
+	defer slog.SetDefault(previous)
+
+	fn()
+
+	var records []map[string]any
+	for line := range strings.SplitSeq(strings.TrimSpace(buf.String()), "\n") {
+		if line == "" {
+			continue
+		}
+		var rec map[string]any
+		require.NoError(t, json.Unmarshal([]byte(line), &rec))
+		records = append(records, rec)
+	}
+	return records
+}
+
+// TestWarnEmptySenderWithoutFromName verifies the plain empty-sender warning
+// does not claim a display name is being dropped.
+func TestWarnEmptySenderWithoutFromName(t *testing.T) {
+	records := captureWarn(t, func() { warnEmptySender("") })
+
+	require.Len(t, records, 1)
+	assert.Equal(t, "smtp_from_address_empty", records[0]["msg"])
+	assert.Equal(t, false, records[0]["from_name_dropped"])
+	detail, ok := records[0]["detail"].(string)
+	require.True(t, ok, "detail attribute missing or not a string")
+	assert.Contains(t, detail, "SMTP_FROM_ADDRESS is not set")
+	assert.NotContains(t, detail, "SMTP_FROM_NAME")
+}
+
+// TestWarnEmptySenderWithFromName covers SMTP_FROM_NAME set with an empty
+// SMTP_FROM_ADDRESS: both pass their own startup checks, so the operator has to
+// be told the display name is dropped rather than used.
+func TestWarnEmptySenderWithFromName(t *testing.T) {
+	records := captureWarn(t, func() { warnEmptySender("ACME IT") })
+
+	require.Len(t, records, 1)
+	assert.Equal(t, "smtp_from_address_empty", records[0]["msg"])
+	assert.Equal(t, true, records[0]["from_name_dropped"])
+	detail, ok := records[0]["detail"].(string)
+	require.True(t, ok, "detail attribute missing or not a string")
+	assert.Contains(t, detail, "SMTP_FROM_ADDRESS is not set")
+	assert.Contains(t, detail, "SMTP_FROM_NAME is set but will be dropped")
+}
+
+// TestBuildRPCHandlerWarnsAboutDroppedFromName verifies the warning path is
+// wired to the configured display name, not to a constant. The handler build
+// is expected to fail: an unreadable template path makes email.NewService
+// return before any LDAP dial, which keeps this test hermetic. The warning is
+// emitted before that, so it is still captured.
+func TestBuildRPCHandlerWarnsAboutDroppedFromName(t *testing.T) {
+	opts := &options.Opts{
+		PasswordResetEnabled: true,
+		SMTPFromAddress:      "",
+		SMTPFromName:         "ACME IT",
+		EmailTemplateHTML:    filepath.Join(t.TempDir(), "does-not-exist.html"),
+	}
+
+	var handler *rpchandler.Handler
+	var err error
+	records := captureWarn(t, func() { handler, err = buildRPCHandler(opts) })
+
+	require.Error(t, err, "handler build must fail on the unreadable template")
+	assert.Nil(t, handler)
+
+	require.Len(t, records, 1)
+	assert.Equal(t, "smtp_from_address_empty", records[0]["msg"])
+	assert.Equal(t, true, records[0]["from_name_dropped"])
 }
 
 // TestLogLDAPSecurityStatusDoesNotPanic verifies both ldap/ldaps cases run cleanly.
@@ -429,6 +535,42 @@ func TestNewHandlerWithResetServicesLDAPError(t *testing.T) {
 	after := runtime.NumGoroutine()
 	assert.LessOrEqual(t, after, before+1,
 		"failed reset-handler init must not leak token-store or IP-limiter cleanup goroutines (before=%d after=%d)",
+		before, after)
+}
+
+// TestNewHandlerWithResetServicesEmailInitError pins the fail-fast contract of
+// ADR 0003: a configured-but-unreadable email template must abort handler
+// construction. Falling back to the built-in templates would boot a server that
+// silently ignores the operator's branding, which the ADR rules out. The error
+// message is asserted because a fallback would still surface the later LDAP
+// error and otherwise satisfy the error/nil-handler checks.
+func TestNewHandlerWithResetServicesEmailInitError(t *testing.T) {
+	opts := &options.Opts{
+		Port:                        "3000",
+		LDAP:                        ldap.Config{Server: "ldap://127.0.0.1:1", BaseDN: "dc=example,dc=com"},
+		PasswordResetEnabled:        true,
+		ResetTokenExpiryMinutes:     15,
+		ResetRateLimitRequests:      3,
+		ResetRateLimitWindowMinutes: 60,
+		SMTPHost:                    "smtp.example.com",
+		SMTPPort:                    587,
+		SMTPFromAddress:             "noreply@example.com",
+		AppBaseURL:                  "https://example.com",
+		EmailTemplateText:           filepath.Join(t.TempDir(), "does-not-exist.txt"),
+	}
+
+	before := runtime.NumGoroutine()
+
+	h, err := newHandlerWithResetServices(opts)
+	require.Error(t, err, "an unreadable email template must abort handler construction")
+	assert.Nil(t, h, "no handler should be returned on error")
+	assert.Contains(t, err.Error(), "initialize email service",
+		"the email service error must be propagated, not swallowed by a template fallback")
+
+	time.Sleep(50 * time.Millisecond)
+	after := runtime.NumGoroutine()
+	assert.LessOrEqual(t, after, before+1,
+		"a failed email-service init must not leak token-store or IP-limiter cleanup goroutines (before=%d after=%d)",
 		before, after)
 }
 

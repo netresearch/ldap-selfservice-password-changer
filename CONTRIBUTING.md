@@ -455,6 +455,7 @@ For significant architectural or design decisions, create an ADR:
 
 - [ADR-0001: Standardize Form Field Names](docs/adr/0001-standardize-form-field-names.md)
 - [ADR-0002: Password Reset Functionality](docs/adr/0002-password-reset-functionality.md)
+- [ADR-0003: Configurable Reset Email Templates](docs/adr/0003-configurable-reset-email-templates.md)
 
 ---
 

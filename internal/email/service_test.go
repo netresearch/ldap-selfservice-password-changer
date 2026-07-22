@@ -16,7 +16,10 @@ func TestNewService(t *testing.T) {
 		BaseURL:      "https://password.example.com",
 	}
 
-	service := email.NewService(&config)
+	service, err := email.NewService(&config)
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
+	}
 	if service == nil {
 		t.Fatal("NewService() returned nil")
 	}
@@ -29,11 +32,17 @@ func TestSendResetEmailValidation(t *testing.T) {
 		FromAddress: "noreply@example.com",
 		BaseURL:     "https://example.com",
 	}
-	service := email.NewService(&config)
+	service, err := email.NewService(&config)
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
+	}
 
 	// Check if MailHog/SMTP is actually available by trying to send
 	smtpAvailable := false
-	testService := email.NewService(&config)
+	testService, err := email.NewService(&config)
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
+	}
 	if err := testService.SendResetEmail("probe@example.com", "probe"); err == nil {
 		smtpAvailable = true
 	}

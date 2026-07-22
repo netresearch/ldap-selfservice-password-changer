@@ -108,6 +108,21 @@ GopherPass is configured via environment variables or command-line flags. Key se
 - `RESET_TOKEN_EXPIRY_MINUTES` - Token validity (default: 15)
 - `RESET_RATE_LIMIT_REQUESTS` - Max requests per window (default: 3)
 
+### Email Templates and Headers (optional)
+
+Unset values fall back to the built-in defaults. A bad header name or value, or a `SMTP_FROM_NAME` containing control characters, aborts startup unconditionally. A bad address (`SMTP_FROM_ADDRESS`, `EMAIL_REPLY_TO`) or a bad template (missing file, parse error, undefined field) aborts startup only when password reset is enabled, since neither is used otherwise. Addresses are checked with the RFC parser, so internal senders such as `noreply@localhost` are accepted.
+
+- `SMTP_FROM_NAME` - Display name for the sender (encoded per RFC 2047)
+- `EMAIL_REPLY_TO` - `Reply-To` address (validated at startup)
+- `EMAIL_TEMPLATE_SUBJECT` - Subject line, itself a Go template
+- `EMAIL_TEMPLATE_HTML` - Path to a Go template for the HTML body
+- `EMAIL_TEMPLATE_TEXT` - Path to a Go template for the plain-text body
+- `SMTP_HEADER_OVERRIDE_*` - Raw header injection, one variable per header; the suffix maps `_` to `-` (`SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC` sets `X-Helpdesk-Topic`). Header names go on the wire in canonical (Go `net/textproto`) casing — first letter and each letter after a `-` upper-cased, the rest lower-cased — no matter how the variable was written. Values must not contain control characters: CR, LF, NUL, any other C0 control and DEL are rejected (HTAB is allowed). `MIME-Version` / `Content-Type` / `Content-Transfer-Encoding` cannot be overridden.
+
+Template fields: `{{.ResetLink}}`, `{{.Token}}`, `{{.BaseURL}}`, `{{.Recipient}}`, `{{.ExpiryMinutes}}`.
+
+Delivery semantics: `To`/`Cc`/`Bcc` overrides are display-only — the SMTP envelope recipient is always the reset requester, so `SMTP_HEADER_OVERRIDE_BCC` does not add a delivery target. It is still written as a real, visible `Bcc:` header line in the message the reset requester receives, so never put an address there that is meant to stay hidden — the override adds no recipient _and_ discloses the address to the user. A cross-domain `From`-header override creates a `From` vs envelope `MAIL FROM` mismatch that can break SPF/DKIM/DMARC alignment and hurt deliverability.
+
 For complete configuration options, run `./ldap-selfservice-password-changer --help`
 
 ## Password Reset Feature

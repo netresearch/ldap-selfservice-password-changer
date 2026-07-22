@@ -68,12 +68,19 @@ func buildEmailConfig(opts *options.Opts) email.Config {
 	// Safe conversion: SMTPPort is uint, typically 25/587/465 (well within int range)
 	smtpPort := int(opts.SMTPPort) //#nosec G115 -- SMTPPort is 0-65535, safe for int
 	return email.Config{
-		SMTPHost:     opts.SMTPHost,
-		SMTPPort:     smtpPort,
-		SMTPUsername: opts.SMTPUsername,
-		SMTPPassword: opts.SMTPPassword,
-		FromAddress:  opts.SMTPFromAddress,
-		BaseURL:      opts.AppBaseURL,
+		SMTPHost:         opts.SMTPHost,
+		SMTPPort:         smtpPort,
+		SMTPUsername:     opts.SMTPUsername,
+		SMTPPassword:     opts.SMTPPassword,
+		FromAddress:      opts.SMTPFromAddress,
+		FromName:         opts.SMTPFromName,
+		ReplyTo:          opts.EmailReplyTo,
+		BaseURL:          opts.AppBaseURL,
+		ExpiryMinutes:    opts.ResetTokenExpiryMinutes,
+		SubjectTemplate:  opts.EmailTemplateSubject,
+		TemplateHTMLPath: opts.EmailTemplateHTML,
+		TemplateTextPath: opts.EmailTemplateText,
+		HeaderOverrides:  opts.SMTPHeaderOverrides,
 	}
 }
 
@@ -98,9 +105,12 @@ func newHandlerWithResetServices(opts *options.Opts) (*rpchandler.Handler, error
 	// Initialize token store (cleanup started below, only on success).
 	tokenStore := resettoken.NewStore()
 
-	// Initialize email service
+	// Initialize email service (fails fast on bad templates/config).
 	emailConfig := buildEmailConfig(opts)
-	emailService := email.NewService(&emailConfig)
+	emailService, err := email.NewService(&emailConfig)
+	if err != nil {
+		return nil, fmt.Errorf("initialize email service: %w", err)
+	}
 
 	// Initialize email-based rate limiter (per-user protection)
 	resetRequests, resetWindowDuration := resetRateLimitSettings(opts)
@@ -142,11 +152,37 @@ func newHandlerWithoutResetServices(opts *options.Opts) (*rpchandler.Handler, er
 	return baseHandler, nil
 }
 
+// emptySenderDetail explains why an unset SMTP_FROM_ADDRESS breaks delivery.
+const emptySenderDetail = "SMTP_FROM_ADDRESS is not set; password reset emails will be sent " +
+	"with an empty sender and are likely to be rejected by the receiving MTA"
+
+// droppedFromNameDetail is appended when SMTP_FROM_NAME is set as well. Each
+// value passes its own startup check, so the combination looks configured while
+// the display name cannot be used: see formatFrom in internal/email/headers.go.
+const droppedFromNameDetail = "; SMTP_FROM_NAME is set but will be dropped, because a display " +
+	"name without an address cannot form a valid From header — set SMTP_FROM_ADDRESS to use it"
+
+// warnEmptySender logs the startup warning for a reset-enabled deployment with
+// no sender address. It is not fatal: an empty sender was accepted before the
+// email-template feature, so refusing to boot would break existing deployments.
+// It is still broken in practice — an empty sender means MAIL FROM:<> (the null
+// sender, reserved for bounces) and a From: header with no address.
+func warnEmptySender(fromName string) {
+	detail := emptySenderDetail
+	if fromName != "" {
+		detail += droppedFromNameDetail
+	}
+	slog.Warn("smtp_from_address_empty", "detail", detail, "from_name_dropped", fromName != "")
+}
+
 // buildRPCHandler selects the appropriate handler factory based on whether
 // the password reset feature is enabled.
 func buildRPCHandler(opts *options.Opts) (*rpchandler.Handler, error) {
 	if opts.PasswordResetEnabled {
 		slog.Info("password reset feature enabled")
+		if opts.SMTPFromAddress == "" {
+			warnEmptySender(opts.SMTPFromName)
+		}
 		return newHandlerWithResetServices(opts)
 	}
 	return newHandlerWithoutResetServices(opts)

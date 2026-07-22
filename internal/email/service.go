@@ -6,6 +6,7 @@ import (
 	"net/smtp"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // emailRegex is compiled once for performance.
@@ -17,93 +18,93 @@ type Config struct {
 	SMTPPort     int    // SMTP server port (e.g., 587 for STARTTLS)
 	SMTPUsername string // SMTP authentication username
 	SMTPPassword string // SMTP authentication password
-	FromAddress  string // Email sender address
+	FromAddress  string // Email sender address (also the SMTP envelope sender)
+	FromName     string // Optional From display name
+	ReplyTo      string // Optional Reply-To address
 	BaseURL      string // Base URL for reset links (e.g., https://password.example.com)
+
+	ExpiryMinutes uint // Token validity in minutes, surfaced to templates
+
+	SubjectTemplate  string            // Inline subject template; empty => default
+	TemplateHTMLPath string            // Path to custom HTML body template; empty => embedded default
+	TemplateTextPath string            // Path to custom text body template; empty => embedded default
+	HeaderOverrides  map[string]string // Raw header overrides (name => verbatim value)
 }
 
 // Service handles sending password reset emails.
 type Service struct {
-	config Config
+	config   Config
+	renderer *renderer
+	// now supplies the instant written to the Date header. NewService sets it
+	// to time.Now; tests pin it to assert the exact header value.
+	now func() time.Time
 }
 
-// NewService creates a new email service with the given configuration.
-func NewService(config *Config) *Service {
-	return &Service{
-		config: *config,
+// NewService creates an email service, loading and validating templates.
+// It fails fast: a missing, unparseable, or field-invalid template returns an
+// error rather than deferring the failure to the first send.
+func NewService(config *Config) (*Service, error) {
+	r, err := newRenderer(config)
+	if err != nil {
+		return nil, fmt.Errorf("initialize email templates: %w", err)
 	}
+	return &Service{config: *config, renderer: r, now: time.Now}, nil
 }
 
-// SendResetEmail sends a password reset email with a token link.
+// SendResetEmail renders and sends a password reset email with a token link.
 func (s *Service) SendResetEmail(to, token string) error {
-	// Validate email address
 	if !ValidateEmailAddress(to) {
 		return fmt.Errorf("invalid email address: %s", to)
 	}
 
-	// Build email content
-	subject := "Password Reset Request"
-	body := s.buildResetEmailBody(token)
+	msg, err := s.buildResetMessage(to, token)
+	if err != nil {
+		return err
+	}
 
-	// Send email
-	return s.sendEmail(to, subject, body)
+	return s.sendEmail(to, msg)
 }
 
-// sendEmail sends an email via SMTP.
-func (s *Service) sendEmail(to, subject, body string) error {
-	// Build email message
-	msg := s.buildEmailMessage(to, subject, body)
+// buildResetMessage is everything SendResetEmail does apart from the SMTP
+// handoff: it assembles the template data from the configuration, renders the
+// subject and both bodies, and returns the raw RFC 5322 message bytes. Split
+// out so the config-to-template wiring is testable without a mail server.
+func (s *Service) buildResetMessage(to, token string) ([]byte, error) {
+	data := resetEmailData{
+		ResetLink:     s.buildResetLink(token),
+		Token:         token,
+		BaseURL:       strings.TrimSuffix(s.config.BaseURL, "/"),
+		Recipient:     to,
+		ExpiryMinutes: s.config.ExpiryMinutes,
+	}
 
-	// Connect to SMTP server
+	subject, textBody, htmlBody, err := s.renderer.render(data)
+	if err != nil {
+		return nil, fmt.Errorf("render reset email: %w", err)
+	}
+
+	msg, err := s.buildMIMEMessage(to, subject, textBody, htmlBody)
+	if err != nil {
+		return nil, fmt.Errorf("build reset email: %w", err)
+	}
+
+	return msg, nil
+}
+
+// sendEmail sends a pre-built message via SMTP.
+func (s *Service) sendEmail(to string, msg []byte) error {
 	addr := fmt.Sprintf("%s:%d", s.config.SMTPHost, s.config.SMTPPort)
 
-	// Authenticate if credentials provided
 	var auth smtp.Auth
 	if s.config.SMTPUsername != "" {
 		auth = smtp.PlainAuth("", s.config.SMTPUsername, s.config.SMTPPassword, s.config.SMTPHost)
 	}
 
-	// Send email
-	err := smtp.SendMail(addr, auth, s.config.FromAddress, []string{to}, msg)
-	if err != nil {
+	if err := smtp.SendMail(addr, auth, s.config.FromAddress, []string{to}, msg); err != nil {
 		return fmt.Errorf("failed to send email: %w", err)
 	}
 
 	return nil
-}
-
-// buildEmailMessage constructs the RFC 5322 email message.
-func (s *Service) buildEmailMessage(to, subject, body string) []byte {
-	msg := fmt.Sprintf("From: %s\r\n", s.config.FromAddress)
-	msg += fmt.Sprintf("To: %s\r\n", to)
-	msg += fmt.Sprintf("Subject: %s\r\n", subject)
-	msg += "MIME-Version: 1.0\r\n"
-	msg += "Content-Type: text/plain; charset=UTF-8\r\n"
-	msg += "\r\n"
-	msg += body
-
-	return []byte(msg)
-}
-
-// buildResetEmailBody generates the email body for password reset.
-func (s *Service) buildResetEmailBody(token string) string {
-	resetLink := s.buildResetLink(token)
-
-	body := `Hi,
-
-We received a request to reset the password for your account.
-If you made this request, click the link below to continue:
-
-` + resetLink + `
-
-This link will expire in 15 minutes.
-
-If you didn't request a password reset, you can safely ignore this email.
-Your password will not be changed.
-
---
-LDAP Selfservice Password Changer`
-
-	return body
 }
 
 // buildResetLink constructs the password reset URL with token.
@@ -113,13 +114,9 @@ func (s *Service) buildResetLink(token string) string {
 }
 
 // ValidateEmailAddress performs basic email validation.
-// This function is exported to allow external validation of email addresses.
 func ValidateEmailAddress(email string) bool {
 	if email == "" {
 		return false
 	}
-
-	// Use package-level compiled regex for performance
-	// Matches: user@example.com, user+tag@sub.example.com
 	return emailRegex.MatchString(email)
 }

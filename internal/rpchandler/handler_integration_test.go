@@ -78,7 +78,8 @@ func TestIntegration_NewWithServices(t *testing.T) {
 		FromAddress:  "test@example.com",
 		BaseURL:      "http://localhost:3000",
 	}
-	emailService := email.NewService(emailConfig)
+	emailService, err := email.NewService(emailConfig)
+	require.NoError(t, err)
 	rateLimiter := ratelimit.NewLimiter(10, 60*time.Minute)
 	ipLimiter := ratelimit.NewIPLimiter()
 

@@ -201,6 +201,54 @@ SMTP_FROM_ADDRESS=noreply@example.com
 APP_BASE_URL=https://passwd.example.com
 ```
 
+#### Email Template and Header Configuration
+
+All optional — unset values use the built-in defaults.
+
+An invalid header name or value (`SMTP_HEADER_OVERRIDE_*`), or a `SMTP_FROM_NAME`
+carrying control characters, aborts startup unconditionally.
+
+An invalid address (`SMTP_FROM_ADDRESS`, `EMAIL_REPLY_TO`), an unparseable
+template, or an undefined template field aborts startup only when password reset
+is enabled: none of them is used otherwise, so with `PASSWORD_RESET_ENABLED=false`
+a stale placeholder or a broken `EMAIL_TEMPLATE_*` path will not block boot.
+
+Addresses are checked with Go's RFC 5322 parser rather than a stricter pattern,
+so internal senders that a local MTA delivers — `noreply@localhost`,
+`gopherpass@intranet`, IP-literal domains — are accepted. An empty
+`SMTP_FROM_ADDRESS` is never fatal; it logs a startup warning instead.
+
+```bash
+# Sender display name (encoded per RFC 2047)
+SMTP_FROM_NAME=ACME IT
+
+# Reply-To address (validated at startup)
+EMAIL_REPLY_TO=helpdesk@example.com
+
+# Subject line — itself a Go template
+EMAIL_TEMPLATE_SUBJECT=[ACME] Reset your password
+
+# Body templates (Go templates read from disk at startup)
+EMAIL_TEMPLATE_HTML=/config/email/reset.html
+EMAIL_TEMPLATE_TEXT=/config/email/reset.txt
+
+# Raw header injection for routing/helpdesk integrations. One variable per
+# header; the suffix maps _ -> - and the name is emitted in canonical
+# (net/textproto) casing, so this sets "X-Helpdesk-Topic" regardless of how the
+# variable is spelled. Values must not contain control characters: CR, LF, NUL,
+# any other C0 control and DEL are rejected (HTAB is allowed).
+# MIME-Version / Content-Type / Content-Transfer-Encoding cannot be overridden.
+SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC=password-reset
+```
+
+Template fields: `{{.ResetLink}}`, `{{.Token}}`, `{{.BaseURL}}`, `{{.Recipient}}`, `{{.ExpiryMinutes}}`.
+
+Delivery semantics:
+
+- `To`/`Cc`/`Bcc` overrides are **display-only**. The SMTP envelope recipient is always the reset requester, so `SMTP_HEADER_OVERRIDE_BCC` does **not** add a delivery target — nobody extra receives the mail.
+- **Never put an address in a `Bcc` override that is meant to stay hidden.** The value is emitted as a real, visible `Bcc:` header line in the message delivered to the reset requester, so it adds no recipient _and_ discloses the address to the user — the inverse of what `Bcc` means.
+- A cross-domain `From`-header override creates a `From` vs envelope `MAIL FROM` mismatch that can break SPF/DKIM/DMARC alignment and hurt deliverability.
+
 #### Server Configuration
 
 ```bash
