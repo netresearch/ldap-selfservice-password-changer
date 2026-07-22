@@ -57,7 +57,7 @@ Access at `http://localhost:3000`
 **Prerequisites:**
 
 - Go 1.26+
-- Bun 1.3+ (see [installation guide](https://bun.sh/docs/installation))
+- Bun (no version pinned; CI installs the latest — see [installation guide](https://bun.sh/docs/installation))
 
 ```bash
 # Clone and build
