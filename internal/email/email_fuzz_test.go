@@ -111,7 +111,7 @@ func FuzzHeaderOverrideValidation(f *testing.F) {
 		{"Naïve", "value"},
 		{"Subject", "operator subject"},
 		{"From", "attacker@evil.example"},
-		{"Reply-To", "helpdesk@acme.com"},
+		{"Reply-To", "helpdesk@example.com"},
 		{"mime-version", "9.9"},
 		{"Content-Type", "text/plain"},
 		{"X-Long", strings.Repeat("a", 2000)},
@@ -132,7 +132,7 @@ func FuzzHeaderOverrideValidation(f *testing.F) {
 		}
 
 		svc := newClockedService(&Config{
-			FromAddress:     "noreply@acme.com",
+			FromAddress:     "noreply@example.com",
 			HeaderOverrides: map[string]string{name: value},
 		})
 		msg, err := svc.buildMIMEMessage(

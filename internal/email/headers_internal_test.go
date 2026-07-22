@@ -46,20 +46,20 @@ func TestEncodeSubject(t *testing.T) {
 }
 
 func TestFormatFrom(t *testing.T) {
-	if got := formatFrom("", "noreply@acme.com"); got != "noreply@acme.com" {
-		t.Errorf("bare from = %q, want noreply@acme.com", got)
+	if got := formatFrom("", "noreply@example.com"); got != "noreply@example.com" {
+		t.Errorf("bare from = %q, want noreply@example.com", got)
 	}
-	if got := formatFrom("ACME IT", "noreply@acme.com"); got != `"ACME IT" <noreply@acme.com>` {
+	if got := formatFrom("ACME IT", "noreply@example.com"); got != `"ACME IT" <noreply@example.com>` {
 		t.Errorf("named from = %q", got)
 	}
 	// Plain ASCII display name with no specials: mail.Address.String() ALWAYS
 	// quotes an all-printable display name, so the quoted form is correct.
-	// Do NOT expect `ACME <noreply@acme.com>` — that assertion would fail.
-	if got := formatFrom("ACME", "noreply@acme.com"); got != `"ACME" <noreply@acme.com>` {
+	// Do NOT expect `ACME <noreply@example.com>` — that assertion would fail.
+	if got := formatFrom("ACME", "noreply@example.com"); got != `"ACME" <noreply@example.com>` {
 		t.Errorf("ascii name = %q, want quoted form", got)
 	}
 	// Non-ASCII display name must be RFC 2047 encoded.
-	if got := formatFrom("ACME Straße", "noreply@acme.com"); !strings.Contains(got, "=?utf-8?") &&
+	if got := formatFrom("ACME Straße", "noreply@example.com"); !strings.Contains(got, "=?utf-8?") &&
 		!strings.Contains(got, "=?UTF-8?") {
 		t.Errorf("non-ASCII name not encoded: %q", got)
 	}
@@ -92,9 +92,9 @@ func TestFormatFromEmptyAddressDropsName(t *testing.T) {
 // non-empty From value formatFrom produces must parse back as an address.
 func TestFormatFromAlwaysParseable(t *testing.T) {
 	cases := []struct{ name, address string }{
-		{"", "noreply@acme.com"},
-		{"ACME IT", "noreply@acme.com"},
-		{"ACME Straße", "noreply@acme.com"},
+		{"", "noreply@example.com"},
+		{"ACME IT", "noreply@example.com"},
+		{"ACME Straße", "noreply@example.com"},
 		{"ACME IT", ""},
 		{"", ""},
 	}
@@ -111,12 +111,12 @@ func TestFormatFromAlwaysParseable(t *testing.T) {
 
 func TestApplyHeaderOverrides(t *testing.T) {
 	base := []headerField{
-		{key: "From", value: "noreply@acme.com"},
-		{key: "To", value: "u@x.com"},
+		{key: "From", value: "noreply@example.com"},
+		{key: "To", value: "u@example.org"},
 	}
 	out := applyHeaderOverrides(base, map[string]string{
-		"from":             "ACME <help@acme.com>", // canonical-key match, replaces
-		"X-HelpDesk-Topic": "reset",                // new, appended
+		"from":             "ACME <help@example.com>", // canonical-key match, replaces
+		"X-HelpDesk-Topic": "reset",                   // new, appended
 	})
 
 	var from, topic string
@@ -133,7 +133,7 @@ func TestApplyHeaderOverrides(t *testing.T) {
 	if fromCount != 1 {
 		t.Errorf("From appears %d times, want 1", fromCount)
 	}
-	if from != "ACME <help@acme.com>" {
+	if from != "ACME <help@example.com>" {
 		t.Errorf("From = %q, want override value", from)
 	}
 	if topic != "reset" {

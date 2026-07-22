@@ -705,6 +705,34 @@ earlier run collides. Clear them and retry:
 docker rm -f gopherpass-openldap gopherpass-mailpit gopherpass-app
 ```
 
+**`APP_BASE_URL` must move with `APP_PORT`.** `compose.yml` pins
+`APP_BASE_URL: "http://localhost:3000"` in the `app` service's inline
+`environment:` block, and inline values win over `.env.local`. Change only
+`APP_PORT` and the app serves on `:3140` while every reset email it sends links
+to `:3000`, where nothing is listening — the mail arrives and the link is dead.
+Edit the `APP_BASE_URL` line in `compose.yml` to match the port you chose.
+
+### Exercising Custom Email Templates
+
+`EMAIL_TEMPLATE_HTML` and `EMAIL_TEMPLATE_TEXT` take paths that must resolve
+**inside the app container**. The runtime image is `FROM scratch` and the `app`
+service declares no `volumes:`, so a path that exists only on the host resolves
+to nothing and startup fails with `text template: stat …: no such file or
+directory`. Bind-mount the file and point the variable at the container path:
+
+```yaml
+# compose.yml, under the app service
+volumes:
+  - ./dev/reset.txt.tmpl:/config/email/reset.txt.tmpl:ro
+environment:
+  EMAIL_TEMPLATE_TEXT: /config/email/reset.txt.tmpl
+```
+
+Template fields are `{{.ResetLink}}`, `{{.Token}}`, `{{.BaseURL}}`,
+`{{.Recipient}}` and `{{.ExpiryMinutes}}`. Leaving one of the two body templates
+unset is fine — the unset side falls back to the template embedded in the binary,
+which is a useful way to compare a custom body against the default in one message.
+
 ### Route B: Native Binary Against Compose Infra
 
 Only if you don't want to rebuild the image. Note that Mailpit's SMTP port (1025)

@@ -104,14 +104,14 @@ func TestNewRenderer_CustomSubjectAndFiles(t *testing.T) {
 		t.Fatalf("newRenderer: %v", err)
 	}
 
-	subject, text, _, err := r.render(resetEmailData{Recipient: "u@x.com", ResetLink: "https://x/y"})
+	subject, text, _, err := r.render(resetEmailData{Recipient: "u@example.org", ResetLink: "https://x/y"})
 	if err != nil {
 		t.Fatalf("render: %v", err)
 	}
 	if subject != "[ACME] Reset your password" {
 		t.Errorf("subject = %q", subject)
 	}
-	if !strings.Contains(text, "Reset for u@x.com: https://x/y") {
+	if !strings.Contains(text, "Reset for u@example.org: https://x/y") {
 		t.Errorf("text = %q", text)
 	}
 }
