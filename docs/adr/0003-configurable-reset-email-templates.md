@@ -129,7 +129,7 @@ type resetEmailData struct {
 
 3. **Correct expiry statement**: the email states the configured lifetime instead of a fixed 15 minutes.
 
-4. **Misconfiguration surfaces at boot**: a broken header fails the process start unconditionally, and a broken template does so when password reset is enabled, rather than surfacing on the first user's reset attempt as a silent non-delivery.
+4. **Misconfiguration surfaces at boot**: a broken header fails the process start unconditionally; a broken address or template does so when password reset is enabled, rather than surfacing on the first user's reset attempt as a silent non-delivery. Address and template checks are deliberately scoped to that path — neither value is used with the feature off, and refusing to boot over an unused setting would regress deployments upgrading with a stale placeholder.
 
 5. **Header injection closed at the message boundary**: validation in `internal/email` holds regardless of how the configuration was assembled.
 

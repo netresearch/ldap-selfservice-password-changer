@@ -729,9 +729,32 @@ func TestParseArgs_InvalidReplyTo(t *testing.T) {
 	t.Chdir(t.TempDir())
 
 	t.Setenv("EMAIL_REPLY_TO", "not-an-email")
-	_, err := ParseArgs(requiredArgs())
+	_, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
 	if err == nil || !strings.Contains(err.Error(), "EMAIL_REPLY_TO") {
 		t.Fatalf("expected EMAIL_REPLY_TO validation error, got %v", err)
+	}
+}
+
+// TestParseArgs_InternalSenderDomains is a regression test. The sender and
+// Reply-To checks originally used ValidateEmailAddress, whose regex demands a
+// dotted TLD. That rejected addresses SMTP delivers fine and which booted on
+// every previous release, so upgrading could stop a working deployment from
+// starting — the opposite of what the empty-value carve-out was protecting.
+func TestParseArgs_InternalSenderDomains(t *testing.T) {
+	for _, addr := range []string{"noreply@localhost", "gopherpass@intranet", "noreply@mailhost"} {
+		t.Run(addr, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+			t.Setenv("SMTP_FROM_ADDRESS", addr)
+			t.Setenv("EMAIL_REPLY_TO", addr)
+
+			opts, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+			if err != nil {
+				t.Fatalf("internal sender domain %q must be accepted, got: %v", addr, err)
+			}
+			if opts.SMTPFromAddress != addr {
+				t.Errorf("SMTPFromAddress = %q, want %q", opts.SMTPFromAddress, addr)
+			}
+		})
 	}
 }
 
@@ -839,13 +862,15 @@ func TestParseArgs_SMTPFromAddress(t *testing.T) {
 		assert.Contains(t, err.Error(), "invalid value for SMTP_FROM_ADDRESS")
 	})
 
-	t.Run("malformed is rejected even when reset disabled", func(t *testing.T) {
+	t.Run("not validated when reset is disabled", func(t *testing.T) {
 		t.Chdir(t.TempDir())
-		t.Setenv("SMTP_FROM_ADDRESS", "not-an-email")
+		t.Setenv("SMTP_FROM_ADDRESS", "changeme")
 
-		_, err := ParseArgs(requiredArgs())
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "invalid value for SMTP_FROM_ADDRESS")
+		// The value is unused with the feature off, so a stale placeholder must
+		// not block boot for someone upgrading.
+		opts, err := ParseArgs(requiredArgs())
+		require.NoError(t, err)
+		assert.Equal(t, "changeme", opts.SMTPFromAddress)
 	})
 
 	t.Run("accepted when reset enabled and valid", func(t *testing.T) {

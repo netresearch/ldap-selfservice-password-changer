@@ -203,13 +203,20 @@ APP_BASE_URL=https://passwd.example.com
 
 #### Email Template and Header Configuration
 
-All optional — unset values use the built-in defaults. An invalid address or
-header (`SMTP_FROM_NAME`, `SMTP_FROM_ADDRESS`, `EMAIL_REPLY_TO`,
-`SMTP_HEADER_OVERRIDE_*`) aborts startup unconditionally. An unparseable
-template or an undefined template field aborts startup when password reset is
-enabled: the templates are read and dry-run only on that path, so with
-`PASSWORD_RESET_ENABLED=false` a broken `EMAIL_TEMPLATE_*` path is never
-loaded.
+All optional — unset values use the built-in defaults.
+
+An invalid header name or value (`SMTP_HEADER_OVERRIDE_*`), or a `SMTP_FROM_NAME`
+carrying control characters, aborts startup unconditionally.
+
+An invalid address (`SMTP_FROM_ADDRESS`, `EMAIL_REPLY_TO`), an unparseable
+template, or an undefined template field aborts startup only when password reset
+is enabled: none of them is used otherwise, so with `PASSWORD_RESET_ENABLED=false`
+a stale placeholder or a broken `EMAIL_TEMPLATE_*` path will not block boot.
+
+Addresses are checked with Go's RFC 5322 parser rather than a stricter pattern,
+so internal senders that a local MTA delivers — `noreply@localhost`,
+`gopherpass@intranet`, IP-literal domains — are accepted. An empty
+`SMTP_FROM_ADDRESS` is never fatal; it logs a startup warning instead.
 
 ```bash
 # Sender display name (encoded per RFC 2047)

@@ -110,7 +110,7 @@ GopherPass is configured via environment variables or command-line flags. Key se
 
 ### Email Templates and Headers (optional)
 
-Unset values fall back to the built-in defaults. A bad address or header value aborts startup unconditionally; a bad template (missing file, parse error, undefined field) aborts startup when password reset is enabled, since templates are only loaded then.
+Unset values fall back to the built-in defaults. A bad header name or value, or a `SMTP_FROM_NAME` containing control characters, aborts startup unconditionally. A bad address (`SMTP_FROM_ADDRESS`, `EMAIL_REPLY_TO`) or a bad template (missing file, parse error, undefined field) aborts startup only when password reset is enabled, since neither is used otherwise. Addresses are checked with the RFC parser, so internal senders such as `noreply@localhost` are accepted.
 
 - `SMTP_FROM_NAME` - Display name for the sender (encoded per RFC 2047)
 - `EMAIL_REPLY_TO` - `Reply-To` address (validated at startup)

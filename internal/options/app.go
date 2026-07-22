@@ -372,25 +372,34 @@ func ParseArgs(args []string) (*Opts, error) {
 		))
 	}
 
-	if *fEmailReplyTo != "" && !email.ValidateEmailAddress(*fEmailReplyTo) {
-		errs.Add(fmt.Sprintf("invalid value for EMAIL_REPLY_TO: %q is not a valid email address", *fEmailReplyTo))
-	}
-
 	if *fSMTPFromName != "" {
 		if err := email.ValidateHeaderValue(*fSMTPFromName); err != nil {
 			errs.Add(fmt.Sprintf("invalid value for SMTP_FROM_NAME: %v", err))
 		}
 	}
 
-	// A malformed sender address is a typo that would otherwise surface only on
-	// the first reset request, so reject it at startup. An *empty* one is NOT an
-	// error: it was accepted before this feature existed, and failing here would
-	// stop existing deployments from booting. main.go warns about it instead.
-	if *fSMTPFromAddress != "" && !email.ValidateEmailAddress(*fSMTPFromAddress) {
-		errs.Add(fmt.Sprintf(
-			"invalid value for SMTP_FROM_ADDRESS: %q is not a valid email address",
-			*fSMTPFromAddress,
-		))
+	// Address checks apply only when the reset feature is on: these values are
+	// unused otherwise, and refusing to boot over a setting the deployment does
+	// not exercise is a regression for anyone upgrading with a stale placeholder.
+	//
+	// They also use the permissive RFC parser rather than ValidateEmailAddress.
+	// That regex demands a dotted TLD and so rejects noreply@localhost and
+	// gopherpass@intranet — senders a local MTA delivers fine, and which booted
+	// on every previous release. A malformed value is still caught; a merely
+	// internal one is not treated as malformed.
+	//
+	// An EMPTY sender stays non-fatal for the same upgrade reason; main.go warns.
+	if *fPasswordResetEnabled {
+		if *fSMTPFromAddress != "" {
+			if err := email.ValidateConfiguredAddress(*fSMTPFromAddress); err != nil {
+				errs.Add(fmt.Sprintf("invalid value for SMTP_FROM_ADDRESS: %q is %v", *fSMTPFromAddress, err))
+			}
+		}
+		if *fEmailReplyTo != "" {
+			if err := email.ValidateConfiguredAddress(*fEmailReplyTo); err != nil {
+				errs.Add(fmt.Sprintf("invalid value for EMAIL_REPLY_TO: %q is %v", *fEmailReplyTo, err))
+			}
+		}
 	}
 
 	headerOverrides := parseHeaderOverrides(os.Environ(), errs)

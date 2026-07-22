@@ -11,6 +11,25 @@ import (
 	"strings"
 )
 
+// ValidateConfiguredAddress reports whether an operator-supplied address (the
+// sender or Reply-To) is a usable RFC 5322 addr-spec.
+//
+// It is deliberately more permissive than ValidateEmailAddress. That regex
+// requires a dotted TLD, which rejects senders SMTP delivers perfectly well:
+// noreply@localhost, gopherpass@intranet, and IP-literal domains are all
+// routine for a containerised app relaying through a local MTA. Applying the
+// strict regex here would refuse to start deployments that work today.
+//
+// Recipient addresses keep the stricter regex: they derive from directory data
+// rather than operator config, so narrowing what is accepted there limits
+// attack surface rather than breaking a working deployment.
+func ValidateConfiguredAddress(addr string) error {
+	if _, err := mail.ParseAddress(addr); err != nil {
+		return fmt.Errorf("not a valid email address: %w", err)
+	}
+	return nil
+}
+
 // headerNameRegex matches an RFC 5322 field name: 1*ftext, where ftext is any
 // printable US-ASCII char (33-126) except ':' (58). No spaces, no controls.
 // The bounds are spelled as hex escapes so the two sub-ranges read as the
