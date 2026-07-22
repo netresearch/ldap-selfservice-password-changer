@@ -739,9 +739,13 @@ The stack's password policy is ≥10 chars with 1 number, 1 symbol, 1 uppercase 
 ### Driving a Reset by Username
 
 This exercises `RESET_IDENTIFIER_MODE`. Set it to `both` via `.env.local` in the
-worktree (Compose loads `.env.local` _after_ the inline environment, so it wins)
-and recreate `app`. Then submit a **username** and confirm Mailpit received mail
-addressed to the account's **registered** address, not the typed identifier:
+worktree and recreate `app`. This works because `RESET_IDENTIFIER_MODE` is _not_
+in the `app` service's inline `environment:` block — Compose's `env_file` only
+supplies variables that block does not already define. A variable listed inline
+always wins over `.env.local`, so appending e.g. `SMTP_HOST` there has no effect;
+to change one of those, edit `compose.yml` instead. Then submit a **username** and
+confirm Mailpit received mail addressed to the account's **registered** address,
+not the typed identifier:
 
 ```bash
 printf 'RESET_IDENTIFIER_MODE=both\n' >> .env.local  # append — never clobber an existing .env.local
