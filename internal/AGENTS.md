@@ -1,6 +1,6 @@
 # Go Backend Services
 
-<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-04-18 -->
+<!-- Managed by agent: keep sections & order; edit content, not structure. Last updated: 2026-07-22 -->
 
 **Scope**: Go backend packages in `internal/` directory
 
@@ -20,22 +20,29 @@ Backend services for LDAP selfservice password change/reset functionality. Organ
 
 ## Setup/Environment
 
-**Required environment variables** (configure in `.env.local`):
+**Environment variables** (configure in `.env.local`; names must match `options/app.go`):
 
 ```bash
-# LDAP connection
-LDAP_URL=ldaps://ldap.example.com:636
-LDAP_USER_BASE_DN=ou=users,dc=example,dc=com
-LDAP_BIND_DN=cn=admin,dc=example,dc=com
-LDAP_BIND_PASSWORD=secret
+# LDAP connection (the four below are the only *required* variables)
+LDAP_SERVER=ldaps://ldap.example.com:636
+LDAP_BASE_DN=dc=example,dc=com
+LDAP_READONLY_USER=cn=readonly,dc=example,dc=com
+LDAP_READONLY_PASSWORD=secret
+LDAP_IS_AD=false   # optional; true for ActiveDirectory (then LDAP_SERVER must be ldaps://)
+
+# Optional dedicated reset account (falls back to the readonly user)
+LDAP_RESET_USER=cn=password-reset,dc=example,dc=com
+LDAP_RESET_PASSWORD=secret
 
 # Email for password reset
+PASSWORD_RESET_ENABLED=true
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
-SMTP_USER=noreply@example.com
+SMTP_USERNAME=noreply@example.com
 SMTP_PASSWORD=secret
-SMTP_FROM=noreply@example.com
+SMTP_FROM_ADDRESS=noreply@example.com
 APP_BASE_URL=https://passwd.example.com
+RESET_IDENTIFIER_MODE=email   # optional; email (default), username, or both
 
 # Email templating (optional; unset => built-in defaults)
 SMTP_FROM_NAME=ACME IT
@@ -45,12 +52,23 @@ EMAIL_TEMPLATE_HTML=/config/email/reset.html
 EMAIL_TEMPLATE_TEXT=/config/email/reset.txt
 # Raw header escape hatch (suffix _ -> -): SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC=...
 
-# Rate limiting (optional)
-RATE_LIMIT_REQUESTS=3
-RATE_LIMIT_WINDOW=1h
+# Rate limiting (optional; window is in minutes, not a duration string)
+RESET_RATE_LIMIT_REQUESTS=3
+RESET_RATE_LIMIT_WINDOW_MINUTES=60
 
-# Token expiry (optional)
-TOKEN_EXPIRY_DURATION=1h
+# Token expiry (optional; minutes, not a duration string)
+RESET_TOKEN_EXPIRY_MINUTES=15
+
+# Password policy (optional; defaults shown)
+MIN_LENGTH=8
+MIN_NUMBERS=1
+MIN_SYMBOLS=1
+MIN_UPPERCASE=1
+MIN_LOWERCASE=1
+PASSWORD_CAN_INCLUDE_USERNAME=false
+
+# HTTP (optional)
+PORT=3000
 ```
 
 **Go toolchain**: Requires Go 1.26+ (specified in `go.mod`)
@@ -170,14 +188,14 @@ conn, _ := ldap.Dial(url)
 **Token Security**:
 
 - Cryptographic random tokens (see `resettoken/token.go`)
-- Configurable expiry (default 1h)
+- Configurable expiry via `RESET_TOKEN_EXPIRY_MINUTES` (default 15 minutes)
 - Single-use tokens (invalidated after use)
 - No token storage in logs or metrics
 
 **Rate Limiting**:
 
-- IP-based limits: 3 requests/hour default
-- Configurable via `RATE_LIMIT_*` env vars
+- IP-based limits: 3 requests per 60-minute window by default
+- Configurable via `RESET_RATE_LIMIT_REQUESTS` / `RESET_RATE_LIMIT_WINDOW_MINUTES`
 - In-memory store (consider Redis for multi-instance)
 - Apply to both change and reset endpoints
 
@@ -219,11 +237,13 @@ conn, _ := ldap.Dial(url)
 
 **✅ Good: Type-safe configuration**
 
+Pattern only — this project parses config with `flag` + `godotenv` in `options/app.go`, not with struct tags. The variable names below are the real ones.
+
 ```go
 type Config struct {
-    LDAPURL      string `env:"LDAP_URL" validate:"required,url"`
-    BindDN       string `env:"LDAP_BIND_DN" validate:"required"`
-    BindPassword string `env:"LDAP_BIND_PASSWORD" validate:"required"`
+    LDAPServer       string `env:"LDAP_SERVER" validate:"required,url"`
+    ReadonlyUser     string `env:"LDAP_READONLY_USER" validate:"required"`
+    ReadonlyPassword string `env:"LDAP_READONLY_PASSWORD" validate:"required"`
 }
 
 func LoadConfig() (*Config, error) {
@@ -240,7 +260,7 @@ func LoadConfig() (*Config, error) {
 ```go
 func LoadConfig() *Config {
     return &Config{
-        LDAPURL: os.Getenv("LDAP_URL"),  // ❌ no validation, may be empty
+        LDAPServer: os.Getenv("LDAP_SERVER"),  // ❌ no validation, may be empty
     }
 }
 ```
@@ -320,7 +340,7 @@ func ResetPassword(username string) error {
 1. **Module issues**: `go mod tidy` to clean dependencies
 2. **Import errors**: Check `go.mod` requires correct versions
 3. **Test failures**: `go test -v ./... -run FailingTest` for verbose output
-4. **LDAP connection**: Verify `LDAP_URL` format and network access
+4. **LDAP connection**: Verify `LDAP_SERVER` format and network access
 5. **Email testing**: Ensure Docker running for testcontainers (MailHog)
 6. **Rate limit testing**: Tests may fail if system time incorrect
 
