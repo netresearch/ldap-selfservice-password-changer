@@ -64,8 +64,8 @@ func parseMessage(t *testing.T, raw []byte) (textproto.MIMEHeader, *multipart.Re
 // rejects such values at startup, but the email package must not depend on it.
 func TestBuildMIMEMessage_RejectsInjectedOverride(t *testing.T) {
 	cases := map[string]map[string]string{
-		"crlf in value":    {"X-Evil": "ok\r\nBcc: attacker@evil.com"},
-		"lone lf in value": {"X-Evil": "ok\nBcc: attacker@evil.com"},
+		"crlf in value":    {"X-Evil": "ok\r\nBcc: attacker@evil.invalid"},
+		"lone lf in value": {"X-Evil": "ok\nBcc: attacker@evil.invalid"},
 		"nul in value":     {"X-Evil": "a\x00b"},
 		"space in name":    {"X Bad": "value"},
 		"colon in name":    {"X:Bad": "value"},
@@ -73,8 +73,8 @@ func TestBuildMIMEMessage_RejectsInjectedOverride(t *testing.T) {
 
 	for name, overrides := range cases {
 		t.Run(name, func(t *testing.T) {
-			s := newClockedService(&Config{FromAddress: "noreply@acme.com", HeaderOverrides: overrides})
-			raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+			s := newClockedService(&Config{FromAddress: "noreply@example.com", HeaderOverrides: overrides})
+			raw, err := s.buildMIMEMessage("user@example.org", "Sub", "t", "<p>h</p>")
 			if err == nil {
 				t.Fatalf("expected an error; got a message:\n%s", raw)
 			}
@@ -90,10 +90,10 @@ func TestBuildMIMEMessage_RejectsInjectedOverride(t *testing.T) {
 // rather than emitted a second time, which would corrupt the multipart parse.
 func TestBuildMIMEMessage_DropsReservedOverride(t *testing.T) {
 	s := newClockedService(&Config{
-		FromAddress:     "noreply@acme.com",
+		FromAddress:     "noreply@example.com",
 		HeaderOverrides: map[string]string{"Content-Type": "text/plain", "Mime-Version": "9.9"},
 	})
-	raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+	raw, err := s.buildMIMEMessage("user@example.org", "Sub", "t", "<p>h</p>")
 	if err != nil {
 		t.Fatalf("buildMIMEMessage: %v", err)
 	}
@@ -112,8 +112,8 @@ func TestBuildMIMEMessage_DropsReservedOverride(t *testing.T) {
 // textproto.ReadMIMEHeader tolerates bare LF, so parsing alone cannot catch a
 // regression here.
 func TestBuildMIMEMessage_LineEndings(t *testing.T) {
-	s := newClockedService(&Config{FromAddress: "noreply@acme.com"})
-	raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+	s := newClockedService(&Config{FromAddress: "noreply@example.com"})
+	raw, err := s.buildMIMEMessage("user@example.org", "Sub", "t", "<p>h</p>")
 	if err != nil {
 		t.Fatalf("buildMIMEMessage: %v", err)
 	}
@@ -133,17 +133,18 @@ func TestBuildMIMEMessage_LineEndings(t *testing.T) {
 }
 
 func TestBuildMIMEMessage_Structure(t *testing.T) {
-	s := newClockedService(&Config{FromAddress: "noreply@acme.com"})
-	raw, err := s.buildMIMEMessage("user@x.com", "Password Reset Request", "TEXT BODY link=x", "<p>HTML BODY link=x</p>")
+	s := newClockedService(&Config{FromAddress: "noreply@example.com"})
+	raw, err := s.buildMIMEMessage(
+		"user@example.org", "Password Reset Request", "TEXT BODY link=x", "<p>HTML BODY link=x</p>")
 	if err != nil {
 		t.Fatalf("buildMIMEMessage: %v", err)
 	}
 
 	hdr, mr := parseMessage(t, raw)
-	if hdr.Get("From") != "noreply@acme.com" {
+	if hdr.Get("From") != "noreply@example.com" {
 		t.Errorf("From = %q", hdr.Get("From"))
 	}
-	if hdr.Get("To") != "user@x.com" {
+	if hdr.Get("To") != "user@example.org" {
 		t.Errorf("To = %q", hdr.Get("To"))
 	}
 	if hdr.Get("Subject") != "Password Reset Request" {
@@ -188,32 +189,32 @@ func TestBuildMIMEMessage_Structure(t *testing.T) {
 }
 
 func TestBuildMIMEMessage_FromNameAndReplyTo(t *testing.T) {
-	s := newClockedService(&Config{FromAddress: "noreply@acme.com", FromName: "ACME IT", ReplyTo: "help@acme.com"})
-	raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+	s := newClockedService(&Config{FromAddress: "noreply@example.com", FromName: "ACME IT", ReplyTo: "help@example.com"})
+	raw, err := s.buildMIMEMessage("user@example.org", "Sub", "t", "<p>h</p>")
 	if err != nil {
 		t.Fatalf("buildMIMEMessage: %v", err)
 	}
 	hdr, _ := parseMessage(t, raw)
-	if hdr.Get("From") != `"ACME IT" <noreply@acme.com>` {
+	if hdr.Get("From") != `"ACME IT" <noreply@example.com>` {
 		t.Errorf("From = %q", hdr.Get("From"))
 	}
-	if hdr.Get("Reply-To") != "help@acme.com" {
+	if hdr.Get("Reply-To") != "help@example.com" {
 		t.Errorf("Reply-To = %q", hdr.Get("Reply-To"))
 	}
 }
 
 func TestBuildMIMEMessage_OverridePrecedence(t *testing.T) {
 	s := newClockedService(&Config{
-		FromAddress:     "noreply@acme.com",
+		FromAddress:     "noreply@example.com",
 		FromName:        "ACME IT",
-		HeaderOverrides: map[string]string{"From": "Custom <c@acme.com>", "X-HelpDesk-Topic": "reset"},
+		HeaderOverrides: map[string]string{"From": "Custom <c@example.com>", "X-HelpDesk-Topic": "reset"},
 	})
-	raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+	raw, err := s.buildMIMEMessage("user@example.org", "Sub", "t", "<p>h</p>")
 	if err != nil {
 		t.Fatalf("buildMIMEMessage: %v", err)
 	}
 	hdr, _ := parseMessage(t, raw)
-	if hdr.Get("From") != "Custom <c@acme.com>" {
+	if hdr.Get("From") != "Custom <c@example.com>" {
 		t.Errorf("From override not applied: %q", hdr.Get("From"))
 	}
 	if hdr.Get("X-Helpdesk-Topic") != "reset" {
@@ -223,16 +224,16 @@ func TestBuildMIMEMessage_OverridePrecedence(t *testing.T) {
 
 func TestBuildMIMEMessage_OverrideReplacesReplyTo(t *testing.T) {
 	s := newClockedService(&Config{
-		FromAddress:     "noreply@acme.com",
-		ReplyTo:         "help@acme.com",
-		HeaderOverrides: map[string]string{"Reply-To": "other@acme.com"},
+		FromAddress:     "noreply@example.com",
+		ReplyTo:         "help@example.com",
+		HeaderOverrides: map[string]string{"Reply-To": "other@example.com"},
 	})
-	raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+	raw, err := s.buildMIMEMessage("user@example.org", "Sub", "t", "<p>h</p>")
 	if err != nil {
 		t.Fatalf("buildMIMEMessage: %v", err)
 	}
 	hdr, _ := parseMessage(t, raw)
-	if got := hdr.Get("Reply-To"); got != "other@acme.com" {
+	if got := hdr.Get("Reply-To"); got != "other@example.com" {
 		t.Errorf("Reply-To = %q, want override value", got)
 	}
 	if got := hdr["Reply-To"]; len(got) != 1 {
@@ -244,8 +245,8 @@ func TestBuildMIMEMessage_OverrideReplacesReplyTo(t *testing.T) {
 // requirement: exactly one Date field, carrying the service clock's instant in
 // a form net/mail can parse back, numeric zone offset included.
 func TestBuildMIMEMessage_DateHeader(t *testing.T) {
-	s := newClockedService(&Config{FromAddress: "noreply@acme.com"})
-	raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+	s := newClockedService(&Config{FromAddress: "noreply@example.com"})
+	raw, err := s.buildMIMEMessage("user@example.org", "Sub", "t", "<p>h</p>")
 	if err != nil {
 		t.Fatalf("buildMIMEMessage: %v", err)
 	}
@@ -285,10 +286,10 @@ func TestBuildMIMEMessage_DateHeader(t *testing.T) {
 func TestBuildMIMEMessage_OverrideReplacesDate(t *testing.T) {
 	const override = "Tue, 01 Jan 2030 00:00:00 +0000"
 	s := newClockedService(&Config{
-		FromAddress:     "noreply@acme.com",
+		FromAddress:     "noreply@example.com",
 		HeaderOverrides: map[string]string{"Date": override},
 	})
-	raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+	raw, err := s.buildMIMEMessage("user@example.org", "Sub", "t", "<p>h</p>")
 	if err != nil {
 		t.Fatalf("buildMIMEMessage: %v", err)
 	}
