@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"path/filepath"
 	"runtime"
 	"testing"
 	"time"
@@ -451,6 +452,42 @@ func TestNewHandlerWithResetServicesLDAPError(t *testing.T) {
 	after := runtime.NumGoroutine()
 	assert.LessOrEqual(t, after, before+1,
 		"failed reset-handler init must not leak token-store or IP-limiter cleanup goroutines (before=%d after=%d)",
+		before, after)
+}
+
+// TestNewHandlerWithResetServicesEmailInitError pins the fail-fast contract of
+// ADR 0003: a configured-but-unreadable email template must abort handler
+// construction. Falling back to the built-in templates would boot a server that
+// silently ignores the operator's branding, which the ADR rules out. The error
+// message is asserted because a fallback would still surface the later LDAP
+// error and otherwise satisfy the error/nil-handler checks.
+func TestNewHandlerWithResetServicesEmailInitError(t *testing.T) {
+	opts := &options.Opts{
+		Port:                        "3000",
+		LDAP:                        ldap.Config{Server: "ldap://127.0.0.1:1", BaseDN: "dc=example,dc=com"},
+		PasswordResetEnabled:        true,
+		ResetTokenExpiryMinutes:     15,
+		ResetRateLimitRequests:      3,
+		ResetRateLimitWindowMinutes: 60,
+		SMTPHost:                    "smtp.example.com",
+		SMTPPort:                    587,
+		SMTPFromAddress:             "noreply@example.com",
+		AppBaseURL:                  "https://example.com",
+		EmailTemplateText:           filepath.Join(t.TempDir(), "does-not-exist.txt"),
+	}
+
+	before := runtime.NumGoroutine()
+
+	h, err := newHandlerWithResetServices(opts)
+	require.Error(t, err, "an unreadable email template must abort handler construction")
+	assert.Nil(t, h, "no handler should be returned on error")
+	assert.Contains(t, err.Error(), "initialize email service",
+		"the email service error must be propagated, not swallowed by a template fallback")
+
+	time.Sleep(50 * time.Millisecond)
+	after := runtime.NumGoroutine()
+	assert.LessOrEqual(t, after, before+1,
+		"a failed email-service init must not leak token-store or IP-limiter cleanup goroutines (before=%d after=%d)",
 		before, after)
 }
 

@@ -53,6 +53,19 @@ func (s *Service) SendResetEmail(to, token string) error {
 		return fmt.Errorf("invalid email address: %s", to)
 	}
 
+	msg, err := s.buildResetMessage(to, token)
+	if err != nil {
+		return err
+	}
+
+	return s.sendEmail(to, msg)
+}
+
+// buildResetMessage is everything SendResetEmail does apart from the SMTP
+// handoff: it assembles the template data from the configuration, renders the
+// subject and both bodies, and returns the raw RFC 5322 message bytes. Split
+// out so the config-to-template wiring is testable without a mail server.
+func (s *Service) buildResetMessage(to, token string) ([]byte, error) {
 	data := resetEmailData{
 		ResetLink:     s.buildResetLink(token),
 		Token:         token,
@@ -63,15 +76,15 @@ func (s *Service) SendResetEmail(to, token string) error {
 
 	subject, textBody, htmlBody, err := s.renderer.render(data)
 	if err != nil {
-		return fmt.Errorf("render reset email: %w", err)
+		return nil, fmt.Errorf("render reset email: %w", err)
 	}
 
 	msg, err := s.buildMIMEMessage(to, subject, textBody, htmlBody)
 	if err != nil {
-		return fmt.Errorf("build reset email: %w", err)
+		return nil, fmt.Errorf("build reset email: %w", err)
 	}
 
-	return s.sendEmail(to, msg)
+	return msg, nil
 }
 
 // sendEmail sends a pre-built message via SMTP.

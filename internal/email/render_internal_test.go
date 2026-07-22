@@ -1,6 +1,7 @@
 package email
 
 import (
+	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -24,8 +25,10 @@ func TestNewRenderer_Defaults(t *testing.T) {
 		t.Fatalf("render: %v", err)
 	}
 
-	if subject != defaultSubjectTemplate {
-		t.Errorf("subject = %q, want %q", subject, defaultSubjectTemplate)
+	// Asserted against the literal text, not defaultSubjectTemplate: comparing
+	// the output to the very constant the implementation substitutes cannot fail.
+	if subject != "Password Reset Request" {
+		t.Errorf("subject = %q, want %q", subject, "Password Reset Request")
 	}
 	for _, want := range []string{"https://example.com/reset-password?token=abc", "20 minutes", "safely ignore"} {
 		if !strings.Contains(text, want) {
@@ -127,6 +130,34 @@ func TestNewRenderer_Errors(t *testing.T) {
 		}
 		if _, err := newRenderer(&Config{TemplateTextPath: p}); err == nil {
 			t.Fatal("expected parse error")
+		}
+	})
+	// A non-regular path must be rejected by the os.Stat mode check rather than
+	// opened. EMAIL_TEMPLATE_HTML=/dev/zero previously stalled startup before
+	// the listener bound and grew until the OOM killer fired; a directory is the
+	// portable stand-in, and reaching os.Open would yield a read error whose
+	// message does not name the real cause.
+	t.Run("non-regular file rejected", func(t *testing.T) {
+		_, err := newRenderer(&Config{TemplateTextPath: t.TempDir()})
+		if err == nil {
+			t.Fatal("expected error for a directory template path")
+		}
+		if !strings.Contains(err.Error(), "is not a regular file") {
+			t.Errorf("error = %v, want it to report a non-regular file", err)
+		}
+	})
+	t.Run("oversized file rejected", func(t *testing.T) {
+		p := filepath.Join(t.TempDir(), "big.txt")
+		// One byte over the cap: enough to trip the check, cheap to write.
+		if err := os.WriteFile(p, bytes.Repeat([]byte("x"), maxTemplateBytes+1), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		_, err := newRenderer(&Config{TemplateTextPath: p})
+		if err == nil {
+			t.Fatal("expected error for a template file over the size cap")
+		}
+		if !strings.Contains(err.Error(), "exceeding the") {
+			t.Errorf("error = %v, want it to report the size limit", err)
 		}
 	})
 	t.Run("undefined field caught by dry-run", func(t *testing.T) {

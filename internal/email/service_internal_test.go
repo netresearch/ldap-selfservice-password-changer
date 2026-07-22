@@ -1,6 +1,10 @@
 package email
 
 import (
+	"io"
+	"mime/multipart"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 )
@@ -61,19 +65,65 @@ func TestSendResetEmail_RejectsInvalidAddress(t *testing.T) {
 	}
 }
 
-func TestSendResetEmail_RendersExpiryFromConfig(t *testing.T) {
-	// Render path is exercised via buildMIMEMessage in message tests; here confirm
-	// the data wiring by rendering directly through the renderer.
-	s := newTestService(t, &Config{BaseURL: "https://example.com", ExpiryMinutes: 42})
-	_, text, _, err := s.renderer.render(resetEmailData{
-		ResetLink:     s.buildResetLink("tok"),
-		ExpiryMinutes: s.config.ExpiryMinutes,
-	})
+// firstPartBody returns the decoded body of the first MIME part. NextPart (not
+// NextRawPart) is deliberate here: it undoes the quoted-printable encoding, so
+// the assertions can be written against the template output rather than its
+// wire form.
+func firstPartBody(t *testing.T, mr *multipart.Reader) string {
+	t.Helper()
+	p, err := mr.NextPart()
 	if err != nil {
-		t.Fatalf("render: %v", err)
+		t.Fatalf("read first part: %v", err)
 	}
-	if !strings.Contains(text, "42 minutes") {
-		t.Errorf("text body missing configured expiry; got %q", text)
+	b, err := io.ReadAll(p)
+	if err != nil {
+		t.Fatalf("read first part body: %v", err)
+	}
+	return string(b)
+}
+
+// TestBuildResetMessage_WiresConfigIntoTemplateData drives the whole
+// SendResetEmail path up to the SMTP handoff and asserts every field of
+// resetEmailData arrives in the rendered message carrying its configured
+// value. The template emits one field per line so a hardcoded or crossed wire
+// fails on the exact field. ExpiryMinutes is deliberately not 15: the bug this
+// feature fixed was a body that said "15 minutes" regardless of configuration.
+func TestBuildResetMessage_WiresConfigIntoTemplateData(t *testing.T) {
+	textPath := filepath.Join(t.TempDir(), "body.txt")
+	body := "link={{.ResetLink}}\ntoken={{.Token}}\nbase={{.BaseURL}}\n" +
+		"recipient={{.Recipient}}\nexpiry={{.ExpiryMinutes}} minutes\n"
+	if err := os.WriteFile(textPath, []byte(body), 0o600); err != nil {
+		t.Fatal(err)
+	}
+
+	s := newTestService(t, &Config{
+		FromAddress:      "noreply@example.com",
+		BaseURL:          "https://reset.example.test/",
+		ExpiryMinutes:    73,
+		TemplateTextPath: textPath,
+	})
+
+	raw, err := s.buildResetMessage("user@example.com", "tok-9f3")
+	if err != nil {
+		t.Fatalf("buildResetMessage: %v", err)
+	}
+
+	hdr, mr := parseMessage(t, raw)
+	if got := hdr.Get("To"); got != "user@example.com" {
+		t.Errorf("To = %q, want user@example.com", got)
+	}
+
+	text := firstPartBody(t, mr)
+	for _, want := range []string{
+		"link=https://reset.example.test/reset-password?token=tok-9f3",
+		"token=tok-9f3",
+		"base=https://reset.example.test",
+		"recipient=user@example.com",
+		"expiry=73 minutes",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("rendered text body missing %q; got:\n%s", want, text)
+		}
 	}
 }
 
