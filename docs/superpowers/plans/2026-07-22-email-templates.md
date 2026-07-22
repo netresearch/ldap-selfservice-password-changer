@@ -30,6 +30,7 @@ Every task's requirements implicitly include these:
 ## File Structure
 
 **Create:**
+
 - `internal/email/templates/reset.txt.tmpl` — embedded default plain-text body.
 - `internal/email/templates/reset.html.tmpl` — embedded default HTML body.
 - `internal/email/render.go` — `resetEmailData`, embedded defaults, `renderer`, `newRenderer`, `render`, `loadTemplateSource`.
@@ -37,23 +38,28 @@ Every task's requirements implicitly include these:
 - `internal/email/message.go` — `buildMIMEMessage`, `writeQPPart`.
 
 **Modify:**
+
 - `internal/email/service.go` — expand `Config`; `Service` holds `*renderer`; `NewService` → `(*Service, error)`; rewrite `SendResetEmail`/`sendEmail`; delete `buildResetEmailBody` and old `buildEmailMessage`.
 - `internal/options/app.go` — new flags/env + `Opts` fields + `parseHeaderOverrides`.
 - `main.go` — `buildEmailConfig` maps new opts (incl. `ExpiryMinutes`); handle `NewService` error.
 - Tests: `internal/email/service_internal_test.go`, `internal/email/service_test.go`, `internal/email/email_fuzz_test.go`, `internal/rpchandler/handler_test.go`, `internal/options/app_test.go`; tag-gated: `internal/email/service_integration_test.go`, `internal/rpchandler/handler_integration_test.go`, `integration_test.go`.
 - Docs: `.env.local.example`, `internal/CLAUDE.md`, and any `docs/*` config reference found by grep.
 
+> **Test-file decomposition:** the unit-test surface is intentionally split across `render_internal_test.go` / `headers_internal_test.go` / `message_internal_test.go` (one per new source file) rather than living wholly in `service_internal_test.go` as the spec sketched.
+
 ---
 
 ## Task 1: Template renderer + embedded defaults
 
 **Files:**
+
 - Create: `internal/email/templates/reset.txt.tmpl`
 - Create: `internal/email/templates/reset.html.tmpl`
 - Create: `internal/email/render.go`
 - Test: `internal/email/render_internal_test.go`
 
 **Interfaces:**
+
 - Produces:
   - `type resetEmailData struct { ResetLink, Token, BaseURL, Recipient string; ExpiryMinutes uint }`
   - `func newRenderer(cfg *Config) (*renderer, error)`
@@ -115,14 +121,18 @@ Create `internal/email/templates/reset.html.tmpl`:
         Or paste this link into your browser:<br />
         <a href="{{.ResetLink}}" style="color:#073763;">{{.ResetLink}}</a>
       </p>
-      <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">This link will expire in {{.ExpiryMinutes}} minutes.</p>
-      <p style="font-size:14px;line-height:1.5;color:#555555;margin:24px 0 0;">
+      <p style="font-size:16px;line-height:1.5;margin:0 0 16px;">
+        This link will expire in {{.ExpiryMinutes}} minutes.
+      </p>
+      <p style="font-size:14px;line-height:1.5;color:#4d4d4d;margin:24px 0 0;">
         If you didn't request a password reset, you can safely ignore this email. Your password will not be changed.
       </p>
     </div>
   </body>
 </html>
 ```
+
+> **Footer contrast:** `#555555` on white is ~7.46:1 — it passes AAA for 14px text, but with almost no margin. `#4d4d4d` gives comfortable headroom while staying visually secondary.
 
 - [ ] **Step 3: Write the failing test**
 
@@ -369,7 +379,7 @@ func (r *renderer) render(data resetEmailData) (subject, text, html string, err 
 }
 ```
 
-> **Why `missingkey=error`:** without it, a typo like `{{.Reciptient}}` renders `<no value>` silently. With a struct data type, an unknown *field* is already a hard error at execute time — `missingkey` only affects maps — but setting it is defensive and documents intent. Keep it.
+> **Why `missingkey=error`:** without it, a typo like `{{.Reciptient}}` renders `<no value>` silently. With a struct data type, an unknown _field_ is already a hard error at execute time — `missingkey` only affects maps — but setting it is defensive and documents intent. Keep it.
 
 - [ ] **Step 7: Run test to verify it passes**
 
@@ -399,11 +409,13 @@ EOF
 ## Task 2: Header validators + fuzz
 
 **Files:**
+
 - Create: `internal/email/headers.go` (validators + encoders portion)
 - Test: `internal/email/headers_internal_test.go`
 - Modify: `internal/email/email_fuzz_test.go`
 
 **Interfaces:**
+
 - Produces:
   - `func ValidateHeaderName(name string) error`
   - `func ValidateHeaderValue(value string) error`
@@ -468,6 +480,12 @@ func TestFormatFrom(t *testing.T) {
 	}
 	if got := formatFrom("ACME IT", "noreply@acme.com"); got != `"ACME IT" <noreply@acme.com>` {
 		t.Errorf("named from = %q", got)
+	}
+	// Plain ASCII display name with no specials: mail.Address.String() ALWAYS
+	// quotes an all-printable display name, so the quoted form is correct.
+	// Do NOT expect `ACME <noreply@acme.com>` — that assertion would fail.
+	if got := formatFrom("ACME", "noreply@acme.com"); got != `"ACME" <noreply@acme.com>` {
+		t.Errorf("ascii name = %q, want quoted form", got)
 	}
 	// Non-ASCII display name must be RFC 2047 encoded.
 	if got := formatFrom("ACME Straße", "noreply@acme.com"); !strings.Contains(got, "=?utf-8?") && !strings.Contains(got, "=?UTF-8?") {
@@ -677,10 +695,12 @@ EOF
 ## Task 3: Multipart MIME message builder
 
 **Files:**
+
 - Create: `internal/email/message.go`
 - Test: `internal/email/message_internal_test.go`
 
 **Interfaces:**
+
 - Consumes: `Service` + `Config` (`FromName`, `FromAddress`, `ReplyTo`, `HeaderOverrides`); `headerField`, `formatFrom`, `encodeSubject`, `applyHeaderOverrides` (Task 2).
 - Produces: `func (s *Service) buildMIMEMessage(to, subject, textBody, htmlBody string) ([]byte, error)`
 
@@ -803,6 +823,25 @@ func TestBuildMIMEMessage_OverridePrecedence(t *testing.T) {
 		t.Errorf("routing header missing: %q", hdr.Get("X-Helpdesk-Topic"))
 	}
 }
+
+func TestBuildMIMEMessage_OverrideReplacesReplyTo(t *testing.T) {
+	s := &Service{config: Config{
+		FromAddress:     "noreply@acme.com",
+		ReplyTo:         "help@acme.com",
+		HeaderOverrides: map[string]string{"Reply-To": "other@acme.com"},
+	}}
+	raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+	if err != nil {
+		t.Fatalf("buildMIMEMessage: %v", err)
+	}
+	hdr, _ := parseMessage(t, raw)
+	if got := hdr.Get("Reply-To"); got != "other@acme.com" {
+		t.Errorf("Reply-To = %q, want override value", got)
+	}
+	if got := hdr["Reply-To"]; len(got) != 1 {
+		t.Errorf("Reply-To appears %d times, want 1", len(got))
+	}
+}
 ```
 
 - [ ] **Step 2: Run test to verify it fails**
@@ -824,6 +863,14 @@ import (
 	"mime/quotedprintable"
 	"net/textproto"
 )
+
+// reservedMIMEHeader lists structural headers the message builder owns; an
+// override of these would duplicate or corrupt the MIME structure.
+var reservedMIMEHeader = map[string]bool{
+	"Mime-Version":              true,
+	"Content-Type":              true,
+	"Content-Transfer-Encoding": true,
+}
 
 // buildMIMEMessage assembles a multipart/alternative message (plain-text part
 // first, HTML part second) with quoted-printable bodies, and returns the raw
@@ -851,7 +898,18 @@ func (s *Service) buildMIMEMessage(to, subject, textBody, htmlBody string) ([]by
 	if s.config.ReplyTo != "" {
 		fields = append(fields, headerField{key: "Reply-To", value: s.config.ReplyTo})
 	}
-	fields = applyHeaderOverrides(fields, s.config.HeaderOverrides)
+	// Defence in depth: never let an override emit a duplicate structural
+	// header. The wired path already rejects these at config-parse time, but
+	// the email package must not depend on the options layer for correctness.
+	overrides := make(map[string]string, len(s.config.HeaderOverrides))
+	for name, value := range s.config.HeaderOverrides {
+		if reservedMIMEHeader[textproto.CanonicalMIMEHeaderKey(name)] {
+			continue
+		}
+		overrides[name] = value
+	}
+
+	fields = applyHeaderOverrides(fields, overrides)
 	fields = append(fields,
 		headerField{key: "MIME-Version", value: "1.0"},
 		headerField{key: "Content-Type", value: `multipart/alternative; boundary="` + mw.Boundary() + `"`},
@@ -912,11 +970,20 @@ EOF
 ## Task 4: Finalize Config + fail-fast NewService + SendResetEmail rewrite
 
 **Files:**
+
 - Modify: `internal/email/service.go`
 - Modify: `internal/email/service_internal_test.go` (rewrite for removed methods + new signature)
 - Modify: `internal/email/service_test.go` (external `email_test` package — `NewService` two-return)
+- Modify: `main.go` (handle the `NewService` error — minimal compile fix; field mapping stays in Task 6)
+- Modify: `internal/rpchandler/handler_test.go` (default build — `NewService` two-return)
+- Modify (tag-gated `integration`): `integration_test.go` (signature only)
+- Modify (tag-gated `integration`): `internal/email/service_integration_test.go` (signature only)
+- Modify (tag-gated `integration`): `internal/rpchandler/handler_integration_test.go` (signature only)
+
+> **Repo-green invariant:** the signature change lands together with **every** call site — default-build **and** `-tags=integration` — so this commit, like every other in the plan, compiles and tests clean under **both tag sets**. This is not optional: [`.github/workflows/ci.yml:25`](../../../.github/workflows/ci.yml) sets `enable-integration-tests: true`, and [`Makefile:52`](../../../Makefile) runs `go test -v -race -tags=integration ./...`, so the integration-tagged files are compiled by CI on every commit. Leaving them for Task 6 would make the Task 4 and Task 5 commits fail `go build -tags=integration ./...` with five `assignment mismatch: 1 variable but email.NewService returns 2 values` errors. Bisect and per-commit CI stay usable only if both tag sets build here.
 
 **Interfaces:**
+
 - Consumes: `newRenderer` (Task 1), `buildMIMEMessage` (Task 3).
 - Produces:
   - Final `Config` struct (all fields).
@@ -1119,29 +1186,107 @@ func TestSendResetEmail_RendersExpiryFromConfig(t *testing.T) {
 
 - [ ] **Step 3: Fix `service_test.go` (external package) call sites**
 
-`internal/email/service_test.go` is `package email_test` and calls `email.NewService(&config)` at 3 sites. Update each to the two-return form. Example for `TestNewService`:
+`internal/email/service_test.go` is `package email_test` (external). It contains **zero** references to `buildResetEmailBody` or `buildEmailMessage` — those are unexported and unreachable from an external test package. **Delete nothing from this file.**
+
+It has exactly three `email.NewService` calls: line 19 (inside `TestNewService`), and lines 32 and 36 (**both** inside `TestSendResetEmailValidation`). Convert **all three** to the two-return form with error handling:
 
 ```go
 	service, err := email.NewService(&config)
 	if err != nil {
 		t.Fatalf("NewService: %v", err)
 	}
+```
+
+For the `TestNewService` site, keep the existing nil assertion after it:
+
+```go
 	if service == nil {
 		t.Fatal("NewService() returned nil")
 	}
 ```
 
-For the other two call sites (the `buildResetEmailBody`-based assertions), those methods no longer exist and are not accessible from an external package anyway — **delete any test in `service_test.go` that calls `service.buildResetEmailBody` or `service.buildEmailMessage`** (they were duplicated internal-only tests). Keep only what compiles against the exported surface (`SendResetEmail`, `ValidateEmailAddress`). Verify by reading the file first.
+**Keep `TestSendResetEmailValidation`** — it still passes. `NewService` now initialises the renderer successfully (the config uses defaults), and a valid address with no reachable SMTP server still returns an error, exactly as the test expects.
 
-- [ ] **Step 4: Run email package tests**
+- [ ] **Step 4: Fix `main.go` `NewService` error handling**
 
-Run: `go test ./internal/email/ -v`
-Expected: PASS (all rewritten + preserved tests). No references to deleted methods remain.
+Replace `main.go:101-103`:
 
-- [ ] **Step 5: Commit**
+```go
+	// Initialize email service
+	emailConfig := buildEmailConfig(opts)
+	emailService := email.NewService(&emailConfig)
+```
+
+with:
+
+```go
+	// Initialize email service (fails fast on bad templates/config).
+	emailConfig := buildEmailConfig(opts)
+	emailService, err := email.NewService(&emailConfig)
+	if err != nil {
+		return nil, fmt.Errorf("initialize email service: %w", err)
+	}
+```
+
+> **At this task, `buildEmailConfig` is NOT yet expanded.** The new `Config` fields stay zero-valued, so `main.go` compiles now; Task 6 expands the field mapping. Transient consequence: `ExpiryMinutes` is `0` until Task 6 wires it, so the default body renders "0 minutes" in this intermediate state. That is expected and resolved in Task 6.
+
+> The function already declares `err` later via `h, err := rpchandler.NewWithServices(...)`. That line remains valid with `:=` because `h` is a new variable — Go allows `:=` as long as at least one variable on the left is new. Verify compile.
+
+- [ ] **Step 5: Fix `handler_test.go:65` (default build)**
+
+Change:
+
+```go
+	emailService := email.NewService(emailConfig)
+```
+
+to:
+
+```go
+	emailService, err := email.NewService(emailConfig)
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
+	}
+```
+
+> Read the surrounding lines first: if `err` is already in scope there, use `=`; if `emailConfig` is a value (not pointer), keep as-is (signature takes `*Config`). Confirm the existing call already passes a pointer.
+
+- [ ] **Step 6: Fix tag-gated integration call sites (signature only)**
+
+These files are behind the `integration` build tag, but **CI compiles them on every commit** — [`.github/workflows/ci.yml:25`](../../../.github/workflows/ci.yml) sets `enable-integration-tests: true`, and [`Makefile:52`](../../../Makefile) runs `go test -v -race -tags=integration ./...`. They must therefore change in the **same commit** as the signature, not in Task 6. Five call sites:
+
+- `integration_test.go:77` — `emailService := email.NewService(emailConfig)`
+- `internal/rpchandler/handler_integration_test.go:81` — `emailService := email.NewService(emailConfig)`
+- `internal/email/service_integration_test.go:66, :130, :149` — `service := email.NewService(config)`
+
+Convert each to the two-return form:
+
+```go
+	service, err := email.NewService(config)
+	require.NoError(t, err)
+```
+
+Use each file's existing idiom — `require.NoError(t, err)` where testify is imported, otherwise `if err != nil { t.Fatalf("NewService: %v", err) }`.
+
+> **CRITICAL — follow-on `:=` at the three `service_integration_test.go` sites ONLY.** At those three sites the very next statement in the same function scope is `err := service.SendResetEmail(...)` (lines 73, 133 and 151 respectively). Once `err` is introduced on the `NewService` line, those follow-on lines MUST be changed from `err :=` to `err =`, otherwise the build fails with `no new variables on left side of :=`. The other two sites need **no** such change: `integration_test.go:77` is followed by `indexPage, err := ...` at line 89 and `handler_integration_test.go:81` by `handler, err := ...` at line 85 — both declare a genuinely new variable, so `:=` stays valid there.
+
+This step is **signature conversion only**. The new multipart-structure, custom-subject and header-override assertions stay in Task 6.
+
+- [ ] **Step 7: Verify the whole repo is green at this commit — both tag sets**
+
+Run:
 
 ```bash
-git add internal/email/service.go internal/email/service_internal_test.go internal/email/service_test.go
+go build ./... && go vet ./... && go test ./...
+go build -tags=integration ./... && go vet -tags=integration ./...
+```
+
+Expected: PASS for both tag sets — the repo compiles under the default **and** the integration build at this commit. (The integration tests themselves may skip without `SMTP_HOST`/Docker; a skip is fine, a compile error is not.)
+
+- [ ] **Step 8: Commit**
+
+```bash
+git add internal/email/service.go internal/email/service_internal_test.go internal/email/service_test.go main.go internal/rpchandler/handler_test.go integration_test.go internal/email/service_integration_test.go internal/rpchandler/handler_integration_test.go
 git commit -s -m "$(cat <<'EOF'
 feat(email)!: fail-fast NewService and template-rendered reset emails
 
@@ -1164,10 +1309,12 @@ EOF
 ## Task 5: Options — flags, env, and header-override prefix scan
 
 **Files:**
+
 - Modify: `internal/options/app.go`
 - Test: `internal/options/app_test.go`
 
 **Interfaces:**
+
 - Consumes: `email.ValidateHeaderName`, `email.ValidateHeaderValue`, `email.ValidateEmailAddress` (Task 2 / existing).
 - Produces: new `Opts` fields — `SMTPFromName, EmailReplyTo, EmailTemplateHTML, EmailTemplateText, EmailTemplateSubject string`; `SMTPHeaderOverrides map[string]string`; helper `func parseHeaderOverrides(environ []string, errs *ConfigError) map[string]string`.
 
@@ -1186,6 +1333,9 @@ func requiredArgs() []string {
 }
 
 func TestParseArgs_EmailTemplateOptions(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
 	t.Setenv("SMTP_FROM_NAME", "ACME IT")
 	t.Setenv("EMAIL_REPLY_TO", "help@acme.com")
 	t.Setenv("EMAIL_TEMPLATE_SUBJECT", "[ACME] Reset")
@@ -1211,6 +1361,9 @@ func TestParseArgs_EmailTemplateOptions(t *testing.T) {
 }
 
 func TestParseArgs_InvalidReplyTo(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
 	t.Setenv("EMAIL_REPLY_TO", "not-an-email")
 	_, err := ParseArgs(requiredArgs())
 	if err == nil || !strings.Contains(err.Error(), "EMAIL_REPLY_TO") {
@@ -1219,6 +1372,9 @@ func TestParseArgs_InvalidReplyTo(t *testing.T) {
 }
 
 func TestParseArgs_HeaderOverrides(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
 	t.Setenv("SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC", "password-reset")
 	t.Setenv("SMTP_HEADER_OVERRIDE_LIST_UNSUBSCRIBE", "<mailto:unsub@acme.com>")
 
@@ -1236,12 +1392,18 @@ func TestParseArgs_HeaderOverrides(t *testing.T) {
 
 func TestParseArgs_HeaderOverrideRejectsCRLFAndReserved(t *testing.T) {
 	t.Run("crlf", func(t *testing.T) {
+		// Run from a temp dir so no .env is loaded from the repo.
+		t.Chdir(t.TempDir())
+
 		t.Setenv("SMTP_HEADER_OVERRIDE_X_EVIL", "a\r\nInjected: yes")
 		if _, err := ParseArgs(requiredArgs()); err == nil {
 			t.Fatal("expected CRLF rejection")
 		}
 	})
 	t.Run("reserved", func(t *testing.T) {
+		// Run from a temp dir so no .env is loaded from the repo.
+		t.Chdir(t.TempDir())
+
 		t.Setenv("SMTP_HEADER_OVERRIDE_CONTENT_TYPE", "text/plain")
 		if _, err := ParseArgs(requiredArgs()); err == nil {
 			t.Fatal("expected reserved-header rejection")
@@ -1249,6 +1411,8 @@ func TestParseArgs_HeaderOverrideRejectsCRLFAndReserved(t *testing.T) {
 	})
 }
 ```
+
+> **Isolation is mandatory:** each new test and subtest calls `t.Chdir(t.TempDir())` **inline** (comment: "Run from a temp dir so no .env is loaded from the repo"), matching the existing `ParseArgs` tests at `internal/options/app_test.go:566`, `:591` and `:608` — hence the first line of each test and subtest above. There is **no package-level shared helper** to reuse: the `setRequired` closure at `app_test.go:643` is declared _inside_ `TestParseArgsResetIdentifierMode` (`setRequired := func(t *testing.T) {...}`) and is function-scoped. If you want to share it, promote it to a package-level helper first — do not assume it is already callable from a new test.
 
 > Confirm `app_test.go` imports `strings`. If not, add it. If a `requiredArgs()` helper already exists in the test file, reuse it instead of redefining.
 
@@ -1374,8 +1538,16 @@ After the reset-identifier-mode validation block, add Reply-To validation and th
 		errs.Add(fmt.Sprintf("invalid value for EMAIL_REPLY_TO: %q is not a valid email address", *fEmailReplyTo))
 	}
 
+	if *fSMTPFromName != "" {
+		if err := email.ValidateHeaderValue(*fSMTPFromName); err != nil {
+			errs.Add(fmt.Sprintf("invalid value for SMTP_FROM_NAME: %v", err))
+		}
+	}
+
 	headerOverrides := parseHeaderOverrides(os.Environ(), errs)
 ```
+
+> **Why validate a name that gets encoded anyway:** `net/mail`'s `Address.String()` handles quoting and RFC 2047 encoding, so a display name cannot break the header syntactically. The explicit CR/LF check satisfies the spec requirement that structured knobs are _validated_ as well as encoded — a rejected startup beats a silently mangled name.
 
 Add the new fields to the returned `&Opts{...}` literal (after `AppBaseURL: *fAppBaseURL,`):
 
@@ -1415,14 +1587,15 @@ EOF
 
 ---
 
-## Task 6: Wire into main.go + fix all NewService call sites
+## Task 6: Expand buildEmailConfig + strengthen integration assertions
 
 **Files:**
-- Modify: `main.go`
-- Modify: `internal/rpchandler/handler_test.go` (default build)
-- Modify (tag-gated `integration`): `integration_test.go`, `internal/email/service_integration_test.go`, `internal/rpchandler/handler_integration_test.go`
+
+- Modify: `main.go` (the `buildEmailConfig` field mapping; the `NewService` error handling already landed in Task 4)
+- Modify (tag-gated `integration`): `internal/email/service_integration_test.go` (assertions + helper extraction only — the `(*Service, error)` conversion of all five call sites, including those in `integration_test.go` and `internal/rpchandler/handler_integration_test.go`, landed in Task 4)
 
 **Interfaces:**
+
 - Consumes: final `NewService(*Config) (*Service, error)` (Task 4); new `Opts` fields (Task 5).
 
 - [ ] **Step 1: Update `buildEmailConfig` in `main.go`**
@@ -1451,90 +1624,111 @@ func buildEmailConfig(opts *options.Opts) email.Config {
 }
 ```
 
-- [ ] **Step 2: Handle the `NewService` error in `newHandlerWithResetServices`**
+> This is the step that lifts `ExpiryMinutes` (and the rest of the new fields) out of their transient zero values from Task 4 — the default body stops rendering "0 minutes" here.
 
-Replace `main.go:102-103`:
+- [ ] **Step 2: Strengthen integration assertions**
 
-```go
-	// Initialize email service
-	emailConfig := buildEmailConfig(opts)
-	emailService := email.NewService(&emailConfig)
-```
+> The `(*Service, error)` signature conversion for all five tag-gated call sites already landed in **Task 4, Step 6** — do not repeat it here. This step adds assertions only.
 
-with:
-
-```go
-	// Initialize email service (fails fast on bad templates/config).
-	emailConfig := buildEmailConfig(opts)
-	emailService, err := email.NewService(&emailConfig)
-	if err != nil {
-		return nil, fmt.Errorf("initialize email service: %w", err)
-	}
-```
-
-> The function already declares `err` later via `h, err := ...`. Because this new `err` is introduced with `:=` before that line, change the later `h, err := rpchandler.NewWithServices(...)` to `h, err = ...` (no colon) to avoid a "no new variables on left side of :=" — OR keep `:=` there if `h` is new (it is). Go allows `:=` as long as at least one var on the left is new (`h`). So leaving the later line as `h, err :=` is fine. Verify compile.
-
-- [ ] **Step 3: Fix `handler_test.go:65` (default build)**
-
-Change:
-
-```go
-	emailService := email.NewService(emailConfig)
-```
-
-to:
-
-```go
-	emailService, err := email.NewService(emailConfig)
-	if err != nil {
-		t.Fatalf("NewService: %v", err)
-	}
-```
-
-> Read the surrounding lines first: if `err` is already in scope there, use `=`; if `emailConfig` is a value (not pointer), keep as-is (signature takes `*Config`). Confirm the existing call already passes a pointer.
-
-- [ ] **Step 4: Fix tag-gated integration call sites**
-
-In each of `integration_test.go:77`, `internal/email/service_integration_test.go:66,130,149`, and `internal/rpchandler/handler_integration_test.go:81`, change the `service := email.NewService(config)` form to:
-
-```go
-	service, err := email.NewService(config)
-	require.NoError(t, err)
-```
-
-(Use the error-handling idiom already present in each file — `require.NoError` where testify is imported, else `if err != nil { t.Fatalf(...) }`.)
-
-Additionally, in `service_integration_test.go` `TestIntegration_SendResetEmail`, add a multipart assertion after fetching the message:
+In `service_integration_test.go` `TestIntegration_SendResetEmail`, assert the received message is genuinely multipart **with both parts, in order** — a `Content-Type` substring check alone does not prove the body was assembled correctly:
 
 ```go
 	contentTypes := foundMessage.Content.Headers["Content-Type"]
 	require.NotEmpty(t, contentTypes)
 	assert.Contains(t, contentTypes[0], "multipart/alternative", "reset email should be multipart")
+
+	// Parse the body and assert exactly two parts: text/plain then text/html.
+	_, params, err := mime.ParseMediaType(contentTypes[0])
+	require.NoError(t, err)
+	require.NotEmpty(t, params["boundary"])
+
+	mr := multipart.NewReader(strings.NewReader(foundMessage.Content.Body), params["boundary"])
+	wantTypes := []string{"text/plain", "text/html"}
+	var gotTypes []string
+	for {
+		p, err := mr.NextPart()
+		if errors.Is(err, io.EOF) {
+			break
+		}
+		require.NoError(t, err)
+
+		mt, _, err := mime.ParseMediaType(p.Header.Get("Content-Type"))
+		require.NoError(t, err)
+		gotTypes = append(gotTypes, mt)
+
+		decoded, err := io.ReadAll(quotedprintable.NewReader(p))
+		require.NoError(t, err)
+		assert.NotEmpty(t, decoded, "part %d body should not be empty", len(gotTypes)-1)
+	}
+	assert.Equal(t, wantTypes, gotTypes, "reset email should have text/plain then text/html")
 ```
 
-> The existing `assert.Contains(t, foundMessage.Content.Body, testToken, ...)` still holds: the token contains no `=`, so quoted-printable does not alter that substring.
+**Step 2a — extract the shared helpers first (prerequisite; they do not exist yet).** `internal/email/service_integration_test.go` currently defines only `getEnvOrSkip`, `MailHogMessage` and `MailHogMessages`. `TestIntegration_SendResetEmail` inlines everything else: the `&email.Config` literal (lines 58-65), the wait + HTTP fetch + message search (lines 77-104), and the token as a function-local (line 70). Before writing the new test, refactor those out of `TestIntegration_SendResetEmail`:
 
-- [ ] **Step 5: Build the whole repo (both tag sets)**
+- `func integrationEmailConfig(t *testing.T) *email.Config` — from the inlined config literal at lines 58-65 (keep `getEnvOrSkip(t, "SMTP_HOST")` inside it so the skip behaviour is preserved).
+- `func waitForMessage(t *testing.T, to string) *MailHogMessage` — from the `time.Sleep` + `http.Get` + `json.Unmarshal` + recipient-search block at lines 77-104, returning the matched `*MailHogMessage` (or `nil`).
+- Promote the token to a package-level `const testToken = "test-reset-token-12345"` and delete the function-local declaration at line 70.
+
+Then have **both** the existing `TestIntegration_SendResetEmail` and the new test below call them. Without this extraction the new test does not compile — `integrationEmailConfig`, `waitForMessage` and `testToken` are undefined.
+
+Add a second integration test asserting that a **custom subject and a custom header override round-trip** to the received message (same MailHog API structs and testify idiom as the existing test):
+
+```go
+func TestIntegration_CustomSubjectAndHeaderOverride(t *testing.T) {
+	cfg := integrationEmailConfig(t) // helper extracted in Step 2a
+	cfg.SubjectTemplate = "[ACME] Reset for {{.Recipient}}"
+	cfg.HeaderOverrides = map[string]string{"X-HelpDesk-Topic": "password-reset"}
+
+	service, err := email.NewService(cfg)
+	require.NoError(t, err)
+
+	to := "custom-headers@example.com"
+	require.NoError(t, service.SendResetEmail(to, testToken))
+
+	foundMessage := waitForMessage(t, to) // helper extracted in Step 2a
+	require.NotNil(t, foundMessage)
+
+	subjects := foundMessage.Content.Headers["Subject"]
+	require.NotEmpty(t, subjects)
+	assert.Equal(t, "[ACME] Reset for "+to, subjects[0], "custom subject should round-trip")
+
+	// Canonical key: applyHeaderOverrides emits header names via
+	// textproto.CanonicalMIMEHeaderKey, so the wire header is X-Helpdesk-Topic.
+	topics := foundMessage.Content.Headers["X-Helpdesk-Topic"]
+	require.NotEmpty(t, topics, "override header should be present on the received message")
+	assert.Equal(t, "password-reset", topics[0])
+}
+```
+
+> Add the imports these assertions need to `service_integration_test.go`: `errors`, `io`, `mime`, `mime/multipart`, `mime/quotedprintable`, `strings`.
+
+> **Header-override keys are emitted canonicalised — assert the canonical form.** `applyHeaderOverrides` (Task 2) appends every override under `textproto.CanonicalMIMEHeaderKey(name)`, so the configured `X-HelpDesk-Topic` goes on the wire as `X-Helpdesk-Topic`. MailHog's `Content.Headers` is a plain `map[string][]string` with **no** canonicalisation on lookup, so `Headers["X-HelpDesk-Topic"]` returns `nil` and the assertion fails. Any raw-map assertion must use the canonical form even when the configured env key was mixed-case. (The sibling unit test in `message_internal_test.go` is unaffected: it goes through `hdr.Get()`, which canonicalises the lookup key for you.)
+
+> **Why the existing `assert.Contains(t, foundMessage.Content.Body, testToken, ...)` still passes — and its limit:** MailHog returns the **raw**, still-quoted-printable-encoded body. `quotedprintable.Writer` inserts soft line breaks (`=\r\n`) at 76 columns, which can split **any** substring, token included. The assertion holds only because the plain-text part renders the reset link on its own line well under 76 characters. A longer `BaseURL` or a longer token would push it past 76 and split the token, failing the assertion for a reason that has nothing to do with correctness. The robust alternative — preferred for any new assertion — is to QP-decode the matching MIME part first (as the two-part loop above does) and do substring assertions on the decoded text.
+
+- [ ] **Step 3: Build the whole repo (both tag sets)**
 
 Run:
+
 ```bash
 go build ./...
 go vet ./...
 go test ./...
 go test -tags integration ./... 2>&1 | head -40   # compiles integration files; tests skip without SMTP_HOST
 ```
+
 Expected: `go build`, `go vet`, `go test ./...` all PASS. The `-tags integration` run compiles cleanly (individual tests may `Skip` without `SMTP_HOST`/Docker — skipping is acceptable, a compile error is not).
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
-git add main.go internal/rpchandler/handler_test.go internal/rpchandler/handler_integration_test.go internal/email/service_integration_test.go integration_test.go
+git add main.go internal/email/service_integration_test.go
 git commit -s -m "$(cat <<'EOF'
-feat(main): wire email template config and fail-fast service init
+feat(main): wire email template config into email.Config
 
-Map the new email template/header options into email.Config and treat a
-NewService error as fatal at startup. Update all NewService call sites for
-the new (*Service, error) signature; assert multipart in the integration test.
+Expand buildEmailConfig to map the new template, sender-name, Reply-To,
+expiry and header-override options. Strengthen the tag-gated integration
+tests: assert multipart structure, custom subject and header round-trip.
 
 Refs #627
 
@@ -1548,6 +1742,7 @@ EOF
 ## Task 7: Documentation
 
 **Files:**
+
 - Modify: `.env.local.example`
 - Modify: `internal/CLAUDE.md`
 - Modify: any `docs/*` config reference (grep first)
@@ -1568,6 +1763,14 @@ Append after the SMTP block (`APP_BASE_URL=` line):
 # the suffix maps _ -> - (e.g. below sets "X-HelpDesk-Topic"). CR/LF is rejected;
 # MIME-Version / Content-Type / Content-Transfer-Encoding cannot be overridden.
 # SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC=password-reset
+#
+# Delivery semantics:
+#  * To/Cc/Bcc overrides are DISPLAY-ONLY. The SMTP envelope recipient is always
+#    the reset requester, so SMTP_HEADER_OVERRIDE_BCC does NOT add a delivery
+#    target — nobody extra receives the mail.
+#  * A cross-domain From-header override creates a From vs envelope MAIL FROM
+#    mismatch that can break SPF/DKIM/DMARC alignment and hurt deliverability.
+#
 # Template fields: {{.ResetLink}} {{.Token}} {{.BaseURL}} {{.Recipient}} {{.ExpiryMinutes}}
 ```
 
@@ -1587,6 +1790,11 @@ EMAIL_TEMPLATE_TEXT=/config/email/reset.txt
 
 Add a one-line note under `email/` in "Package-Specific Notes": that `NewService` now returns `(*Service, error)` and validates templates at startup; template fields are `ResetLink, Token, BaseURL, Recipient, ExpiryMinutes`.
 
+Also record the header-override delivery semantics there:
+
+- **To/Cc/Bcc overrides are display-only.** `sendEmail` passes a fixed `[]string{to}` to `smtp.SendMail`, so the SMTP envelope recipient is always the reset requester — `SMTP_HEADER_OVERRIDE_BCC` does **not** add a delivery target.
+- **A cross-domain `From`-header override** creates a `From` vs envelope `MAIL FROM` mismatch that can break SPF/DKIM/DMARC alignment and hurt deliverability.
+
 - [ ] **Step 3: Sweep docs/ for config references**
 
 Run: `grep -rln "SMTP_FROM_ADDRESS\|APP_BASE_URL\|Password Reset Request" docs/ README.md 2>/dev/null`
@@ -1595,12 +1803,14 @@ For each hit that lists configuration or describes the email, add the new option
 - [ ] **Step 4: Format + final verification**
 
 Run:
+
 ```bash
 bunx prettier --write .
 go build ./...
 go test ./...
 go vet ./...
 ```
+
 Expected: all green; prettier leaves only intended changes.
 
 - [ ] **Step 5: Commit**
@@ -1625,6 +1835,7 @@ EOF
 ## Self-Review
 
 **Spec coverage:**
+
 - Multipart HTML+text → Task 1 (templates/renderer) + Task 3 (assembly). ✓
 - File-path override + embedded defaults → Task 1 (`loadTemplateSource`). ✓
 - `EMAIL_TEMPLATE_*` naming + subject inline template → Task 5 + Task 1. ✓
@@ -1635,6 +1846,13 @@ EOF
 - Testing (unit/options/integration/fuzz) → Tasks 1–6. ✓
 - Docs → Task 7. ✓
 - Out-of-scope (`GOPHERPASS_*`, username field) → not built. ✓
+
+**Commit granularity — every commit is repo-green under BOTH tag sets:** the invariant covers the default build _and_ the `-tags=integration` build, because this repo's CI compiles and runs the integration-tagged build on every commit ([`.github/workflows/ci.yml:25`](../../../.github/workflows/ci.yml) sets `enable-integration-tests: true`; [`Makefile:52`](../../../Makefile) runs `go test -v -race -tags=integration ./...`). The breaking `NewService` signature change therefore lands in Task 4 _together with_ **every** call site — 20 in total. Fifteen are default-build: the wholly-rewritten `internal/email/service_internal_test.go` (10 unqualified `NewService(` calls, replaced en bloc in Step 2), `main.go:103`, `internal/rpchandler/handler_test.go:65`, and `internal/email/service_test.go:19,32,36`. Five are tag-gated: `integration_test.go:77`, `internal/rpchandler/handler_integration_test.go:81`, and `internal/email/service_integration_test.go:66,130,149`. So both `go build ./... && go vet ./... && go test ./...` and `go build -tags=integration ./... && go vet -tags=integration ./...` pass at **every** commit in the plan. Bisect and per-commit CI stay usable. Task 4 leaves `buildEmailConfig` unexpanded — the new `Config` fields are transiently zero-valued (the default body renders "0 minutes") until Task 6 wires the field mapping; that is a deliberate, compiling intermediate state, not a defect.
+
+**Intentional divergences from the spec:**
+
+- The unit-test surface is decomposed per source file (`render_` / `headers_` / `message_internal_test.go`) instead of a single `service_internal_test.go`.
+- Structural MIME headers (`MIME-Version`, `Content-Type`, `Content-Transfer-Encoding`) are refused as overrides in **two** layers: rejected at config-parse time in `internal/options`, and filtered again inside `buildMIMEMessage` as defence in depth so the email package's correctness never depends on the options layer. This restriction is now also recorded in the spec.
 
 **Placeholder scan:** No "TBD/TODO/handle edge cases"; every code step carries complete code.
 

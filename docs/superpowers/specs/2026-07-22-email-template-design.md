@@ -47,31 +47,31 @@ Out of scope (recorded, not built here):
 4. **Templatable surface:** subject + HTML body + text body, plus structured
    `From` name / `Reply-To`, plus a raw header map.
 5. **Two header layers:**
-   - *Structured, safe:* `SMTP_FROM_NAME`, `EMAIL_REPLY_TO` — app validates and
+   - _Structured, safe:_ `SMTP_FROM_NAME`, `EMAIL_REPLY_TO` — app validates and
      encodes; app owns correctness.
-   - *Raw escape hatch:* `SMTP_HEADER_OVERRIDE_*` — verbatim value; operator owns
+   - _Raw escape hatch:_ `SMTP_HEADER_OVERRIDE_*` — verbatim value; operator owns
      correctness; app enforces only structural integrity.
 6. **Override map expression:** prefix scan of `os.Environ()` (env-only, no flag
    mirror), suffix `_`→`-` for the header name.
 7. **Failure mode:** fail fast at startup. Misconfiguration exits non-zero;
-   only *unset* (not *broken*) falls back to embedded defaults.
+   only _unset_ (not _broken_) falls back to embedded defaults.
 
 ## Configuration surface
 
 ### Content templates — `EMAIL_TEMPLATE_*`
 
-| Env var | Flag | Default | Notes |
-|---|---|---|---|
-| `EMAIL_TEMPLATE_HTML` | `--email-template-html` | embedded default | Path to HTML body template file |
-| `EMAIL_TEMPLATE_TEXT` | `--email-template-text` | embedded default | Path to plain-text body template file |
+| Env var                  | Flag                       | Default                  | Notes                                            |
+| ------------------------ | -------------------------- | ------------------------ | ------------------------------------------------ |
+| `EMAIL_TEMPLATE_HTML`    | `--email-template-html`    | embedded default         | Path to HTML body template file                  |
+| `EMAIL_TEMPLATE_TEXT`    | `--email-template-text`    | embedded default         | Path to plain-text body template file            |
 | `EMAIL_TEMPLATE_SUBJECT` | `--email-template-subject` | `Password Reset Request` | Inline string template (subjects are one-liners) |
 
 ### Structured header knobs — `SMTP_*` / `EMAIL_*`
 
-| Env var | Flag | Default | Notes |
-|---|---|---|---|
-| `SMTP_FROM_NAME` | `--smtp-from-name` | *(empty)* | `From:` display name; RFC 2047 encoded-word if non-ASCII, quoted if it contains specials |
-| `EMAIL_REPLY_TO` | `--email-reply-to` | *(empty)* | `Reply-To:` address; validated with `ValidateEmailAddress` |
+| Env var          | Flag               | Default   | Notes                                                                                    |
+| ---------------- | ------------------ | --------- | ---------------------------------------------------------------------------------------- |
+| `SMTP_FROM_NAME` | `--smtp-from-name` | _(empty)_ | `From:` display name; RFC 2047 encoded-word if non-ASCII, quoted if it contains specials |
+| `EMAIL_REPLY_TO` | `--email-reply-to` | _(empty)_ | `Reply-To:` address; validated with `ValidateEmailAddress`                               |
 
 Prefix rationale: `SMTP_FROM_NAME` sits with its sibling `SMTP_FROM_ADDRESS`
 (sender identity, transport-adjacent); `Reply-To` is message-content routing and
@@ -89,10 +89,21 @@ live under a `GOPHERPASS_*` prefix (out of scope).
 - **Integrity guard (non-negotiable):** reject any value containing CR or LF, and
   require the resulting field-name to be a valid RFC 5322 token; violations feed
   `ConfigError` and fail startup. Operators needing N headers set N vars.
+- **Reserved structural headers (non-negotiable):** `MIME-Version`,
+  `Content-Type` and `Content-Transfer-Encoding` cannot be set via
+  `SMTP_HEADER_OVERRIDE_*`; an attempt feeds `ConfigError` and fails startup.
+  Rationale: the message builder owns these and appends them _after_ overrides
+  are applied, so permitting an override would emit duplicate, conflicting
+  headers and corrupt the multipart structure. This narrows the "wins for any
+  header it names" rule below to non-structural headers.
 - **Precedence:** applied **last**; wins for any header it names, including
-  overriding the `From:`/`Reply-To:` *headers*. The SMTP **envelope** sender
+  overriding the `From:`/`Reply-To:` _headers_. The SMTP **envelope** sender
   passed to `smtp.SendMail` remains `SMTP_FROM_ADDRESS`, unaffected by an
   override of the `From:` header.
+- **Delivery semantics:** `To:`/`Cc:`/`Bcc:` overrides are display-only — the
+  SMTP envelope recipient is always the reset requester, so an override cannot
+  add a delivery target. A cross-domain `From:` header override can break
+  SPF/DKIM/DMARC alignment.
 
 ## Template data contract
 
@@ -179,10 +190,12 @@ ExpiryMinutes    uint
 ## Error handling
 
 - Missing file, parse error, undefined-field on dry-run, invalid `EMAIL_REPLY_TO`,
-  invalid override field-name, or CR/LF in an override value ⇒ `ConfigError` /
+  invalid override field-name, CR/LF in an override value, or an override naming
+  a reserved structural header (`MIME-Version`, `Content-Type`,
+  `Content-Transfer-Encoding`) ⇒ `ConfigError` /
   `NewService` error ⇒ process exits non-zero at boot with a clear message.
-- Never a silent fallback to defaults for a *misconfigured* template — fallback
-  only applies to an *unset* one.
+- Never a silent fallback to defaults for a _misconfigured_ template — fallback
+  only applies to an _unset_ one.
 - Subject render forced single-line.
 
 ## Testing
