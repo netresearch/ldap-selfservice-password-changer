@@ -19,6 +19,10 @@ type Config struct {
 	SMTPPassword string // SMTP authentication password
 	FromAddress  string // Email sender address
 	BaseURL      string // Base URL for reset links (e.g., https://password.example.com)
+
+	SubjectTemplate  string // Inline subject template; empty => default
+	TemplateHTMLPath string // Path to custom HTML body template; empty => embedded default
+	TemplateTextPath string // Path to custom text body template; empty => embedded default
 }
 
 // Service handles sending password reset emails.
