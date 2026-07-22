@@ -3,6 +3,7 @@ package email
 import (
 	"bufio"
 	"bytes"
+	"errors"
 	"io"
 	"mime"
 	"mime/multipart"
@@ -18,7 +19,7 @@ func parseMessage(t *testing.T, raw []byte) (textproto.MIMEHeader, *multipart.Re
 	r := bufio.NewReader(bytes.NewReader(raw))
 	tp := textproto.NewReader(r)
 	hdr, err := tp.ReadMIMEHeader()
-	if err != nil && err != io.EOF {
+	if err != nil && !errors.Is(err, io.EOF) {
 		t.Fatalf("read headers: %v", err)
 	}
 	mediaType, params, err := mime.ParseMediaType(hdr.Get("Content-Type"))
@@ -132,7 +133,7 @@ func TestBuildMIMEMessage_Structure(t *testing.T) {
 	// make both the CTE and the encoding assertions below vacuous.
 	for i := 0; ; i++ {
 		p, err := mr.NextRawPart()
-		if err == io.EOF {
+		if errors.Is(err, io.EOF) {
 			if i != 2 {
 				t.Fatalf("got %d parts, want 2", i)
 			}
@@ -141,14 +142,20 @@ func TestBuildMIMEMessage_Structure(t *testing.T) {
 		if err != nil {
 			t.Fatalf("next part: %v", err)
 		}
-		mt, _, _ := mime.ParseMediaType(p.Header.Get("Content-Type"))
+		mt, _, err := mime.ParseMediaType(p.Header.Get("Content-Type"))
+		if err != nil {
+			t.Fatalf("part %d: parse content-type %q: %v", i, p.Header.Get("Content-Type"), err)
+		}
 		if mt != wantTypes[i] {
 			t.Errorf("part %d type = %q, want %q", i, mt, wantTypes[i])
 		}
 		if enc := p.Header.Get("Content-Transfer-Encoding"); enc != "quoted-printable" {
 			t.Errorf("part %d CTE = %q, want quoted-printable", i, enc)
 		}
-		decoded, _ := io.ReadAll(quotedprintable.NewReader(p))
+		decoded, err := io.ReadAll(quotedprintable.NewReader(p))
+		if err != nil {
+			t.Fatalf("part %d: decode quoted-printable body: %v", i, err)
+		}
 		if !strings.Contains(string(decoded), wantBodies[i]) {
 			t.Errorf("part %d body missing %q; got %q", i, wantBodies[i], decoded)
 		}

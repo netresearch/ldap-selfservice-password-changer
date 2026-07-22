@@ -1,4 +1,3 @@
-//nolint:testpackage // tests internal functions
 package email
 
 import (
@@ -6,9 +5,12 @@ import (
 	"testing"
 )
 
-func newTestService(t *testing.T, cfg Config) *Service {
+// newTestService builds a Service from cfg, failing the test if NewService
+// rejects it. cfg is taken by pointer because Config is large enough that
+// copying it per call is wasteful, and NewService takes a pointer anyway.
+func newTestService(t *testing.T, cfg *Config) *Service {
 	t.Helper()
-	s, err := NewService(&cfg)
+	s, err := NewService(cfg)
 	if err != nil {
 		t.Fatalf("NewService: %v", err)
 	}
@@ -16,7 +18,7 @@ func newTestService(t *testing.T, cfg Config) *Service {
 }
 
 func TestNewService_ConfigStored(t *testing.T) {
-	s := newTestService(t, Config{SMTPHost: "smtp.example.com", FromAddress: "noreply@example.com"})
+	s := newTestService(t, &Config{SMTPHost: "smtp.example.com", FromAddress: "noreply@example.com"})
 	if s.config.SMTPHost != "smtp.example.com" {
 		t.Errorf("SMTPHost = %q", s.config.SMTPHost)
 	}
@@ -32,21 +34,27 @@ func TestNewService_BrokenTemplateFailsFast(t *testing.T) {
 }
 
 func TestBuildResetLink(t *testing.T) {
-	s := newTestService(t, Config{BaseURL: "https://example.com"})
+	s := newTestService(t, &Config{BaseURL: "https://example.com"})
 	if got := s.buildResetLink("test-token-123"); got != "https://example.com/reset-password?token=test-token-123" {
 		t.Errorf("buildResetLink = %q", got)
 	}
 }
 
 func TestBuildResetLinkWithTrailingSlash(t *testing.T) {
-	s := newTestService(t, Config{BaseURL: "https://example.com/"})
+	s := newTestService(t, &Config{BaseURL: "https://example.com/"})
 	if got := s.buildResetLink("test-token-123"); got != "https://example.com/reset-password?token=test-token-123" {
 		t.Errorf("buildResetLink = %q", got)
 	}
 }
 
 func TestSendResetEmail_RejectsInvalidAddress(t *testing.T) {
-	s := newTestService(t, Config{SMTPHost: "localhost", SMTPPort: 1025, FromAddress: "noreply@example.com", BaseURL: "https://example.com", ExpiryMinutes: 15})
+	s := newTestService(t, &Config{
+		SMTPHost:      "localhost",
+		SMTPPort:      1025,
+		FromAddress:   "noreply@example.com",
+		BaseURL:       "https://example.com",
+		ExpiryMinutes: 15,
+	})
 	err := s.SendResetEmail("not-an-email", "token123")
 	if err == nil || !strings.Contains(err.Error(), "invalid email") {
 		t.Errorf("expected invalid-email error, got %v", err)
@@ -56,7 +64,7 @@ func TestSendResetEmail_RejectsInvalidAddress(t *testing.T) {
 func TestSendResetEmail_RendersExpiryFromConfig(t *testing.T) {
 	// Render path is exercised via buildMIMEMessage in message tests; here confirm
 	// the data wiring by rendering directly through the renderer.
-	s := newTestService(t, Config{BaseURL: "https://example.com", ExpiryMinutes: 42})
+	s := newTestService(t, &Config{BaseURL: "https://example.com", ExpiryMinutes: 42})
 	_, text, _, err := s.renderer.render(resetEmailData{
 		ResetLink:     s.buildResetLink("tok"),
 		ExpiryMinutes: s.config.ExpiryMinutes,

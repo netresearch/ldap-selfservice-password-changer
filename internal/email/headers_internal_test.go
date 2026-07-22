@@ -35,7 +35,8 @@ func TestEncodeSubject(t *testing.T) {
 	if got := encodeSubject("Password Reset Request"); got != "Password Reset Request" {
 		t.Errorf("ASCII subject changed: %q", got)
 	}
-	if got := encodeSubject("Zurücksetzen"); !strings.HasPrefix(got, "=?utf-8?q?") && !strings.HasPrefix(got, "=?UTF-8?q?") {
+	if got := encodeSubject("Zurücksetzen"); !strings.HasPrefix(got, "=?utf-8?q?") &&
+		!strings.HasPrefix(got, "=?UTF-8?q?") {
 		t.Errorf("non-ASCII subject not RFC 2047 encoded: %q", got)
 	}
 	if got := encodeSubject("line1\r\nline2"); strings.ContainsAny(got, "\r\n") {
@@ -57,7 +58,8 @@ func TestFormatFrom(t *testing.T) {
 		t.Errorf("ascii name = %q, want quoted form", got)
 	}
 	// Non-ASCII display name must be RFC 2047 encoded.
-	if got := formatFrom("ACME Straße", "noreply@acme.com"); !strings.Contains(got, "=?utf-8?") && !strings.Contains(got, "=?UTF-8?") {
+	if got := formatFrom("ACME Straße", "noreply@acme.com"); !strings.Contains(got, "=?utf-8?") &&
+		!strings.Contains(got, "=?UTF-8?") {
 		t.Errorf("non-ASCII name not encoded: %q", got)
 	}
 }
