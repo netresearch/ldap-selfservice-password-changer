@@ -77,11 +77,19 @@ func encodeSubject(subject string) string {
 	return mime.QEncoding.Encode("utf-8", subject)
 }
 
-// formatFrom builds the From header value. With a display name it uses
-// net/mail so the name is quoted/RFC 2047-encoded correctly; without one it
-// emits the bare address (unchanged from prior behavior).
+// formatFrom builds the From header value. With both a display name and an
+// address it uses net/mail so the name is quoted/RFC 2047-encoded correctly;
+// with only an address it emits the bare address (unchanged from prior
+// behavior).
+//
+// An empty address drops the display name and yields an empty value, so the
+// caller emits a bare empty From exactly as the pre-template code did. There is
+// no valid header to build from a name alone: mail.Address{Name: "ACME IT"}.String()
+// renders "ACME IT" <@>, which is not an RFC 5322 addr-spec — net/mail itself
+// refuses to parse it back. Startup warns about this configuration; see
+// warnEmptySender in main.go.
 func formatFrom(name, address string) string {
-	if name == "" {
+	if name == "" || address == "" {
 		return address
 	}
 	addr := mail.Address{Name: name, Address: address}

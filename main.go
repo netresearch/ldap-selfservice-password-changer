@@ -152,19 +152,36 @@ func newHandlerWithoutResetServices(opts *options.Opts) (*rpchandler.Handler, er
 	return baseHandler, nil
 }
 
+// emptySenderDetail explains why an unset SMTP_FROM_ADDRESS breaks delivery.
+const emptySenderDetail = "SMTP_FROM_ADDRESS is not set; password reset emails will be sent " +
+	"with an empty sender and are likely to be rejected by the receiving MTA"
+
+// droppedFromNameDetail is appended when SMTP_FROM_NAME is set as well. Each
+// value passes its own startup check, so the combination looks configured while
+// the display name cannot be used: see formatFrom in internal/email/headers.go.
+const droppedFromNameDetail = "; SMTP_FROM_NAME is set but will be dropped, because a display " +
+	"name without an address cannot form a valid From header — set SMTP_FROM_ADDRESS to use it"
+
+// warnEmptySender logs the startup warning for a reset-enabled deployment with
+// no sender address. It is not fatal: an empty sender was accepted before the
+// email-template feature, so refusing to boot would break existing deployments.
+// It is still broken in practice — an empty sender means MAIL FROM:<> (the null
+// sender, reserved for bounces) and a From: header with no address.
+func warnEmptySender(fromName string) {
+	detail := emptySenderDetail
+	if fromName != "" {
+		detail += droppedFromNameDetail
+	}
+	slog.Warn("smtp_from_address_empty", "detail", detail, "from_name_dropped", fromName != "")
+}
+
 // buildRPCHandler selects the appropriate handler factory based on whether
 // the password reset feature is enabled.
 func buildRPCHandler(opts *options.Opts) (*rpchandler.Handler, error) {
 	if opts.PasswordResetEnabled {
 		slog.Info("password reset feature enabled")
 		if opts.SMTPFromAddress == "" {
-			// Not fatal: this was accepted before the email-template feature, so
-			// refusing to boot would break existing deployments. It is still
-			// broken in practice — an empty sender means MAIL FROM:<> (the null
-			// sender, reserved for bounces) and a From: header with no address.
-			slog.Warn("smtp_from_address_empty",
-				"detail", "SMTP_FROM_ADDRESS is not set; password reset emails will be sent "+
-					"with an empty sender and are likely to be rejected by the receiving MTA")
+			warnEmptySender(opts.SMTPFromName)
 		}
 		return newHandlerWithResetServices(opts)
 	}

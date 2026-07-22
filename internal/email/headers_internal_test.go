@@ -1,6 +1,7 @@
 package email
 
 import (
+	"net/mail"
 	"strings"
 	"testing"
 )
@@ -61,6 +62,50 @@ func TestFormatFrom(t *testing.T) {
 	if got := formatFrom("ACME Straße", "noreply@acme.com"); !strings.Contains(got, "=?utf-8?") &&
 		!strings.Contains(got, "=?UTF-8?") {
 		t.Errorf("non-ASCII name not encoded: %q", got)
+	}
+}
+
+// TestFormatFromEmptyAddressDropsName covers SMTP_FROM_NAME set with
+// SMTP_FROM_ADDRESS empty — each passes its own startup check, and the pair
+// used to render `"ACME IT" <@>`, which is not a valid RFC 5322 addr-spec.
+func TestFormatFromEmptyAddressDropsName(t *testing.T) {
+	for _, name := range []string{"ACME IT", "ACME", "ACME Straße", `Weird "Quoted" Name`} {
+		got := formatFrom(name, "")
+		if got != "" {
+			t.Errorf("formatFrom(%q, \"\") = %q, want empty string", name, got)
+		}
+	}
+
+	// Guard the specific malformed shape: a value with an address delimiter but
+	// no addr-spec must never be produced.
+	if got := formatFrom("ACME IT", ""); strings.Contains(got, "<") || strings.Contains(got, "@") {
+		t.Errorf("formatFrom emitted an address-shaped value without an address: %q", got)
+	}
+
+	// Both empty stays empty.
+	if got := formatFrom("", ""); got != "" {
+		t.Errorf("formatFrom(\"\", \"\") = %q, want empty string", got)
+	}
+}
+
+// TestFormatFromAlwaysParseable asserts the invariant behind the fix: every
+// non-empty From value formatFrom produces must parse back as an address.
+func TestFormatFromAlwaysParseable(t *testing.T) {
+	cases := []struct{ name, address string }{
+		{"", "noreply@acme.com"},
+		{"ACME IT", "noreply@acme.com"},
+		{"ACME Straße", "noreply@acme.com"},
+		{"ACME IT", ""},
+		{"", ""},
+	}
+	for _, c := range cases {
+		got := formatFrom(c.name, c.address)
+		if got == "" {
+			continue
+		}
+		if _, err := mail.ParseAddress(got); err != nil {
+			t.Errorf("formatFrom(%q, %q) = %q, not a parseable address: %v", c.name, c.address, got, err)
+		}
 	}
 }
 
