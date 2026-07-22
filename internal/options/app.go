@@ -11,8 +11,9 @@ import (
 	"strings"
 
 	"github.com/joho/godotenv"
-	"github.com/netresearch/ldap-selfservice-password-changer/internal/email"
 	ldap "github.com/netresearch/simple-ldap-go"
+
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/email"
 )
 
 // ResetIdentifierMode selects which identifier types the password reset form accepts.
@@ -151,11 +152,10 @@ var reservedHeaderOverride = map[string]bool{
 func parseHeaderOverrides(environ []string, errs *ConfigError) map[string]string {
 	overrides := map[string]string{}
 	for _, kv := range environ {
-		eq := strings.IndexByte(kv, '=')
-		if eq < 0 {
+		name, value, found := strings.Cut(kv, "=")
+		if !found {
 			continue
 		}
-		name := kv[:eq]
 		if !strings.HasPrefix(name, headerOverridePrefix) {
 			continue
 		}
@@ -164,7 +164,6 @@ func parseHeaderOverrides(environ []string, errs *ConfigError) map[string]string
 			errs.Add(fmt.Sprintf("invalid %s: header name is empty", name))
 			continue
 		}
-		value := kv[eq+1:]
 		headerName := strings.ReplaceAll(suffix, "_", "-")
 
 		if err := email.ValidateHeaderName(headerName); err != nil {
@@ -176,7 +175,7 @@ func parseHeaderOverrides(environ []string, errs *ConfigError) map[string]string
 			continue
 		}
 		if reservedHeaderOverride[textproto.CanonicalMIMEHeaderKey(headerName)] {
-			errs.Add(fmt.Sprintf("%s: cannot override structural MIME header", name))
+			errs.Add(name + ": cannot override structural MIME header")
 			continue
 		}
 		overrides[headerName] = value
@@ -389,7 +388,8 @@ func ParseArgs(args []string) (*Opts, error) {
 	if *fPasswordResetEnabled {
 		switch {
 		case *fSMTPFromAddress == "":
-			errs.Add("required options missing: smtp-from-address (SMTP_FROM_ADDRESS) is required when password reset is enabled")
+			errs.Add("required options missing: smtp-from-address (SMTP_FROM_ADDRESS) " +
+				"is required when password reset is enabled")
 		case !email.ValidateEmailAddress(*fSMTPFromAddress):
 			errs.Add(fmt.Sprintf(
 				"invalid value for SMTP_FROM_ADDRESS: %q is not a valid email address",
