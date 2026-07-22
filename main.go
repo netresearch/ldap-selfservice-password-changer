@@ -98,9 +98,12 @@ func newHandlerWithResetServices(opts *options.Opts) (*rpchandler.Handler, error
 	// Initialize token store (cleanup started below, only on success).
 	tokenStore := resettoken.NewStore()
 
-	// Initialize email service
+	// Initialize email service (fails fast on bad templates/config).
 	emailConfig := buildEmailConfig(opts)
-	emailService := email.NewService(&emailConfig)
+	emailService, err := email.NewService(&emailConfig)
+	if err != nil {
+		return nil, fmt.Errorf("initialize email service: %w", err)
+	}
 
 	// Initialize email-based rate limiter (per-user protection)
 	resetRequests, resetWindowDuration := resetRateLimitSettings(opts)

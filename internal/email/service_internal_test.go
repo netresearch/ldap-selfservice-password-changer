@@ -1,3 +1,4 @@
+//nolint:testpackage // tests internal functions
 package email
 
 import (
@@ -5,81 +6,66 @@ import (
 	"testing"
 )
 
-func TestNewService(t *testing.T) {
-	config := Config{
-		SMTPHost:     "smtp.gmail.com",
-		SMTPPort:     587,
-		SMTPUsername: "test@example.com",
-		SMTPPassword: "testpass",
-		FromAddress:  "noreply@example.com",
-		BaseURL:      "https://password.example.com",
+func newTestService(t *testing.T, cfg Config) *Service {
+	t.Helper()
+	s, err := NewService(&cfg)
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
 	}
+	return s
+}
 
-	service := NewService(&config)
-	if service == nil {
-		t.Fatal("NewService() returned nil")
-		return
+func TestNewService_ConfigStored(t *testing.T) {
+	s := newTestService(t, Config{SMTPHost: "smtp.example.com", FromAddress: "noreply@example.com"})
+	if s.config.SMTPHost != "smtp.example.com" {
+		t.Errorf("SMTPHost = %q", s.config.SMTPHost)
 	}
-	if service.config.SMTPHost != config.SMTPHost {
-		t.Errorf("SMTPHost = %s, want %s", service.config.SMTPHost, config.SMTPHost)
+	if s.renderer == nil {
+		t.Error("renderer not initialized")
 	}
 }
 
-func TestSendResetEmail(t *testing.T) {
-	// This test requires a mock SMTP server or skip in CI
-	// For now, test template rendering logic
-	config := Config{
-		SMTPHost:     "localhost",
-		SMTPPort:     1025, // MailHog
-		SMTPUsername: "",
-		SMTPPassword: "",
-		FromAddress:  "test@example.com",
-		BaseURL:      "https://test.example.com",
+func TestNewService_BrokenTemplateFailsFast(t *testing.T) {
+	if _, err := NewService(&Config{SubjectTemplate: "{{ .Nope "}); err == nil {
+		t.Fatal("expected error for unparseable subject template")
 	}
-
-	service := NewService(&config)
-	token := "test-token-abc123"
-	to := "user@example.com"
-
-	// Test that email body is generated correctly
-	body := service.buildResetEmailBody(token)
-	if !strings.Contains(body, token) {
-		t.Error("Email body does not contain token")
-	}
-	if !strings.Contains(body, config.BaseURL) {
-		t.Error("Email body does not contain base URL")
-	}
-	if !strings.Contains(body, "reset the password") {
-		t.Error("Email body does not contain expected reset text")
-	}
-
-	// Skip actual SMTP test in unit tests
-	// Integration tests will validate actual sending
-	_ = to
 }
 
-func TestBuildResetEmailBody(t *testing.T) {
-	config := Config{
-		BaseURL: "https://example.com",
+func TestBuildResetLink(t *testing.T) {
+	s := newTestService(t, Config{BaseURL: "https://example.com"})
+	if got := s.buildResetLink("test-token-123"); got != "https://example.com/reset-password?token=test-token-123" {
+		t.Errorf("buildResetLink = %q", got)
 	}
-	service := NewService(&config)
-	token := "abc123token"
+}
 
-	body := service.buildResetEmailBody(token)
-
-	// Verify required elements in email
-	requiredElements := []string{
-		"reset the password",
-		token,
-		config.BaseURL,
-		"reset-password",
-		"15 minutes",
+func TestBuildResetLinkWithTrailingSlash(t *testing.T) {
+	s := newTestService(t, Config{BaseURL: "https://example.com/"})
+	if got := s.buildResetLink("test-token-123"); got != "https://example.com/reset-password?token=test-token-123" {
+		t.Errorf("buildResetLink = %q", got)
 	}
+}
 
-	for _, element := range requiredElements {
-		if !strings.Contains(body, element) {
-			t.Errorf("Email body missing required element: %s", element)
-		}
+func TestSendResetEmail_RejectsInvalidAddress(t *testing.T) {
+	s := newTestService(t, Config{SMTPHost: "localhost", SMTPPort: 1025, FromAddress: "noreply@example.com", BaseURL: "https://example.com", ExpiryMinutes: 15})
+	err := s.SendResetEmail("not-an-email", "token123")
+	if err == nil || !strings.Contains(err.Error(), "invalid email") {
+		t.Errorf("expected invalid-email error, got %v", err)
+	}
+}
+
+func TestSendResetEmail_RendersExpiryFromConfig(t *testing.T) {
+	// Render path is exercised via buildMIMEMessage in message tests; here confirm
+	// the data wiring by rendering directly through the renderer.
+	s := newTestService(t, Config{BaseURL: "https://example.com", ExpiryMinutes: 42})
+	_, text, _, err := s.renderer.render(resetEmailData{
+		ResetLink:     s.buildResetLink("tok"),
+		ExpiryMinutes: s.config.ExpiryMinutes,
+	})
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+	if !strings.Contains(text, "42 minutes") {
+		t.Errorf("text body missing configured expiry; got %q", text)
 	}
 }
 
@@ -134,160 +120,6 @@ func TestValidateEmailAddress(t *testing.T) {
 				t.Errorf("ValidateEmailAddress(%q) = %v, want %v", tt.email, valid, tt.valid)
 			}
 		})
-	}
-}
-
-func TestBuildResetLink(t *testing.T) {
-	config := Config{
-		BaseURL: "https://example.com",
-	}
-	service := NewService(&config)
-	token := "test-token-123"
-
-	link := service.buildResetLink(token)
-
-	expected := "https://example.com/reset-password?token=test-token-123"
-	if link != expected {
-		t.Errorf("buildResetLink() = %s, want %s", link, expected)
-	}
-}
-
-func TestBuildResetLinkWithTrailingSlash(t *testing.T) {
-	config := Config{
-		BaseURL: "https://example.com/", // trailing slash
-	}
-	service := NewService(&config)
-	token := "test-token-123"
-
-	link := service.buildResetLink(token)
-
-	expected := "https://example.com/reset-password?token=test-token-123"
-	if link != expected {
-		t.Errorf("buildResetLink() = %s, want %s", link, expected)
-	}
-}
-
-func TestBuildEmailMessage(t *testing.T) {
-	config := Config{
-		FromAddress: "noreply@example.com",
-	}
-	service := NewService(&config)
-
-	msg := service.buildEmailMessage("user@example.com", "Test Subject", "Test Body")
-	msgStr := string(msg)
-
-	// Verify RFC 5322 compliance
-	requiredHeaders := []string{
-		"From: noreply@example.com",
-		"To: user@example.com",
-		"Subject: Test Subject",
-		"MIME-Version: 1.0",
-		"Content-Type: text/plain; charset=UTF-8",
-	}
-
-	for _, header := range requiredHeaders {
-		if !strings.Contains(msgStr, header) {
-			t.Errorf("Email message missing header: %s", header)
-		}
-	}
-
-	// Verify body is included
-	if !strings.Contains(msgStr, "Test Body") {
-		t.Error("Email message missing body content")
-	}
-
-	// Verify CRLF line endings
-	if !strings.Contains(msgStr, "\r\n") {
-		t.Error("Email message should use CRLF line endings")
-	}
-}
-
-func TestSendResetEmailValidation(t *testing.T) {
-	config := Config{
-		SMTPHost:    "localhost",
-		SMTPPort:    1025,
-		FromAddress: "noreply@example.com",
-		BaseURL:     "https://example.com",
-	}
-	service := NewService(&config)
-
-	// Check if MailHog/SMTP is actually available by trying to send
-	smtpAvailable := false
-	testService := NewService(&config)
-	if err := testService.SendResetEmail("probe@example.com", "probe"); err == nil {
-		smtpAvailable = true
-	}
-
-	tests := []struct {
-		name         string
-		email        string
-		token        string
-		invalidEmail bool // true if email format is invalid
-	}{
-		{"valid email", "user@example.com", "token123", false},
-		{"empty email", "", "token123", true},
-		{"invalid email", "not-an-email", "token123", true},
-		{"email with spaces", "user @example.com", "token123", true},
-		{"valid complex email", "user+tag@sub.example.com", "token123", false},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := service.SendResetEmail(tt.email, tt.token)
-
-			switch {
-			case tt.invalidEmail:
-				// Invalid emails should always error with validation error
-				if err == nil {
-					t.Errorf("SendResetEmail should error for invalid email %q", tt.email)
-				} else if !strings.Contains(err.Error(), "invalid email") {
-					t.Errorf("Expected validation error for %q, got: %v", tt.email, err)
-				}
-			case smtpAvailable:
-				// Valid emails should succeed when SMTP is available
-				if err != nil {
-					t.Errorf("SendResetEmail should succeed with SMTP server for %q, got: %v", tt.email, err)
-				}
-			default:
-				// Valid emails should error when no SMTP server
-				if err == nil {
-					t.Error("SendResetEmail should error without SMTP server")
-				}
-			}
-		})
-	}
-}
-
-func TestEmailBodyContainsSecurityWarning(t *testing.T) {
-	config := Config{
-		BaseURL: "https://example.com",
-	}
-	service := NewService(&config)
-	body := service.buildResetEmailBody("token123")
-
-	// Verify security warning is present
-	securityPhrases := []string{
-		"If you didn't request",
-		"safely ignore",
-		"will not be changed",
-	}
-
-	for _, phrase := range securityPhrases {
-		if !strings.Contains(body, phrase) {
-			t.Errorf("Email body missing security phrase: %s", phrase)
-		}
-	}
-}
-
-func TestEmailBodyContainsExpirationInfo(t *testing.T) {
-	config := Config{
-		BaseURL: "https://example.com",
-	}
-	service := NewService(&config)
-	body := service.buildResetEmailBody("token123")
-
-	if !strings.Contains(body, "15 minutes") {
-		t.Error("Email body should mention token expiration time")
 	}
 }
 

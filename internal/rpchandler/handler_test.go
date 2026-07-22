@@ -62,7 +62,10 @@ func TestNewWithServicesInvalidLDAP(t *testing.T) {
 		FromAddress:  "noreply@example.com",
 		BaseURL:      "https://pwd.example.com",
 	}
-	emailService := email.NewService(emailConfig)
+	emailService, err := email.NewService(emailConfig)
+	if err != nil {
+		t.Fatalf("NewService: %v", err)
+	}
 	rateLimiter := ratelimit.NewLimiter(3, 60*time.Minute)
 	ipLimiter := ratelimit.NewIPLimiter()
 

@@ -63,14 +63,15 @@ func TestIntegration_SendResetEmail(t *testing.T) {
 		FromAddress:  "noreply@example.com",
 		BaseURL:      "http://localhost:3000",
 	}
-	service := email.NewService(config)
+	service, err := email.NewService(config)
+	require.NoError(t, err)
 
 	// Generate unique email to avoid conflicts
 	uniqueEmail := fmt.Sprintf("testuser-%d@example.com", time.Now().UnixNano())
 	testToken := "test-reset-token-12345"
 
 	// Send email
-	err := service.SendResetEmail(uniqueEmail, testToken)
+	err = service.SendResetEmail(uniqueEmail, testToken)
 	require.NoError(t, err)
 
 	// Wait briefly for MailHog to receive the email
@@ -127,10 +128,11 @@ func TestIntegration_SendResetEmailInvalidAddress(t *testing.T) {
 		FromAddress:  "noreply@example.com",
 		BaseURL:      "http://localhost:3000",
 	}
-	service := email.NewService(config)
+	service, err := email.NewService(config)
+	require.NoError(t, err)
 
 	// Invalid email address should fail validation
-	err := service.SendResetEmail("not-an-email", "token123")
+	err = service.SendResetEmail("not-an-email", "token123")
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "invalid email")
 }
@@ -146,9 +148,10 @@ func TestIntegration_SendResetEmailConnectionFailure(t *testing.T) {
 		FromAddress:  "noreply@example.com",
 		BaseURL:      "http://localhost:3000",
 	}
-	service := email.NewService(config)
+	service, err := email.NewService(config)
+	require.NoError(t, err)
 
-	err := service.SendResetEmail("test@example.com", "token123")
+	err = service.SendResetEmail("test@example.com", "token123")
 	assert.Error(t, err)
 	assert.True(t, strings.Contains(err.Error(), "failed to send") ||
 		strings.Contains(err.Error(), "connection refused"),

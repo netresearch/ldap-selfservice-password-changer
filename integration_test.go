@@ -74,7 +74,8 @@ func TestIntegration_FullPasswordResetFlow(t *testing.T) {
 		FromAddress:  "noreply@example.com",
 		BaseURL:      "http://localhost:3000",
 	}
-	emailService := email.NewService(emailConfig)
+	emailService, err := email.NewService(emailConfig)
+	require.NoError(t, err)
 	rateLimiter := ratelimit.NewLimiter(10, 60*time.Minute)
 	ipLimiter := ratelimit.NewIPLimiter()
 
