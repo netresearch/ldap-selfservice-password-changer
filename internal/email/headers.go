@@ -27,11 +27,21 @@ func ValidateHeaderName(name string) error {
 	return nil
 }
 
-// ValidateHeaderValue rejects values that would break message structure.
-// A raw CR or LF enables header/body injection, so it is never permitted.
+// ValidateHeaderValue rejects values that would break message structure or
+// smuggle bytes into the SMTP DATA stream. A raw CR or LF enables header/body
+// injection, so it is never permitted. Other C0 controls and DEL are rejected
+// too: MTA handling of them is undefined (truncation at NUL, or a 5xx for the
+// whole message). HTAB is allowed — it is legal folding whitespace.
 func ValidateHeaderValue(value string) error {
-	if strings.ContainsAny(value, "\r\n") {
-		return fmt.Errorf("header value must not contain CR or LF")
+	for i := 0; i < len(value); i++ {
+		c := value[i]
+		if c == '\t' {
+			continue
+		}
+		if c < 0x20 || c == 0x7f {
+			return fmt.Errorf(
+				"header value must not contain control characters (found 0x%02x at offset %d)", c, i)
+		}
 	}
 	return nil
 }

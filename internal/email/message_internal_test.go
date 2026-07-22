@@ -31,6 +31,81 @@ func parseMessage(t *testing.T, raw []byte) (textproto.MIMEHeader, *multipart.Re
 	return hdr, multipart.NewReader(r, params["boundary"])
 }
 
+// TestBuildMIMEMessage_RejectsInjectedOverride is a regression test for a
+// confirmed header-injection defect: buildMIMEMessage filtered reserved header
+// names but passed override *values* through verbatim, so a value containing
+// CRLF smuggled arbitrary extra headers into the message. The options layer
+// rejects such values at startup, but the email package must not depend on it.
+func TestBuildMIMEMessage_RejectsInjectedOverride(t *testing.T) {
+	cases := map[string]map[string]string{
+		"crlf in value":    {"X-Evil": "ok\r\nBcc: attacker@evil.com"},
+		"lone lf in value": {"X-Evil": "ok\nBcc: attacker@evil.com"},
+		"nul in value":     {"X-Evil": "a\x00b"},
+		"space in name":    {"X Bad": "value"},
+		"colon in name":    {"X:Bad": "value"},
+	}
+
+	for name, overrides := range cases {
+		t.Run(name, func(t *testing.T) {
+			s := &Service{config: Config{FromAddress: "noreply@acme.com", HeaderOverrides: overrides}}
+			raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+			if err == nil {
+				t.Fatalf("expected an error; got a message:\n%s", raw)
+			}
+			if raw != nil {
+				t.Errorf("expected nil message on error, got %d bytes", len(raw))
+			}
+		})
+	}
+}
+
+// TestBuildMIMEMessage_DropsReservedOverride confirms the builder keeps
+// ownership of the structural MIME headers: an override naming one is dropped
+// rather than emitted a second time, which would corrupt the multipart parse.
+func TestBuildMIMEMessage_DropsReservedOverride(t *testing.T) {
+	s := &Service{config: Config{
+		FromAddress:     "noreply@acme.com",
+		HeaderOverrides: map[string]string{"Content-Type": "text/plain", "Mime-Version": "9.9"},
+	}}
+	raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+	if err != nil {
+		t.Fatalf("buildMIMEMessage: %v", err)
+	}
+
+	hdr, _ := parseMessage(t, raw) // fails the test if Content-Type is not multipart/alternative
+	if v := hdr.Get("Mime-Version"); v != "1.0" {
+		t.Errorf("MIME-Version = %q, want 1.0 (override must not win)", v)
+	}
+	if n := strings.Count(string(raw), "Content-Type: multipart/alternative"); n != 1 {
+		t.Errorf("found %d top-level multipart Content-Type headers, want exactly 1", n)
+	}
+}
+
+// TestBuildMIMEMessage_LineEndings guards the RFC 5322 wire format. The
+// pre-refactor TestBuildEmailMessage asserted MIME-Version and CRLF endings;
+// textproto.ReadMIMEHeader tolerates bare LF, so parsing alone cannot catch a
+// regression here.
+func TestBuildMIMEMessage_LineEndings(t *testing.T) {
+	s := &Service{config: Config{FromAddress: "noreply@acme.com"}}
+	raw, err := s.buildMIMEMessage("user@x.com", "Sub", "t", "<p>h</p>")
+	if err != nil {
+		t.Fatalf("buildMIMEMessage: %v", err)
+	}
+
+	hdr, _ := parseMessage(t, raw)
+	if v := hdr.Get("Mime-Version"); v != "1.0" {
+		t.Errorf("MIME-Version = %q, want 1.0", v)
+	}
+
+	// Every LF in the header block must be preceded by CR.
+	head, _, _ := strings.Cut(string(raw), "\r\n\r\n")
+	for i := range len(head) {
+		if head[i] == '\n' && (i == 0 || head[i-1] != '\r') {
+			t.Fatalf("bare LF at offset %d in header block:\n%q", i, head)
+		}
+	}
+}
+
 func TestBuildMIMEMessage_Structure(t *testing.T) {
 	s := &Service{config: Config{FromAddress: "noreply@acme.com"}}
 	raw, err := s.buildMIMEMessage("user@x.com", "Password Reset Request", "TEXT BODY link=x", "<p>HTML BODY link=x</p>")

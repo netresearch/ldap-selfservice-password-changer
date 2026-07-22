@@ -39,6 +39,48 @@ func TestNewRenderer_Defaults(t *testing.T) {
 	}
 }
 
+// TestDefaultTemplatesContainSecurityWarning guards the security wording in the
+// built-in templates. It replaces the pre-refactor TestEmailBodyContainsSecurityWarning
+// and TestEmailBodyContainsExpirationInfo, which asserted the same phrases against
+// the old hardcoded body. Without it, editing a default template could silently drop
+// the "you didn't request this" reassurance from every reset email.
+func TestDefaultTemplatesContainSecurityWarning(t *testing.T) {
+	r, err := newRenderer(&Config{})
+	if err != nil {
+		t.Fatalf("newRenderer with defaults: %v", err)
+	}
+
+	_, text, html, err := r.render(resetEmailData{
+		ResetLink:     "https://example.com/reset-password?token=abc",
+		ExpiryMinutes: 15,
+	})
+	if err != nil {
+		t.Fatalf("render: %v", err)
+	}
+
+	securityPhrases := []string{
+		"If you didn't request",
+		"safely ignore",
+		"will not be changed",
+	}
+	for _, phrase := range securityPhrases {
+		if !strings.Contains(text, phrase) {
+			t.Errorf("default text body missing security phrase %q", phrase)
+		}
+		if !strings.Contains(html, phrase) {
+			t.Errorf("default html body missing security phrase %q", phrase)
+		}
+	}
+
+	// Expiry must be rendered from config, not hardcoded (the bug this feature fixed).
+	if !strings.Contains(text, "15 minutes") {
+		t.Errorf("default text body missing rendered expiry; got %q", text)
+	}
+	if !strings.Contains(html, "15 minutes") {
+		t.Errorf("default html body missing rendered expiry")
+	}
+}
+
 func TestNewRenderer_CustomSubjectAndFiles(t *testing.T) {
 	dir := t.TempDir()
 	textPath := filepath.Join(dir, "body.txt")

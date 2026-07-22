@@ -5,6 +5,7 @@ import (
 	_ "embed"
 	"fmt"
 	htmltemplate "html/template"
+	"io"
 	"os"
 	texttemplate "text/template"
 )
@@ -85,13 +86,38 @@ func newRenderer(cfg *Config) (*renderer, error) {
 	return r, nil
 }
 
+// maxTemplateBytes caps a configured template file. An email template is a few
+// kilobytes; the cap keeps a mistyped path from stalling or OOM-ing startup.
+const maxTemplateBytes = 1 << 20 // 1 MiB
+
 // loadTemplateSource returns the file content at path, or fallback when path
-// is empty. A configured-but-unreadable path is an error.
+// is empty. A configured-but-unreadable path is an error. The path must be a
+// regular file within the size cap: pointing at a device or stream such as
+// /dev/zero would otherwise hang the process before it ever binds a listener,
+// which in a memory-limited container is an undiagnosable crash-loop.
 func loadTemplateSource(path, fallback string) (string, error) {
 	if path == "" {
 		return fallback, nil
 	}
-	b, err := os.ReadFile(path) //#nosec G304 -- operator-controlled config path, intentional
+
+	fi, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("stat %q: %w", path, err)
+	}
+	if !fi.Mode().IsRegular() {
+		return "", fmt.Errorf("template %q is not a regular file (mode %s)", path, fi.Mode())
+	}
+	if fi.Size() > maxTemplateBytes {
+		return "", fmt.Errorf("template %q is %d bytes, exceeding the %d byte limit", path, fi.Size(), maxTemplateBytes)
+	}
+
+	f, err := os.Open(path) //#nosec G304 -- operator-controlled config path, intentional
+	if err != nil {
+		return "", fmt.Errorf("open %q: %w", path, err)
+	}
+	defer func() { _ = f.Close() }()
+
+	b, err := io.ReadAll(io.LimitReader(f, maxTemplateBytes))
 	if err != nil {
 		return "", fmt.Errorf("read %q: %w", path, err)
 	}

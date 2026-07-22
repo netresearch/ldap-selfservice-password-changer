@@ -42,13 +42,22 @@ func (s *Service) buildMIMEMessage(to, subject, textBody, htmlBody string) ([]by
 	if s.config.ReplyTo != "" {
 		fields = append(fields, headerField{key: "Reply-To", value: s.config.ReplyTo})
 	}
-	// Defence in depth: never let an override emit a duplicate structural
-	// header. The wired path already rejects these at config-parse time, but
-	// the email package must not depend on the options layer for correctness.
+	// Defence in depth: the email package must not depend on the options layer
+	// for correctness. A reserved structural header is dropped (the builder
+	// owns those, and the wired path already hard-errors on them); a malformed
+	// name or a value carrying CR/LF or other control bytes is a header
+	// injection vector, so it fails the send loudly rather than being smuggled
+	// into the message.
 	overrides := make(map[string]string, len(s.config.HeaderOverrides))
 	for name, value := range s.config.HeaderOverrides {
 		if reservedMIMEHeader[textproto.CanonicalMIMEHeaderKey(name)] {
 			continue
+		}
+		if err := ValidateHeaderName(name); err != nil {
+			return nil, fmt.Errorf("header override %q: %w", name, err)
+		}
+		if err := ValidateHeaderValue(value); err != nil {
+			return nil, fmt.Errorf("header override %q: %w", name, err)
 		}
 		overrides[name] = value
 	}
