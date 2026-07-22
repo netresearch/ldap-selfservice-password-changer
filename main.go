@@ -68,12 +68,19 @@ func buildEmailConfig(opts *options.Opts) email.Config {
 	// Safe conversion: SMTPPort is uint, typically 25/587/465 (well within int range)
 	smtpPort := int(opts.SMTPPort) //#nosec G115 -- SMTPPort is 0-65535, safe for int
 	return email.Config{
-		SMTPHost:     opts.SMTPHost,
-		SMTPPort:     smtpPort,
-		SMTPUsername: opts.SMTPUsername,
-		SMTPPassword: opts.SMTPPassword,
-		FromAddress:  opts.SMTPFromAddress,
-		BaseURL:      opts.AppBaseURL,
+		SMTPHost:         opts.SMTPHost,
+		SMTPPort:         smtpPort,
+		SMTPUsername:     opts.SMTPUsername,
+		SMTPPassword:     opts.SMTPPassword,
+		FromAddress:      opts.SMTPFromAddress,
+		FromName:         opts.SMTPFromName,
+		ReplyTo:          opts.EmailReplyTo,
+		BaseURL:          opts.AppBaseURL,
+		ExpiryMinutes:    opts.ResetTokenExpiryMinutes,
+		SubjectTemplate:  opts.EmailTemplateSubject,
+		TemplateHTMLPath: opts.EmailTemplateHTML,
+		TemplateTextPath: opts.EmailTemplateText,
+		HeaderOverrides:  opts.SMTPHeaderOverrides,
 	}
 }
 
