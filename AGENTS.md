@@ -42,6 +42,8 @@ Source: `package.json` scripts + `go test`. Run from repo root.
 
 **Docker-first**: `docker compose --profile dev up` is the canonical dev path; native Bun/Go is optional convenience.
 
+**Running it locally**: full runbook in [docs/development-guide.md](docs/development-guide.md). The `Dockerfile` is a binary-selector (`COPY bin/…-linux-<arch>`), so `docker compose --build` — including the `dev`/`test` profiles — fails on a clean checkout until you build binaries into `bin/` first.
+
 ## Workflow
 
 1. Before coding, read the nearest `AGENTS.md` for the area you're touching.
@@ -119,5 +121,5 @@ Pipeline (see [.github/workflows/release.yml](.github/workflows/release.yml)):
 1. Scoped `AGENTS.md` for the area → code in `internal/` → [docs/](docs/).
 2. Similar patterns: search git history / existing tests.
 3. `go test -v ./...` surfaces many problems.
-4. Docker weirdness: `docker compose down -v && docker compose --profile dev up --build`.
+4. Docker weirdness: `docker compose down -v && docker compose --profile dev up --build`. If the build dies on `COPY bin/…: lstat /bin: no such file or directory`, that's the binary-selector — see [docs/development-guide.md](docs/development-guide.md).
 5. Env config: `.env.local` vs `.env.local.example`.
