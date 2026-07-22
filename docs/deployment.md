@@ -203,9 +203,13 @@ APP_BASE_URL=https://passwd.example.com
 
 #### Email Template and Header Configuration
 
-All optional — unset values use the built-in defaults, while a misconfigured
-value (unparseable template, undefined field, invalid address or header) aborts
-startup.
+All optional — unset values use the built-in defaults. An invalid address or
+header (`SMTP_FROM_NAME`, `SMTP_FROM_ADDRESS`, `EMAIL_REPLY_TO`,
+`SMTP_HEADER_OVERRIDE_*`) aborts startup unconditionally. An unparseable
+template or an undefined template field aborts startup when password reset is
+enabled: the templates are read and dry-run only on that path, so with
+`PASSWORD_RESET_ENABLED=false` a broken `EMAIL_TEMPLATE_*` path is never
+loaded.
 
 ```bash
 # Sender display name (encoded per RFC 2047)

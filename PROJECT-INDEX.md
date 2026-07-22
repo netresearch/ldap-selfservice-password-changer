@@ -53,10 +53,11 @@
 
 ### Architecture Decision Records (`docs/adr/`)
 
-| ADR                                                       | Title                        | Status      | Date       |
-| --------------------------------------------------------- | ---------------------------- | ----------- | ---------- |
-| [ADR-0001](docs/adr/0001-standardize-form-field-names.md) | Standardize Form Field Names | ✅ Accepted | 2024-10-06 |
-| [ADR-0002](docs/adr/0002-password-reset-functionality.md) | Password Reset Functionality | ✅ Accepted | 2024-10-07 |
+| ADR                                                             | Title                              | Status      | Date       |
+| --------------------------------------------------------------- | ---------------------------------- | ----------- | ---------- |
+| [ADR-0001](docs/adr/0001-standardize-form-field-names.md)       | Standardize Form Field Names       | ✅ Accepted | 2024-10-06 |
+| [ADR-0002](docs/adr/0002-password-reset-functionality.md)       | Password Reset Functionality       | ✅ Accepted | 2024-10-07 |
+| [ADR-0003](docs/adr/0003-configurable-reset-email-templates.md) | Configurable Reset Email Templates | ✅ Accepted | 2026-07-22 |
 
 ### Analysis & Planning (`claudedocs/`)
 

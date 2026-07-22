@@ -76,7 +76,9 @@ This is enforced in **both** layers, by design:
 
 Without this, a header value is a header injection vector: a raw CR or LF lets an operator-supplied value terminate the field and inject further headers, or end the header block and forge a body. Other C0 controls and DEL are rejected because MTA handling of them is undefined — truncation at NUL or a 5xx for the whole message.
 
-This validation lives in the `internal/email` package and runs in the message builder, not only at config-parse time. Header values reach the builder from more than one direction, and the package that writes the wire format is the one that must guarantee the wire format.
+This validation lives in the `internal/email` package and runs over the **override map** in the message builder, not only at config-parse time. Overrides reach the builder from more than one direction, so the package that writes the wire format re-checks the values it was handed rather than trusting the options layer.
+
+The builder's own `From:`, `To:` and `Reply-To:` fields do not pass through `ValidateHeaderValue`. They are constrained where they are produced instead: `EMAIL_REPLY_TO` and the recipient address are matched against the anchored `emailRegex`, and `SMTP_FROM_NAME` is both checked in `ParseArgs` and emitted through `mail.Address.String()`, which quotes or RFC 2047-encodes what it is given.
 
 ### 7. Envelope Sender and Delivery Semantics
 
@@ -90,7 +92,10 @@ A cross-domain `From:` header override can break SPF, DKIM and DMARC alignment. 
 
 `NewService` resolves each template (configured path or embedded default), parses it with the correct engine, and **dry-runs it against a sample context**. Parsed templates are cached on the `Service`; a send only executes them.
 
-A missing file, a parse error, an undefined field surfaced by the dry run, an invalid `EMAIL_REPLY_TO`, an invalid override field name, a control character in an override value, or an override naming a reserved structural header aborts boot with a non-zero exit.
+The two validation layers have different reach, which is worth stating exactly:
+
+- **Unconditional**, in `ParseArgs`: an invalid `EMAIL_REPLY_TO`, an invalid `SMTP_FROM_NAME`, a malformed non-empty `SMTP_FROM_ADDRESS`, an invalid override field name, a control character in an override value, or an override naming a reserved structural header aborts boot with a non-zero exit, whatever `PASSWORD_RESET_ENABLED` is set to.
+- **Only when password reset is enabled**: template resolution, parsing and the dry run happen inside `NewService`, which `buildRPCHandler` constructs only for `PASSWORD_RESET_ENABLED=true`. So a missing template file, a parse error or an undefined field aborts boot only in that case; with the feature off, a broken `EMAIL_TEMPLATE_*` path is never read and the process starts normally.
 
 Fallback to embedded defaults applies only to an **unset** template, never to a **broken** one. Silently serving the default in place of a template the operator explicitly configured would hide the misconfiguration behind mail that still appears to work.
 
@@ -124,7 +129,7 @@ type resetEmailData struct {
 
 3. **Correct expiry statement**: the email states the configured lifetime instead of a fixed 15 minutes.
 
-4. **Misconfiguration surfaces at boot**: a broken template or header fails the process start rather than the first user's reset attempt, where it would appear as a silent non-delivery.
+4. **Misconfiguration surfaces at boot**: a broken header fails the process start unconditionally, and a broken template does so when password reset is enabled, rather than surfacing on the first user's reset attempt as a silent non-delivery.
 
 5. **Header injection closed at the message boundary**: validation in `internal/email` holds regardless of how the configuration was assembled.
 
@@ -221,7 +226,7 @@ type resetEmailData struct {
 ### Raw Header Overrides (env-only)
 
 - `SMTP_HEADER_OVERRIDE_<NAME>=value`: sets header `<NAME>` with `_` mapped to `-`, value verbatim
-- Example: `SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC=password-reset` emits `X-HelpDesk-Topic: password-reset`
+- Example: `SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC=password-reset` emits `X-Helpdesk-Topic: password-reset` — names go on the wire in canonical (Go `net/textproto`) casing regardless of how the variable was written
 - Applied last; wins for any non-structural header it names
 - Refused: `MIME-Version`, `Content-Type`, `Content-Transfer-Encoding`
 - Refused: values containing CR, LF, NUL, other C0 controls, or DEL

@@ -116,6 +116,7 @@ Design decisions and their rationale:
 
 - [ADR-0001: Standardize Form Field Names](adr/0001-standardize-form-field-names.md) - Password manager compatibility
 - [ADR-0002: Password Reset Functionality](adr/0002-password-reset-functionality.md) - Email-based password recovery
+- [ADR-0003: Configurable Reset Email Templates](adr/0003-configurable-reset-email-templates.md) - Operator-configurable bodies, subject and headers
 
 ---
 
