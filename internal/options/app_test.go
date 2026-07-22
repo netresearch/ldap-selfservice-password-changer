@@ -774,3 +774,83 @@ func TestParseArgs_HeaderOverrideRejectsCRLFAndReserved(t *testing.T) {
 		}
 	})
 }
+
+// TestParseArgs_HeaderOverrideRejectsInvalidName exercises email.ValidateHeaderName
+// through parseHeaderOverrides: a space is not valid ftext, so the whole config
+// must be rejected rather than the override silently dropped.
+func TestParseArgs_HeaderOverrideRejectsInvalidName(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	t.Setenv("SMTP_HEADER_OVERRIDE_X BAD", "v")
+
+	_, err := ParseArgs(requiredArgs())
+	require.Error(t, err, "expected invalid header name rejection")
+	assert.Contains(t, err.Error(), "SMTP_HEADER_OVERRIDE_X BAD")
+	assert.Contains(t, err.Error(), "invalid header name")
+}
+
+// TestParseHeaderOverridesEmptySuffix verifies that SMTP_HEADER_OVERRIDE_= is
+// reported instead of silently skipped — every other rejection path in
+// parseHeaderOverrides fails fast, and so must this one.
+func TestParseHeaderOverridesEmptySuffix(t *testing.T) {
+	errs := &ConfigError{}
+	overrides := parseHeaderOverrides([]string{"SMTP_HEADER_OVERRIDE_=value"}, errs)
+
+	assert.Empty(t, overrides)
+	require.True(t, errs.HasErrors(), "empty header-override suffix must be reported")
+	assert.Contains(t, errs.Error(), "SMTP_HEADER_OVERRIDE_")
+}
+
+// TestParseArgs_InvalidFromName verifies a CR/LF-bearing SMTP_FROM_NAME is
+// rejected at startup instead of being smuggled into the From header.
+func TestParseArgs_InvalidFromName(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	t.Setenv("SMTP_FROM_NAME", "a\r\nInjected: yes")
+
+	_, err := ParseArgs(requiredArgs())
+	require.Error(t, err, "expected CRLF rejection for SMTP_FROM_NAME")
+	assert.Contains(t, err.Error(), "SMTP_FROM_NAME")
+}
+
+// TestParseArgs_SMTPFromAddress covers the sender-address requirement, which
+// only applies when the password reset feature is enabled.
+func TestParseArgs_SMTPFromAddress(t *testing.T) {
+	t.Run("required when reset enabled", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		t.Setenv("SMTP_FROM_ADDRESS", "")
+
+		_, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "smtp-from-address")
+	})
+
+	t.Run("must be a valid address when reset enabled", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		t.Setenv("SMTP_FROM_ADDRESS", "not-an-email")
+
+		_, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid value for SMTP_FROM_ADDRESS")
+	})
+
+	t.Run("accepted when reset enabled and valid", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		t.Setenv("SMTP_FROM_ADDRESS", "noreply@acme.com")
+
+		opts, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+		require.NoError(t, err)
+		assert.Equal(t, "noreply@acme.com", opts.SMTPFromAddress)
+	})
+
+	t.Run("not required when reset disabled", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		t.Setenv("SMTP_FROM_ADDRESS", "")
+
+		opts, err := ParseArgs(requiredArgs())
+		require.NoError(t, err)
+		assert.Empty(t, opts.SMTPFromAddress)
+	})
+}

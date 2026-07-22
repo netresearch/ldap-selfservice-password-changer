@@ -161,6 +161,7 @@ func parseHeaderOverrides(environ []string, errs *ConfigError) map[string]string
 		}
 		suffix := name[len(headerOverridePrefix):]
 		if suffix == "" {
+			errs.Add(fmt.Sprintf("invalid %s: header name is empty", name))
 			continue
 		}
 		value := kv[eq+1:]
@@ -379,6 +380,21 @@ func ParseArgs(args []string) (*Opts, error) {
 	if *fSMTPFromName != "" {
 		if err := email.ValidateHeaderValue(*fSMTPFromName); err != nil {
 			errs.Add(fmt.Sprintf("invalid value for SMTP_FROM_NAME: %v", err))
+		}
+	}
+
+	// The sender address is only meaningful when reset emails are actually
+	// sent. Validate it at startup so a misconfiguration fails fast instead of
+	// producing an empty envelope sender on the first reset request.
+	if *fPasswordResetEnabled {
+		switch {
+		case *fSMTPFromAddress == "":
+			errs.Add("required options missing: smtp-from-address (SMTP_FROM_ADDRESS) is required when password reset is enabled")
+		case !email.ValidateEmailAddress(*fSMTPFromAddress):
+			errs.Add(fmt.Sprintf(
+				"invalid value for SMTP_FROM_ADDRESS: %q is not a valid email address",
+				*fSMTPFromAddress,
+			))
 		}
 	}
 
