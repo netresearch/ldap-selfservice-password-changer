@@ -12,7 +12,7 @@ Backend services for LDAP selfservice password change/reset functionality. Organ
 
 - **email/**: SMTP email service for password reset tokens
 - **options/**: Configuration management from environment variables
-- **ratelimit/**: IP-based rate limiting (3 req/hour default)
+- **ratelimit/**: sliding-window limiting. `Limiter` is generic over a string key; `IPLimiter` wraps it with a hardcoded 10 req/60 min/1000-IP configuration
 - **resettoken/**: Cryptographic token generation and validation
 - **rpchandler/**: JSON-RPC 2.0 API handlers (password change/reset) — renamed from `rpc/` to avoid Go stdlib `net/rpc` conflict
 - **validators/**: Password policy validation logic
@@ -52,7 +52,9 @@ EMAIL_TEMPLATE_HTML=/config/email/reset.html
 EMAIL_TEMPLATE_TEXT=/config/email/reset.txt
 # Raw header escape hatch (suffix _ -> -): SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC=...
 
-# Rate limiting (optional; window is in minutes, not a duration string)
+# Rate limiting for the reset flow, per identifier (optional; window is in
+# minutes, not a duration string). The separate per-IP limiter is hardcoded —
+# no environment variable configures it, and there is no RATE_LIMIT_* prefix.
 RESET_RATE_LIMIT_REQUESTS=3
 RESET_RATE_LIMIT_WINDOW_MINUTES=60
 
@@ -192,12 +194,12 @@ conn, _ := ldap.Dial(url)
 - Single-use tokens (invalidated after use)
 - No token storage in logs or metrics
 
-**Rate Limiting**:
+**Rate Limiting** — two distinct limiters, keep them apart:
 
-- IP-based limits: 3 requests per 60-minute window by default
-- Configurable via `RESET_RATE_LIMIT_REQUESTS` / `RESET_RATE_LIMIT_WINDOW_MINUTES`
-- In-memory store (consider Redis for multi-instance)
-- Apply to both change and reset endpoints
+- **Per-IP** (`ratelimit.NewIPLimiter`): 10 requests per 60-minute window, at most 1000 tracked IPs. Hardcoded in `ratelimit/ip_limiter.go`; **not** configurable by any environment variable. Applied to both the change and the reset endpoint.
+- **Per-identifier, reset only** (`ratelimit.NewLimiter`): `RESET_RATE_LIMIT_REQUESTS` (default 3) per `RESET_RATE_LIMIT_WINDOW_MINUTES` (default 60). Keyed by the typed identifier (`typed:` prefix) and again by the resolved account (`account:` prefix) — never by IP.
+- Both are in-memory (consider Redis for multi-instance)
+- The client IP fed to the per-IP limiter comes from `rpchandler.extractClientIP`, which trusts `X-Forwarded-For`/`X-Real-IP` from any source — see the note in `rpchandler/` below.
 
 **Input Validation**:
 
@@ -391,6 +393,8 @@ go build -gcflags="all=-N -l"
 - In-memory store (map with mutex)
 - Consider Redis for multi-instance deployments
 - Tests use fixed time.Now for deterministic results
+- `Limiter` is key-agnostic (`AllowRequest(identifier string)`); the caller chooses the key. `NewLimiter` caps tracked identifiers at `maxIdentifiers` (10000); `NewLimiterWithCapacity` takes the cap explicitly.
+- **`IPLimiter` is not configurable.** `NewIPLimiter()` takes no arguments and hardcodes `NewLimiterWithCapacity(10, 60*time.Minute, 1000)`. Changing the per-IP limit requires a code change, not an env var.
 
 ### resettoken/
 
@@ -406,6 +410,7 @@ go build -gcflags="all=-N -l"
 - Error codes defined in [docs/api-reference.md](../docs/api-reference.md)
 - Request validation before processing
 - Endpoint: `POST /api/rpc`
+- **`extractClientIP` trusts proxy headers unconditionally.** It returns the first valid IP among the leftmost `X-Forwarded-For` value, `X-Real-IP`, and `fiber.Ctx.IP()`, falling back to `0.0.0.0`. There is no trusted-proxy allow-list — `fiber.New` in `main.go` sets no `TrustProxy`, and no option reads one. Any client that can reach the app directly picks its own per-IP rate-limit bucket by setting the header, so the app must not be exposed without a proxy that **overwrites** `X-Forwarded-For`.
 
 ### Health Check
 

@@ -130,7 +130,8 @@ services:
       # Reset feature
       PASSWORD_RESET_ENABLED: "true"
       RESET_TOKEN_EXPIRY_MINUTES: "15"
-      # Matches the default documented in AGENTS.md (3/hour/IP).
+      # Reset limiter only: 3/hour per typed identifier and per resolved
+      # account. The per-IP limiter (10/hour) is hardcoded and unaffected.
       RESET_RATE_LIMIT_REQUESTS: "3"
       RESET_RATE_LIMIT_WINDOW_MINUTES: "60"
       # SMTP → mailpit

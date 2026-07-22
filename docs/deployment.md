@@ -174,12 +174,20 @@ RESET_IDENTIFIER_MODE=email
 # Token expiry in minutes (default: 15)
 RESET_TOKEN_EXPIRY_MINUTES=15
 
-# Rate limit: max requests per IP (default: 3)
+# Reset rate limit: max requests per identifier (default: 3)
+# Counted per typed identifier and per resolved account — NOT per IP.
 RESET_RATE_LIMIT_REQUESTS=3
 
-# Rate limit: time window in minutes (default: 60)
+# Reset rate limit: time window in minutes (default: 60)
 RESET_RATE_LIMIT_WINDOW_MINUTES=60
 ```
+
+The separate **per-IP** limiter — 10 requests per 60 minutes, at most 1000
+tracked IPs, applied to both `change-password` and `request-password-reset` —
+is hardcoded in `internal/ratelimit/ip_limiter.go`. No environment variable
+configures it; there is no `RATE_LIMIT_*` prefix. Changing it requires a code
+change and a rebuild. To cap request rates without rebuilding, rate-limit at
+the reverse proxy instead — see the Reverse Proxy Configuration section below.
 
 #### SMTP Configuration
 
@@ -254,11 +262,39 @@ Delivery semantics:
 ```bash
 # HTTP port (default: 3000)
 PORT=3000
-
-# Trusted proxy IPs (optional, comma-separated)
-TRUSTED_PROXIES=192.168.1.1,10.0.0.0/8
-# Required if behind reverse proxy for accurate client IP detection
 ```
+
+`PORT` is the only server-level variable the application reads.
+
+##### Client IP detection (no trusted-proxy allow-list)
+
+There is no `TRUSTED_PROXIES` option. `internal/rpchandler/ip_extraction.go`
+determines the client IP used for the per-IP rate limiter by taking the first
+valid IP address among:
+
+1. the leftmost entry of `X-Forwarded-For`,
+2. `X-Real-IP`,
+3. the direct connection address (`fiber.Ctx.IP()`),
+
+falling back to `0.0.0.0` if none parses. Both headers are honoured no matter
+who sent them — `fiber.New` in `main.go` sets no `TrustProxy` configuration and
+nothing validates the immediate peer.
+
+**Consequence:** a caller that can set its own `X-Forwarded-For` chooses its own
+rate-limit bucket, and by varying the value defeats the per-IP limit entirely.
+Two deployment rules follow:
+
+- **Never expose the application port directly.** Bind it to the loopback
+  interface or a private network and put a reverse proxy in front.
+- **The proxy must overwrite `X-Forwarded-For`, not append to it.** The nginx
+  example below uses `$proxy_add_x_forwarded_for`, which appends the peer
+  address to whatever the client sent — the client-supplied value stays
+  leftmost and is therefore the one this application trusts. Replace it with
+  `proxy_set_header X-Forwarded-For $remote_addr;` when clients reach the proxy
+  directly. The Apache example below already overwrites the header
+  (`RequestHeader set X-Forwarded-For "%{REMOTE_ADDR}s"`). For the Traefik
+  example, set `forwardedHeaders.trustedIPs` on the entrypoint so incoming
+  values are only honoured from your own proxies.
 
 ### Configuration Files
 
@@ -331,29 +367,37 @@ cat ldap-ca.crt >> /etc/ssl/certs/ca-certificates.crt
 docker run -v /etc/ssl/certs:/etc/ssl/certs:ro ...
 ```
 
-### Docker Secrets (Swarm/Kubernetes)
+### Secrets as files: not supported
 
-```yaml
-# Use Docker secrets for sensitive data
-services:
-  ldap-passwd:
-    image: ghcr.io/netresearch/ldap-selfservice-password-changer:latest
-    secrets:
-      - ldap_readonly_password
-      - ldap_reset_password
-      - smtp_password
-    environment: LDAP_READONLY_PASSWORD_FILE=/run/secrets/ldap_readonly_password
-      LDAP_RESET_PASSWORD_FILE=/run/secrets/ldap_reset_password
-      SMTP_PASSWORD_FILE=/run/secrets/smtp_password
+**The application reads secrets from environment variables only.** Every option
+is parsed with `os.LookupEnv` in `internal/options/app.go`; there is no `*_FILE`
+variant of any variable. `LDAP_READONLY_PASSWORD_FILE`,
+`LDAP_RESET_PASSWORD_FILE` and `SMTP_PASSWORD_FILE` configure nothing. How that
+fails depends on whether the underlying option is required:
 
-secrets:
-  ldap_readonly_password:
-    external: true
-  ldap_reset_password:
-    external: true
-  smtp_password:
-    external: true
-```
+- `LDAP_READONLY_PASSWORD` is required, so substituting the `_FILE` form aborts
+  startup with `required options missing: readonly-password` — confusing, since
+  the operator did supply a secret, but at least loud.
+- `LDAP_RESET_PASSWORD` and `SMTP_PASSWORD` are optional, so their `_FILE`
+  forms fail **silently**: the container starts with an empty value and the
+  reset bind or SMTP authentication fails later, at request time.
+
+Nor can this be worked around with an entrypoint wrapper in the published
+image: the runtime stage is `FROM scratch` with the binary itself as
+`ENTRYPOINT` (see [`Dockerfile`](../Dockerfile)), so there is no shell available
+to read a file and export it.
+
+Supply secrets as environment variables instead:
+
+- **Kubernetes** — inject them with `secretKeyRef`, as in the Deployment
+  manifest below. This is the recommended production path.
+- **Docker Swarm** — Swarm mounts secrets as files, so it cannot feed this
+  application directly. Either resolve the values into `environment:` at deploy
+  time from your own secret store, or build a derived image on a base that has
+  a shell and add an entrypoint that exports the file contents before exec'ing
+  the binary.
+- **Plain Docker / Compose** — use an `env_file` with restrictive permissions,
+  kept out of version control (see `.env.local`).
 
 ---
 
@@ -1100,12 +1144,19 @@ curl -v --url "smtp://$SMTP_HOST:$SMTP_PORT" \
 docker restart ldap-passwd
 ```
 
-**Adjust rate limits**:
+**Adjust the per-identifier reset limit**:
 
 ```bash
 RESET_RATE_LIMIT_REQUESTS=10
 RESET_RATE_LIMIT_WINDOW_MINUTES=60
 ```
+
+If users are blocked despite a raised `RESET_RATE_LIMIT_REQUESTS`, the per-IP
+limiter is the likely cause: it allows 10 requests per hour per client IP, is
+hardcoded, and applies to `change-password` as well. Behind a proxy that does
+not forward a per-client `X-Forwarded-For`, every user shares one bucket. There
+is no environment variable for it — check the proxy's header handling first
+(see the Client IP detection section above).
 
 ### Password Policy Errors
 

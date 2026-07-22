@@ -216,7 +216,7 @@ go test ./... -cover
 ### Security Features
 
 - **LDAPS Support**: Encrypted LDAP connections
-- **Rate Limiting**: 3 requests/hour per IP for reset requests
+- **Rate Limiting**: 10 requests/hour per IP (hardcoded) on both endpoints, plus 3 requests/hour per identifier for reset requests (configurable)
 - **Cryptographic Tokens**: 256-bit secure token generation
 - **No Password Storage**: Passwords never persisted
 - **Input Validation**: Client and server-side validation

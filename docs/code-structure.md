@@ -115,49 +115,53 @@ type Opts struct {
 
 ### `internal/ratelimit`
 
-**Purpose**: Rate limiting middleware to prevent abuse of password reset requests.
+**Purpose**: Sliding-window rate limiting to prevent abuse of the password change and reset endpoints.
 
 **Files**:
 
-- `limiter.go` - Rate limiter implementation with IP-based tracking
-- `limiter_test.go` - Comprehensive unit tests (72.3% coverage)
+- `limiter.go` - Generic, key-agnostic sliding-window limiter
+- `ip_limiter.go` - Thin wrapper preconfigured for per-IP limiting
+- `limiter_test.go`, `limiter_internal_test.go`, `ip_limiter_test.go`, `ip_limiter_internal_test.go` - Unit tests
 
 **Key Types**:
 
 ```go
 type Limiter struct {
-    maxRequests int
-    window      time.Duration
-    requests    map[string][]time.Time
-    mu          sync.RWMutex
+    mu             sync.RWMutex
+    entries        map[string]*Entry
+    maxRequests    int
+    window         time.Duration
+    maxIdentifiers int
 }
 ```
 
 **Public API**:
 
-- `NewLimiter(maxRequests int, window time.Duration)` - Create rate limiter
-- `Allow(ip string) bool` - Check if IP is allowed to make request
-- `Reset(ip string)` - Clear rate limit for IP (for testing)
+- `NewLimiter(maxRequests int, window time.Duration) *Limiter` - Create limiter with the default capacity (10000 identifiers)
+- `NewLimiterWithCapacity(maxRequests int, window time.Duration, capacity int) *Limiter` - Create limiter with an explicit capacity
+- `AllowRequest(identifier string) bool` - Check and record a request for an arbitrary key
+- `CleanupExpired() int` / `StartCleanup(interval time.Duration) chan struct{}` - Evict expired entries
+- `Count() int` / `IsFull() bool` - Capacity introspection
+- `NewIPLimiter() *IPLimiter` - Per-IP limiter with a **hardcoded** `NewLimiterWithCapacity(10, 60*time.Minute, 1000)`; it takes no arguments and no environment variable configures it
 
 **Implementation Details**:
 
 - **Sliding window algorithm**: Tracks requests in time window
-- **IP-based**: Uses client IP address as key
+- **Key-agnostic**: `AllowRequest` takes any string; the caller chooses whether it is an IP, a typed identifier, or a resolved account
 - **Thread-safe**: Uses RWMutex for concurrent access
-- **Memory bounded**: Automatic cleanup of expired entries
+- **Memory bounded**: Capacity limit plus automatic cleanup of expired entries; fails closed when at capacity
 
 **Default Configuration**:
 
-- Max requests: 3
-- Time window: 1 hour
-- Per IP address
+- Per-IP limiter: 10 requests / 60 minutes, max 1000 IPs — hardcoded
+- Reset limiter: `RESET_RATE_LIMIT_REQUESTS` (3) / `RESET_RATE_LIMIT_WINDOW_MINUTES` (60), keyed per identifier, not per IP
 
-**Test Coverage**: 72.3%
+**Test Coverage**: 100.0% (`go test -cover ./internal/ratelimit/`)
 
 - ✅ Basic allow/deny logic
 - ✅ Sliding window behavior
 - ✅ Concurrent access
-- ✅ Reset functionality
+- ✅ Capacity limits and expiry cleanup
 - ⚠️ Memory cleanup not fully tested
 
 ---
@@ -269,7 +273,7 @@ Response: {
 
 **Handler**: `internal/rpchandler/request_password_reset.go`
 
-- Rate limiting check (3 requests/hour per IP)
+- Rate limiting check: first per IP (10 requests/hour, hardcoded), then per typed identifier and per resolved account (3 requests/hour by default)
 - Resolve the account per `RESET_IDENTIFIER_MODE` (`email` default, `username`, or `both`).
   In `both`, an input containing `@` is looked up by email, otherwise by username.
 - Generate secure reset token
