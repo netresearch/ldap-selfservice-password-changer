@@ -222,9 +222,11 @@ EMAIL_TEMPLATE_HTML=/config/email/reset.html
 EMAIL_TEMPLATE_TEXT=/config/email/reset.txt
 
 # Raw header injection for routing/helpdesk integrations. One variable per
-# header; the suffix maps _ -> - (this sets "X-HelpDesk-Topic"). CR/LF is
-# rejected; MIME-Version / Content-Type / Content-Transfer-Encoding cannot be
-# overridden.
+# header; the suffix maps _ -> - and the name is emitted in canonical
+# (net/textproto) casing, so this sets "X-Helpdesk-Topic" regardless of how the
+# variable is spelled. Values must not contain control characters: CR, LF, NUL,
+# any other C0 control and DEL are rejected (HTAB is allowed).
+# MIME-Version / Content-Type / Content-Transfer-Encoding cannot be overridden.
 SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC=password-reset
 ```
 
@@ -233,6 +235,7 @@ Template fields: `{{.ResetLink}}`, `{{.Token}}`, `{{.BaseURL}}`, `{{.Recipient}}
 Delivery semantics:
 
 - `To`/`Cc`/`Bcc` overrides are **display-only**. The SMTP envelope recipient is always the reset requester, so `SMTP_HEADER_OVERRIDE_BCC` does **not** add a delivery target — nobody extra receives the mail.
+- **Never put an address in a `Bcc` override that is meant to stay hidden.** The value is emitted as a real, visible `Bcc:` header line in the message delivered to the reset requester, so it adds no recipient _and_ discloses the address to the user — the inverse of what `Bcc` means.
 - A cross-domain `From`-header override creates a `From` vs envelope `MAIL FROM` mismatch that can break SPF/DKIM/DMARC alignment and hurt deliverability.
 
 #### Server Configuration

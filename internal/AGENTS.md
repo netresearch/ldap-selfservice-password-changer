@@ -356,7 +356,8 @@ go build -gcflags="all=-N -l"
 - MailHog container spins up automatically in tests
 - Mock `EmailService` interface for unit tests in other packages
 - `NewService` returns `(*Service, error)` and validates templates at startup (parse + dry-run); template fields are `ResetLink`, `Token`, `BaseURL`, `Recipient`, `ExpiryMinutes`
-- **To/Cc/Bcc overrides are display-only.** `sendEmail` passes a fixed `[]string{to}` to `smtp.SendMail`, so the SMTP envelope recipient is always the reset requester — `SMTP_HEADER_OVERRIDE_BCC` does **not** add a delivery target.
+- **To/Cc/Bcc overrides are display-only.** `sendEmail` passes a fixed `[]string{to}` to `smtp.SendMail`, so the SMTP envelope recipient is always the reset requester — `SMTP_HEADER_OVERRIDE_BCC` does **not** add a delivery target. `buildMIMEMessage` still writes it as a real, visible `Bcc:` header line in the mail the requester receives, so an address put there gains no delivery _and_ is disclosed to the user — never configure one that must stay hidden.
+- **Header override names are canonicalized.** `applyHeaderOverrides` keys fields by `textproto.CanonicalMIMEHeaderKey`, so `SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC` goes on the wire as `X-Helpdesk-Topic`, not `X-HelpDesk-Topic`. Values are rejected (fail-fast in `options`, hard error in `buildMIMEMessage`) if they contain CR, LF, NUL, any other C0 control or DEL; HTAB is allowed.
 - **A cross-domain `From`-header override** creates a `From` vs envelope `MAIL FROM` mismatch that can break SPF/DKIM/DMARC alignment and hurt deliverability.
 
 ### options/
