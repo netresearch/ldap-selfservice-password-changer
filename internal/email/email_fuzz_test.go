@@ -2,6 +2,7 @@
 package email
 
 import (
+	"strings"
 	"testing"
 )
 
@@ -65,6 +66,32 @@ func FuzzValidateEmailAddress(f *testing.F) {
 			if !hasDot {
 				t.Errorf("Valid email %q should contain .", email)
 			}
+		}
+	})
+}
+
+// FuzzHeaderOverrideValidation fuzzes the header-override validators. They must
+// never panic and must reject any value containing CR or LF.
+func FuzzHeaderOverrideValidation(f *testing.F) {
+	seeds := []struct{ name, value string }{
+		{"X-HelpDesk-Topic", "reset"},
+		{"", ""},
+		{"X Bad", "value"},
+		{"X-Inject", "a\r\nEvil: yes"},
+		{"X-CR", "a\rb"},
+		{"X-LF", "a\nb"},
+		{"Naïve", "value"},
+	}
+	for _, s := range seeds {
+		f.Add(s.name, s.value)
+	}
+
+	f.Fuzz(func(t *testing.T, name, value string) {
+		_ = ValidateHeaderName(name) // must not panic
+
+		err := ValidateHeaderValue(value)
+		if strings.ContainsAny(value, "\r\n") && err == nil {
+			t.Errorf("ValidateHeaderValue(%q) accepted CR/LF", value)
 		}
 	})
 }
