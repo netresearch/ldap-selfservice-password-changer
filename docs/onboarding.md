@@ -6,7 +6,7 @@ Progressive learning path for new developers joining the LDAP Selfservice Passwo
 
 Before starting, ensure you have:
 
-- [ ] Go 1.24+ installed (`go version`)
+- [ ] Go 1.26+ installed (`go version`) — matches the `go` directive in `go.mod`
 - [ ] Bun installed (`bun --version`) — package manager and JavaScript runtime for the frontend build
 - [ ] Git configured with your credentials
 - [ ] Access to LDAP/AD test server (or credentials for development)

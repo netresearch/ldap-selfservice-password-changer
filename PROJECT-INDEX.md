@@ -59,33 +59,15 @@
 | [ADR-0002](docs/adr/0002-password-reset-functionality.md)       | Password Reset Functionality       | ✅ Accepted | 2024-10-07 |
 | [ADR-0003](docs/adr/0003-configurable-reset-email-templates.md) | Configurable Reset Email Templates | ✅ Accepted | 2026-07-22 |
 
-### Analysis & Planning (`claudedocs/`)
+### Supplementary Documentation (`docs/`)
 
-**Project Context**
-
-- [Project Context Snapshot](claudedocs/project-context-2025-10-04.md)
-- [Component Reference](claudedocs/component-reference.md)
-- [Architecture Patterns](claudedocs/architecture-patterns.md)
-
-**Feature Implementation**
-
-- [Password Reset PRD](claudedocs/password-reset-prd.md)
-- [Implementation Workflow](claudedocs/password-reset-implementation-workflow.md)
-- [Phase 1 Complete](claudedocs/phase1-implementation-complete.md)
-
-**Quality & Validation**
-
-- [Validation Report](claudedocs/VALIDATION-REPORT.md)
-- [WCAG 2.2 Analysis](claudedocs/wcag-2.2-analysis-2025-10-07.md)
-- [WCAG Contrast Analysis](claudedocs/wcag-contrast-analysis.md)
-- [Accessibility Redesign Plan](claudedocs/accessibility-redesign-plan.md)
-
-**Testing & Guides**
-
-- [Testing Guide](claudedocs/testing-guide.md)
-- [Density Toggle Testing](claudedocs/density-toggle-testing-guide.md)
-- [Maintenance Guide](claudedocs/MAINTENANCE.md)
-- [Onboarding Checklist](claudedocs/onboarding-checklist.md)
+| Document                                                                        | Purpose                                        | Audience         |
+| ------------------------------------------------------------------------------- | ---------------------------------------------- | ---------------- |
+| [Onboarding Checklist](docs/onboarding.md)                                      | Progressive learning path for new developers   | New developers   |
+| [Documentation Maintenance Guide](docs/maintenance.md)                          | Keeping documentation accurate as code evolves | Maintainers      |
+| [Security Assessment](docs/security-assessment-2025-10-09.md)                   | Security assessment report (2025-10-09)        | Security, DevOps |
+| [Security Assessment (Revised)](docs/security-assessment-revised-2025-10-09.md) | Revised security assessment report             | Security, DevOps |
+| [Security Quick Fix Guide](docs/security-quick-fix-guide.md)                    | Immediate actions for critical findings        | Developers       |
 
 ---
 
@@ -109,14 +91,14 @@ LDAP Selfservice Password Changer provides:
 
 ### Technology Stack
 
-| Layer         | Technology     | Version |
-| ------------- | -------------- | ------- |
-| Backend       | Go             | 1.26+   |
-| Web Framework | Fiber          | v2.52+  |
-| Frontend      | TypeScript     | 5.9+    |
-| CSS           | Tailwind CSS   | v4.1+   |
-| Build         | Bun            | latest  |
-| Testing       | testcontainers | Latest  |
+| Layer         | Technology   | Version                                |
+| ------------- | ------------ | -------------------------------------- |
+| Backend       | Go           | 1.26 (`go.mod`)                        |
+| Web Framework | Fiber        | v3.4.0 (`github.com/gofiber/fiber/v3`) |
+| Frontend      | TypeScript   | ~6.0.3 (`package.json`)                |
+| CSS           | Tailwind CSS | ^4.3.2 (`package.json`)                |
+| Build         | Bun          | no version pinned                      |
+| Testing       | testify      | v1.11.1 (`go.mod`)                     |
 
 ---
 
@@ -129,7 +111,7 @@ ldap-selfservice-password-changer/
 │   ├── options/           # Application configuration
 │   ├── ratelimit/         # Rate limiting middleware
 │   ├── resettoken/        # Token generation and storage
-│   ├── rpc/               # JSON-RPC handlers
+│   ├── rpchandler/        # JSON-RPC handlers
 │   ├── validators/        # Password validation rules
 │   └── web/               # Web server and static assets
 │       ├── static/        # Compiled JS, CSS, icons
@@ -139,7 +121,6 @@ ldap-selfservice-password-changer/
 │           └── molecules/ # Composite components
 ├── docs/                  # Official documentation
 │   └── adr/               # Architecture Decision Records
-├── claudedocs/            # Analysis and planning documents
 ├── main.go                # Application entry point
 ├── go.mod                 # Go dependencies
 ├── package.json           # Node.js dependencies
@@ -199,13 +180,10 @@ go build -o ldap-selfservice-password-changer
 go test ./... -cover
 ```
 
-**Current coverage**:
-
-- ✅ validators: 100.0%
-- ✅ ratelimit: 72.3%
-- ✅ resettoken: 71.7%
-- ✅ rpc: 45.6%
-- ✅ email: 31.2%
+**Current coverage**: tracked by Codecov, not restated here — see the
+[codecov badge and dashboard](https://codecov.io/gh/netresearch/ldap-selfservice-password-changer).
+Hardcoded per-package percentages in Markdown go stale within a release; the
+command above prints the authoritative local numbers.
 
 **See [Testing Guide](docs/testing-guide.md) for comprehensive testing documentation.**
 
@@ -220,7 +198,9 @@ go test ./... -cover
 - **Cryptographic Tokens**: 256-bit secure token generation
 - **No Password Storage**: Passwords never persisted
 - **Input Validation**: Client and server-side validation
-- **CSRF Protection**: Token-based CSRF prevention
+
+There is no CSRF protection; see WAF-02 in
+[docs/security-assessment-revised-2025-10-09.md](docs/security-assessment-revised-2025-10-09.md).
 
 **See [Security Documentation](docs/security.md) for threat model and security architecture.**
 
@@ -263,7 +243,7 @@ See [README.md](README.md) for contributing guidelines.
 
 ## 📝 Document Maintenance
 
-**Last Updated**: 2025-10-08
+**Last Updated**: 2026-07-23
 **Maintained By**: Development Team
 **Update Frequency**: Per release + major changes
 

@@ -12,7 +12,7 @@ internal/
 ├── options/        # Application configuration and environment variables
 ├── ratelimit/      # Rate limiting middleware for API protection
 ├── resettoken/     # Token generation, storage, and validation
-├── rpc/            # JSON-RPC handlers for all API methods
+├── rpchandler/     # JSON-RPC handlers for all API methods
 ├── validators/     # Password validation rules and enforcement
 └── web/            # Web server, static assets, and templates
 ```
@@ -23,41 +23,52 @@ internal/
 
 ### `internal/email`
 
-**Purpose**: SMTP email service for sending password reset links.
+**Purpose**: Renders and sends the password reset email over SMTP.
 
 **Files**:
 
-- `service.go` - Email service implementation with SMTP configuration
-- `service_test.go` - Unit and integration tests (31.2% coverage)
+- `service.go` - `Config`, `Service`, `NewService`, `SendResetEmail`, reset-link construction, recipient address validation
+- `render.go` - Template loading, parsing and execution for subject, text body and HTML body
+- `message.go` - `multipart/alternative` RFC 5322 message assembly with quoted-printable bodies
+- `headers.go` - Address/header-name/header-value validation, RFC 2047 subject encoding, operator header overrides
+- `templates/` - Embedded defaults: `reset.txt.tmpl` and `reset.html.tmpl`
 
 **Key Types**:
 
 ```go
+type Config struct {
+    SMTPHost, SMTPUsername, SMTPPassword string
+    SMTPPort                             int
+    FromAddress, FromName, ReplyTo       string
+    BaseURL                              string
+    ExpiryMinutes                        uint
+
+    SubjectTemplate  string            // inline template; empty => built-in default
+    TemplateHTMLPath string            // file path; empty => embedded default
+    TemplateTextPath string            // file path; empty => embedded default
+    HeaderOverrides  map[string]string // raw header name => verbatim value
+}
+
 type Service struct {
-    smtpHost     string
-    smtpPort     int
-    smtpUsername string
-    smtpPassword string
-    fromAddress  string
-    fromName     string
+    config   Config
+    renderer *renderer
+    now      func() time.Time // pinned in tests to assert the Date header
 }
 ```
 
 **Public API**:
 
-- `NewService(...)` - Create new email service with SMTP config
-- `SendPasswordResetEmail(to, token, resetURL string)` - Send reset email
+- `NewService(config *Config) (*Service, error)` - Build the service, loading, parsing and dry-running all three templates. Fails fast: a missing, unparseable or field-invalid template is an error here, not at first send.
+- `SendResetEmail(to, token string) error` - Render and send the reset email
+- `ValidateEmailAddress(email string) bool` - Strict regex check for recipient addresses (derived from directory data)
+- `ValidateConfiguredAddress(addr string) error` - Permissive RFC 5322 check for operator-supplied addresses, so senders such as `noreply@localhost` are accepted
+- `ValidateHeaderName(name string) error` / `ValidateHeaderValue(value string) error` - Reject malformed names and control characters in override values
 
-**Dependencies**:
+**Template data** (`resetEmailData`): `ResetLink`, `Token`, `BaseURL`, `Recipient`, `ExpiryMinutes`. Templates are parsed with `missingkey=error`, so an undefined field surfaces during the startup dry-run instead of rendering `<no value>`.
 
-- `net/smtp` - SMTP client
-- Environment variables for configuration
+**Delivery semantics**: `sendEmail` passes a fixed `[]string{to}` to `smtp.SendMail`, so the SMTP envelope recipient is always the reset requester. `To`/`Cc`/`Bcc` overrides are display-only — they add no delivery target, and a `Bcc` override is written as a visible header line in the message the requester receives. `MIME-Version`, `Content-Type` and `Content-Transfer-Encoding` cannot be overridden.
 
-**Test Coverage**: 31.2%
-
-- ✅ Service creation and configuration
-- ✅ Email template rendering
-- ⚠️ Limited SMTP connection testing (requires test server)
+**Dependencies**: `net/smtp`, `net/mail`, `net/textproto`, `mime`, `mime/multipart`, `mime/quotedprintable`, `text/template`, `html/template`, `embed` — all standard library.
 
 ---
 
@@ -67,49 +78,71 @@ type Service struct {
 
 **Files**:
 
-- `app.go` - Configuration struct and environment variable loading
+- `app.go` - `Opts`, `ConfigError`, flag/environment parsing and validation
 
 **Key Types**:
 
 ```go
 type Opts struct {
-    // LDAP Configuration
-    LDAPHost                 string
-    LDAPPort                 int
-    LDAPUseTLS               bool
-    LDAPBaseDN               string
-    LDAPUserAttribute        string
+    Port             string
+    LDAP             ldap.Config // from github.com/netresearch/simple-ldap-go
+    ReadonlyUser     string
+    ReadonlyPassword string
 
-    // Password Policy
-    MinLength                int
-    MinNumbers               int
-    MinSymbols               int
-    MinUppercase             int
-    MinLowercase             int
+    MinLength                  uint
+    MinNumbers                 uint
+    MinSymbols                 uint
+    MinUppercase               uint
+    MinLowercase               uint
     PasswordCanIncludeUsername bool
 
-    // Password Reset Feature
-    PasswordResetEnabled     bool
-    SMTPHost                 string
-    SMTPPort                 int
-    ResetTokenValidityHours  int
+    // Password Reset Configuration
+    PasswordResetEnabled        bool
+    ResetIdentifierMode         ResetIdentifierMode
+    ResetTokenExpiryMinutes     uint
+    ResetRateLimitRequests      uint
+    ResetRateLimitWindowMinutes uint
+    SMTPHost                    string
+    SMTPPort                    uint
+    SMTPUsername                string
+    SMTPPassword                string
+    SMTPFromAddress             string
+    AppBaseURL                  string
 
-    // Server Configuration
-    Port                     int
-    TrustedProxies           []string
+    SMTPFromName         string
+    EmailReplyTo         string
+    EmailTemplateHTML    string
+    EmailTemplateText    string
+    EmailTemplateSubject string
+    SMTPHeaderOverrides  map[string]string
+
+    // Optional dedicated reset account; falls back to ReadonlyUser
+    ResetUser     string
+    ResetPassword string
 }
+
+// ResetIdentifierMode is "email" (default), "username" or "both".
+type ResetIdentifierMode string
 ```
 
 **Public API**:
 
-- `LoadFromEnv()` - Load configuration from environment variables
-- `Validate()` - Validate configuration completeness
+- `Parse() (*Opts, error)` - Parse `os.Args` after loading `.env` / `.env.local`
+- `ParseArgs(args []string) (*Opts, error)` - Same, with an explicit argument slice
+- `MustParse() *Opts` - `Parse`, exiting on error
+- `ConfigError` - Accumulates validation failures; `Add`, `HasErrors`, `Error`
+- `ResetIdentifierMode.Valid() bool` - Reports whether the mode is recognized
 
 **Configuration Sources**:
 
-1. Environment variables (`.env` file)
-2. Default values for optional settings
-3. Validation on startup
+Environment variables supply the _defaults_ of the `flag.FlagSet`, so an
+explicitly passed flag wins over the environment, which wins over the built-in
+default. `godotenv.Load(".env.local", ".env")` runs first and does not overwrite
+variables already present in the process environment. Every validation failure
+is collected into one `ConfigError` rather than aborting at the first.
+
+There is no `TrustedProxies` option; see `internal/rpchandler/ip_extraction.go`
+for the actual, allow-list-free client-IP handling.
 
 ---
 
@@ -156,13 +189,12 @@ type Limiter struct {
 - Per-IP limiter: 10 requests / 60 minutes, max 1000 IPs — hardcoded
 - Reset limiter: `RESET_RATE_LIMIT_REQUESTS` (3) / `RESET_RATE_LIMIT_WINDOW_MINUTES` (60), keyed per identifier, not per IP
 
-**Test Coverage**: 100.0% (`go test -cover ./internal/ratelimit/`)
+**Tested behaviour** (run `go test -cover ./internal/ratelimit/` for the number):
 
 - ✅ Basic allow/deny logic
 - ✅ Sliding window behavior
 - ✅ Concurrent access
 - ✅ Capacity limits and expiry cleanup
-- ⚠️ Memory cleanup not fully tested
 
 ---
 
@@ -173,54 +205,53 @@ type Limiter struct {
 **Files**:
 
 - `token.go` - Cryptographic token generation
-- `token_test.go` - Token generation tests
-- `store.go` - In-memory token storage with expiration
-- `store_test.go` - Comprehensive store tests (71.7% coverage)
+- `store.go` - In-memory token storage with expiration and capacity limit
+- `clock.go` - `Clock` indirection so tests can pin the current time
+- `token_test.go`, `token_fuzz_test.go`, `store_test.go`, `store_internal_test.go`, `clock_test.go` - Tests
 
 **Key Types**:
 
 ```go
-// Token generation
-func GenerateToken() (string, error)
-
-// Token storage
-type Store struct {
-    tokens map[string]TokenData
-    mu     sync.RWMutex
+type ResetToken struct {
+    Token            string
+    Username         string
+    Email            string
+    CreatedAt        time.Time
+    ExpiresAt        time.Time
+    Used             bool
+    RequiresApproval bool
 }
 
-type TokenData struct {
-    Email     string
-    ExpiresAt time.Time
+type Store struct {
+    mu     sync.RWMutex
+    tokens map[string]*ResetToken
 }
 ```
 
 **Public API**:
 
 ```go
-// Token operations
-GenerateToken() (string, error)           // Generate 256-bit secure token
-NewStore() *Store                         // Create token store
-Store(token, email string, ttl time.Duration) // Store token with expiration
-Validate(token string) (email string, error)  // Validate and consume token
-Delete(token string)                      // Explicitly delete token
+GenerateToken() (string, error)                          // 32 random bytes, URL-safe base64
+NewStore() *Store                                        // Create token store
+(*Store) Store(token *ResetToken) error                  // Insert; rejects duplicates and over-capacity
+(*Store) Get(tokenString string) (*ResetToken, error)    // Look up; does not consume
+(*Store) MarkUsed(tokenString string) error              // Flag a token as spent
+(*Store) Delete(tokenString string) error                // Remove a token
+(*Store) CleanupExpired() int                            // Evict expired tokens
+(*Store) StartCleanup(interval time.Duration) chan struct{}
+(*Store) Count() int
+(*Store) IsFull() bool
+(*ResetToken) IsExpired() bool
 ```
 
 **Security Features**:
 
-- **Cryptographically secure**: Uses `crypto/rand` for token generation
-- **256-bit tokens**: Encoded as URL-safe base64 (43 characters)
-- **Time-limited**: Configurable TTL (default 24 hours)
-- **Single-use**: Tokens deleted after successful validation
-- **Automatic expiration**: Background cleanup of expired tokens
-
-**Test Coverage**: 71.7%
-
-- ✅ Token generation and uniqueness
-- ✅ Store/validate/delete operations
-- ✅ Expiration handling
-- ✅ Concurrent access
-- ⚠️ Edge cases for cleanup timing
+- **Cryptographically secure**: `crypto/rand` for token generation
+- **256-bit tokens**: 32 random bytes, URL-safe base64 without padding (43 characters)
+- **Time-limited**: `ExpiresAt` set by the caller from `RESET_TOKEN_EXPIRY_MINUTES` (default 15 minutes)
+- **Single-use**: `reset_password` calls `MarkUsed` after a successful reset; the entry stays in the store until it expires and cleanup removes it
+- **Capacity bounded**: `maxCapacity` is 10000 entries. At capacity the store first evicts expired tokens and, failing that, rejects the new token — it never evicts a live one
+- **Automatic expiration**: `StartCleanup` runs background eviction
 
 ---
 
@@ -234,9 +265,9 @@ Delete(token string)                      // Explicitly delete token
 - `dto.go` - Data transfer objects for RPC methods
 - `change_password.go` - Password change RPC handler
 - `request_password_reset.go` - Request reset token handler
-- `request_password_reset_test.go` - Reset request tests
 - `reset_password.go` - Complete password reset handler
-- `reset_password_test.go` - Password reset tests
+- `ip_extraction.go` - Client-IP resolution for the per-IP rate limiter
+- `password_validation.go` - Server-side password policy enforcement
 
 **RPC Methods**:
 
@@ -304,56 +335,50 @@ Response: {
 - Retrieve user email from token store
 - Lookup user DN in LDAP
 - Reset password via LDAP admin bind
-- Delete token after successful reset
+- Mark the token used (`Store.MarkUsed`) after a successful reset; the entry is
+  removed later by expiry cleanup, not here
 
-**Test Coverage**: 45.6%
+**Tested behaviour** (run `go test -cover ./internal/rpchandler/` for the number):
 
 - ✅ Happy path for all methods
 - ✅ Error handling for invalid inputs
-- ✅ LDAP integration with testcontainers
-- ⚠️ Edge cases and error conditions partially covered
+- ✅ Fuzz tests for client-IP extraction and password validation
+- ✅ LDAP integration behind the `integration` build tag, against a real server
 
 ---
 
 ### `internal/validators`
 
-**Purpose**: Password validation rules matching server-side policy.
+**Purpose**: Character-class counting predicates used by the server-side password policy.
 
 **Files**:
 
 - `validate.go` - Validation rule implementations
-- `validate_test.go` - Comprehensive validation tests (100% coverage)
+- `validate_test.go` - Validation tests
 
 **Public API**:
 
 ```go
-// Validation functions
-ValidateMinLength(password string, minLength int) error
-ValidateMinNumbers(password string, minNumbers int) error
-ValidateMinSymbols(password string, minSymbols int) error
-ValidateMinUppercase(password string, minUppercase int) error
-ValidateMinLowercase(password string, minLowercase int) error
-ValidateNoUsername(password, username string) error
-
-// Combined validation
-ValidatePassword(password, username string, opts *options.Opts) error
+MinNumbersInString(value string, amount uint) bool
+MinSymbolsInString(value string, amount uint) bool
+MinUppercaseLettersInString(value string, amount uint) bool
+MinLowercaseLettersInString(value string, amount uint) bool
 ```
 
-**Validation Rules**:
+Each returns a bool, not an error, and counts ASCII runes only. The package holds
+no minimum-length or username check: those, and the human-readable error
+messages, live in `rpchandler.ValidateNewPassword`, which composes these four
+predicates with `opts`.
 
-- ✅ Minimum length (configurable, default 8)
-- ✅ Minimum numbers (configurable, default 1)
-- ✅ Minimum symbols (configurable, default 1)
-- ✅ Minimum uppercase (configurable, default 1)
-- ✅ Minimum lowercase (configurable, default 1)
-- ✅ Username exclusion (optional, default enabled)
+**Validation Rules** (defaults from `internal/options`):
 
-**Test Coverage**: 100% ✅
-
-- All validation rules tested
-- Edge cases covered
-- Combined validation tested
-- Configuration variations tested
+- ✅ Minimum length (`MIN_LENGTH`, default 8) — enforced in `rpchandler`
+- ✅ Maximum length — `rpchandler.MaxPasswordLength`, a hardcoded 128, not configurable
+- ✅ Minimum numbers (`MIN_NUMBERS`, default 1)
+- ✅ Minimum symbols (`MIN_SYMBOLS`, default 1)
+- ✅ Minimum uppercase (`MIN_UPPERCASE`, default 1)
+- ✅ Minimum lowercase (`MIN_LOWERCASE`, default 1)
+- ✅ Username exclusion (`PASSWORD_CAN_INCLUDE_USERNAME`, default false, i.e. excluded) — enforced in `rpchandler`
 
 ---
 
@@ -366,14 +391,22 @@ ValidatePassword(password, username string, opts *options.Opts) error
 ```
 web/
 ├── static/
-│   ├── js/
+│   ├── js/                     # .ts sources plus the .js tsc emits beside them
 │   │   ├── app.ts              # Main page (password change)
 │   │   ├── forgot-password.ts  # Password reset request
 │   │   ├── reset-password.ts   # Password reset completion
+│   │   ├── *-init.ts           # Per-page bootstrap entry points
+│   │   ├── theme-init.ts       # Theme applied before first paint
+│   │   ├── density-init.ts     # Density applied before first paint
+│   │   ├── toggles.ts          # Theme/density toggle wiring
+│   │   ├── policy-ui.ts        # Password policy checklist rendering
+│   │   ├── error-utils.ts      # Shared error formatting
 │   │   └── validators.ts       # Client-side validation
+│   ├── static.go               # embed.FS for this directory
 │   ├── styles.css              # Compiled Tailwind CSS
 │   ├── favicon.ico             # Browser favicon
-│   ├── *.png                   # PWA icons
+│   ├── *.png, logo.webp, safari-pinned-tab.svg
+│   ├── browserconfig.xml
 │   └── site.webmanifest        # PWA manifest
 ├── templates/
 │   ├── atoms/                  # Basic UI components
@@ -445,8 +478,9 @@ web/
 
 ```go
 RenderIndex(opts *options.Opts) ([]byte, error)
-RenderForgotPassword() ([]byte, error)
+RenderForgotPassword(opts *options.Opts) ([]byte, error)
 RenderResetPassword(opts *options.Opts) ([]byte, error)
+MakeInputOpts(name, placeholder, inputType, autocomplete, help string) InputOpts
 ```
 
 **Features**:
@@ -465,8 +499,7 @@ RenderResetPassword(opts *options.Opts) ([]byte, error)
 **TypeScript → JavaScript**:
 
 ```bash
-tsc                    # Compile TypeScript
-uglify-js             # Minify for production
+tsc                    # Compile TypeScript; no minifier is configured
 ```
 
 **Tailwind CSS → CSS**:
@@ -504,53 +537,62 @@ var staticFS embed.FS
 
 ### Go Dependencies (go.mod)
 
-**Direct**:
+**Direct** (the full `require` block of `go.mod`):
 
-- `github.com/gofiber/fiber/v2` - Web framework
+- `github.com/gofiber/fiber/v3` - Web framework
 - `github.com/joho/godotenv` - Environment variable loading
 - `github.com/netresearch/simple-ldap-go` - LDAP client
-
-**Testing**:
-
-- `github.com/testcontainers/testcontainers-go` - Integration testing
-- `github.com/testcontainers/testcontainers-go/modules/openldap` - LDAP test server
+- `github.com/valyala/fasthttp` - HTTP engine under Fiber
 - `github.com/stretchr/testify` - Test assertions
+
+There is no testcontainers dependency. Integration tests are gated by the
+`integration` build tag and talk to services the developer or CI already
+started; see the Testing Strategy section below.
 
 ### Node Dependencies (package.json)
 
+All are `devDependencies`; the package has no runtime `dependencies`.
+
 **Build Tools**:
 
-- `typescript` - Type-safe JavaScript
-- `@tailwindcss/postcss` - CSS framework
-- `uglify-js` - JavaScript minification
-- `postcss` - CSS processing (minification via @tailwindcss/postcss / Lightning CSS)
+- `typescript` - Type-safe JavaScript; `tsc` is the only JS build step, and no minifier is configured
+- `tailwindcss` / `@tailwindcss/postcss` - CSS framework (minification via Lightning CSS)
+- `postcss` / `postcss-cli` - CSS processing
 
 **Development**:
 
-- `concurrently` - Parallel script execution
-- `nodemon` - File watching and hot reload
-- `prettier` - Code formatting
+- `eslint`, `typescript-eslint`, `@eslint/js`, `eslint-config-prettier` - Linting
+- `prettier`, `prettier-plugin-go-template`, `prettier-plugin-tailwindcss` - Code formatting
+
+`bun run dev` also invokes `air` for Go hot-reload; `air` is not declared in
+`package.json` and must be installed separately.
 
 ---
 
 ## Testing Strategy
 
+Per-package coverage percentages are not listed here — they go stale faster than
+anyone updates them. Run `go test -cover ./...`, or read the
+[Codecov dashboard](https://codecov.io/gh/netresearch/ldap-selfservice-password-changer).
+
 ### Unit Tests
 
-- **Package**: `internal/validators` - 100% coverage ✅
-- **Package**: `internal/ratelimit` - 72.3% coverage
-- **Package**: `internal/resettoken` - 71.7% coverage
+- Default build, no tags: `go test ./...`
+- `*_internal_test.go` files test unexported behaviour from inside the package
+- `*_fuzz_test.go` files cover client-IP extraction, password validation and email input
 
 ### Integration Tests
 
-- **Package**: `internal/rpchandler` - 45.6% coverage
-- **Package**: `internal/email` - 31.2% coverage
-- Uses testcontainers for real LDAP server
-- Tests complete RPC workflows
+- Build tag `integration`; `make test-integration` runs `go test -v -race -tags=integration ./...`
+- Backing services come from `docker compose --profile test up`
+- Configured through the same environment variables as the app; a test whose
+  variables are unset skips instead of failing
 
 ### E2E Tests
 
-- Recommended: Playwright for browser automation
+- Build tag `e2e`, in `e2e/e2e_test.go`; `make test-e2e` runs
+  `go test -v -race -tags=e2e ./e2e/...`
+- Go and `httptest` against the assembled Fiber app — no browser automation
 - See [Testing Guide](testing-guide.md) for setup
 
 ---
@@ -607,7 +649,10 @@ See [Security Documentation](security.md) for comprehensive security architectur
 - `internal/resettoken` - Cryptographic token generation
 - `internal/validators` - Input validation
 - LDAPS support in LDAP client
-- CSRF protection in Fiber middleware
+
+There is no CSRF middleware: nothing in the tree references `csrf`, and the
+security assessments record it as an accepted, unimplemented finding
+(`docs/security-assessment-revised-2025-10-09.md`, WAF-02).
 
 ---
 
