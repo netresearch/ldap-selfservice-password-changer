@@ -369,9 +369,11 @@ docker run -v /etc/ssl/certs:/etc/ssl/certs:ro ...
 
 ### Secrets as files: not supported
 
-**The application reads secrets from environment variables only.** Every option
-is parsed with `os.LookupEnv` in `internal/options/app.go`; there is no `*_FILE`
-variant of any variable. `LDAP_READONLY_PASSWORD_FILE`,
+**The application reads secrets from environment variables or CLI flags only.**
+In `internal/options/app.go` each environment variable supplies the _default_ of
+a `flag.FlagSet` entry, so an explicitly passed flag overrides the environment.
+Either way the value is a string in the process environment or argv — there is no
+`*_FILE` variant of any variable. `LDAP_READONLY_PASSWORD_FILE`,
 `LDAP_RESET_PASSWORD_FILE` and `SMTP_PASSWORD_FILE` configure nothing. How that
 fails depends on whether the underlying option is required:
 

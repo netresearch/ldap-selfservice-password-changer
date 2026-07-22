@@ -461,8 +461,10 @@ SMTP_PASSWORD=secret
 - ✅ Rotate credentials regularly
 - ✅ Use secret managers in production (Vault, AWS Secrets Manager)
 
-**Secrets are read from environment variables only.** `internal/options/app.go`
-resolves every option with `os.LookupEnv`; no `*_FILE` variant exists, so a
+**Secrets are read from environment variables or CLI flags only.** In
+`internal/options/app.go` each environment variable supplies the default of a
+`flag.FlagSet` entry, so a passed flag wins over the environment; no `*_FILE`
+variant exists either way, so a
 file-mounted secret (Docker Swarm `/run/secrets/...`) cannot be consumed
 directly. A `..._FILE` variable configures nothing — for the optional
 `LDAP_RESET_PASSWORD` and `SMTP_PASSWORD` it fails silently and leaves the

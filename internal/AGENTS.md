@@ -79,7 +79,6 @@ PORT=3000
 
 - `github.com/gofiber/fiber/v3` - HTTP server
 - `github.com/netresearch/simple-ldap-go` - LDAP client
-- `github.com/testcontainers/testcontainers-go` - Integration testing
 - `github.com/joho/godotenv` - Environment loading
 
 ## Build & Tests
@@ -96,8 +95,8 @@ go test ./internal/ratelimit/...     # Test rate limiter
 go test ./internal/resettoken/...    # Test token generation
 go test -run TestSpecificFunction    # Run specific test
 
-# Integration tests (uses testcontainers)
-go test -v ./internal/email/...      # Requires Docker for MailHog container
+# Integration tests (build-tagged; skipped unless the services are reachable)
+SMTP_HOST=localhost go test -tags=integration -v ./internal/email/...   # needs Mailpit
 
 # Coverage
 go test -cover ./...                 # Coverage summary
@@ -167,7 +166,7 @@ conn, _ := ldap.Dial(url)
 **Testing**:
 
 - Table-driven tests preferred
-- Use testcontainers for external dependencies (LDAP, SMTP)
+- Integration tests are build-tagged `integration` and gated on env vars (e.g. `SMTP_HOST`); there is no testcontainers dependency, so they skip silently when the service is absent
 - Test files colocated with code: `validators/validate_test.go`
 - Descriptive test names: `TestPasswordValidation_RequiresMinimumLength`
 
@@ -343,7 +342,7 @@ func ResetPassword(username string) error {
 2. **Import errors**: Check `go.mod` requires correct versions
 3. **Test failures**: `go test -v ./... -run FailingTest` for verbose output
 4. **LDAP connection**: Verify `LDAP_SERVER` format and network access
-5. **Email testing**: Ensure Docker running for testcontainers (MailHog)
+5. **Email testing**: integration tests need a reachable Mailpit and `SMTP_HOST` set; without them they skip rather than fail
 6. **Rate limit testing**: Tests may fail if system time incorrect
 
 **Debugging**:
@@ -374,8 +373,7 @@ go build -gcflags="all=-N -l"
 
 ### email/
 
-- Uses testcontainers for integration tests
-- MailHog container spins up automatically in tests
+- Integration tests are behind the `integration` build tag and talk to Mailpit over SMTP + its HTTP API; nothing spins a container up for you (see `compose.yml`, `dev` profile)
 - Mock `EmailService` interface for unit tests in other packages
 - `NewService` returns `(*Service, error)` and validates templates at startup (parse + dry-run); template fields are `ResetLink`, `Token`, `BaseURL`, `Recipient`, `ExpiryMinutes`
 - **To/Cc/Bcc overrides are display-only.** `sendEmail` passes a fixed `[]string{to}` to `smtp.SendMail`, so the SMTP envelope recipient is always the reset requester — `SMTP_HEADER_OVERRIDE_BCC` does **not** add a delivery target. `buildMIMEMessage` still writes it as a real, visible `Bcc:` header line in the mail the requester receives, so an address put there gains no delivery _and_ is disclosed to the user — never configure one that must stay hidden.
