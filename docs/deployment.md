@@ -201,6 +201,40 @@ SMTP_FROM_ADDRESS=noreply@example.com
 APP_BASE_URL=https://passwd.example.com
 ```
 
+#### Email Template and Header Configuration
+
+All optional — unset values use the built-in defaults, while a misconfigured
+value (unparseable template, undefined field, invalid address or header) aborts
+startup.
+
+```bash
+# Sender display name (encoded per RFC 2047)
+SMTP_FROM_NAME=ACME IT
+
+# Reply-To address (validated at startup)
+EMAIL_REPLY_TO=helpdesk@example.com
+
+# Subject line — itself a Go template
+EMAIL_TEMPLATE_SUBJECT=[ACME] Reset your password
+
+# Body templates (Go templates read from disk at startup)
+EMAIL_TEMPLATE_HTML=/config/email/reset.html
+EMAIL_TEMPLATE_TEXT=/config/email/reset.txt
+
+# Raw header injection for routing/helpdesk integrations. One variable per
+# header; the suffix maps _ -> - (this sets "X-HelpDesk-Topic"). CR/LF is
+# rejected; MIME-Version / Content-Type / Content-Transfer-Encoding cannot be
+# overridden.
+SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC=password-reset
+```
+
+Template fields: `{{.ResetLink}}`, `{{.Token}}`, `{{.BaseURL}}`, `{{.Recipient}}`, `{{.ExpiryMinutes}}`.
+
+Delivery semantics:
+
+- `To`/`Cc`/`Bcc` overrides are **display-only**. The SMTP envelope recipient is always the reset requester, so `SMTP_HEADER_OVERRIDE_BCC` does **not** add a delivery target — nobody extra receives the mail.
+- A cross-domain `From`-header override creates a `From` vs envelope `MAIL FROM` mismatch that can break SPF/DKIM/DMARC alignment and hurt deliverability.
+
 #### Server Configuration
 
 ```bash

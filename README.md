@@ -108,6 +108,21 @@ GopherPass is configured via environment variables or command-line flags. Key se
 - `RESET_TOKEN_EXPIRY_MINUTES` - Token validity (default: 15)
 - `RESET_RATE_LIMIT_REQUESTS` - Max requests per window (default: 3)
 
+### Email Templates and Headers (optional)
+
+Unset values fall back to the built-in defaults; a misconfigured value aborts startup.
+
+- `SMTP_FROM_NAME` - Display name for the sender (encoded per RFC 2047)
+- `EMAIL_REPLY_TO` - `Reply-To` address (validated at startup)
+- `EMAIL_TEMPLATE_SUBJECT` - Subject line, itself a Go template
+- `EMAIL_TEMPLATE_HTML` - Path to a Go template for the HTML body
+- `EMAIL_TEMPLATE_TEXT` - Path to a Go template for the plain-text body
+- `SMTP_HEADER_OVERRIDE_*` - Raw header injection, one variable per header; the suffix maps `_` to `-` (`SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC` sets `X-HelpDesk-Topic`). CR/LF is rejected, and `MIME-Version` / `Content-Type` / `Content-Transfer-Encoding` cannot be overridden.
+
+Template fields: `{{.ResetLink}}`, `{{.Token}}`, `{{.BaseURL}}`, `{{.Recipient}}`, `{{.ExpiryMinutes}}`.
+
+Delivery semantics: `To`/`Cc`/`Bcc` overrides are display-only — the SMTP envelope recipient is always the reset requester, so `SMTP_HEADER_OVERRIDE_BCC` does not add a delivery target. A cross-domain `From`-header override creates a `From` vs envelope `MAIL FROM` mismatch that can break SPF/DKIM/DMARC alignment and hurt deliverability.
+
 For complete configuration options, run `./ldap-selfservice-password-changer --help`
 
 ## Password Reset Feature
