@@ -474,10 +474,10 @@ postcss               # Process Tailwind directives
 
 **Build Scripts** (`package.json`):
 
-- `pnpm build:assets` - Build both JS and CSS
-- `pnpm js:build` - TypeScript compilation + minification
-- `pnpm css:build` - Tailwind CSS compilation
-- `pnpm dev` - Watch mode with hot reload
+- `bun run build:assets` - Build both JS and CSS
+- `bun run js:build` - TypeScript compilation (`tsc`)
+- `bun run css:build` - Tailwind CSS compilation
+- `bun run dev` - Watch mode with hot reload
 
 ### Go Embed
 

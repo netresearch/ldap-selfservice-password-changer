@@ -739,11 +739,22 @@ govulncheck ./...
 
 ```bash
 # Audit dependencies
-pnpm audit
+bun audit
 
-# Fix vulnerabilities
-pnpm audit --fix
+# Fail CI on high-severity advisories only
+bun audit --audit-level=high
 ```
+
+`bun audit` has no auto-fix flag. Remediate manually:
+
+```bash
+# Direct dependency: update within the package.json range, or to the latest release
+bun update <package>
+bun update <package> --latest
+```
+
+For a vulnerable **transitive** dependency that upstream has not patched, pin it via a
+top-level `overrides` entry in `package.json`, then re-run `bun install` and `bun audit`.
 
 ### Dynamic Analysis
 

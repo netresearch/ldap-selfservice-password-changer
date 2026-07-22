@@ -195,7 +195,7 @@ func TestChangePassword_Success(t *testing.T) {
 **Setup**:
 
 ```bash
-pnpm add -D vitest @vitest/ui
+bun add -d vitest @vitest/ui
 ```
 
 **Configuration**: Create `vitest.config.ts`
@@ -383,8 +383,8 @@ func (m *mockLDAP) ChangePasswordForSAMAccountName(username, oldPass, newPass st
 **Setup**:
 
 ```bash
-pnpm add -D @playwright/test
-pnpm exec playwright install
+bun add -d @playwright/test
+bunx playwright install
 ```
 
 **Configuration**: Create `playwright.config.ts`
@@ -395,7 +395,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/e2e",
   webServer: {
-    command: "pnpm dev",
+    command: "bun run dev",
     port: 3000,
     reuseExistingServer: !process.env.CI
   },
@@ -522,13 +522,13 @@ test("error from backend displays correctly", async ({ page }) => {
 
 ```bash
 # Run all tests
-pnpm exec playwright test
+bunx playwright test
 
 # Run with UI
-pnpm exec playwright test --ui
+bunx playwright test --ui
 
 # Debug mode
-pnpm exec playwright test --debug
+bunx playwright test --debug
 ```
 
 ## Test Organization
@@ -597,51 +597,48 @@ jobs:
         with:
           go-version: "1.26"
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10.17.1
+      - uses: oven-sh/setup-bun@v2
 
       - name: Install dependencies
-        run: pnpm install
+        run: bun install --frozen-lockfile
 
       - name: Build frontend
-        run: pnpm build:assets
+        run: bun run build:assets
 
       - name: Run Go tests
         run: go test -v -cover ./...
 
       - name: Run TypeScript tests
-        run: pnpm test
+        run: bunx vitest run
 
       - name: Run E2E tests
-        run: pnpm exec playwright test
+        run: bunx playwright test
 ```
 
-### Pre-Commit Hooks
+> The repository already runs Go tests, linting, and license checks through
+> [`.github/workflows/ci.yml`](../.github/workflows/ci.yml), which delegates to the shared
+> `netresearch/.github` `go-check.yml` workflow with `setup-bun: true`. Add the frontend
+> test steps there rather than creating a competing workflow.
 
-**Tool**: Husky (already in dependencies)
+### Pre-Commit Checks
 
-**Setup**: Create `.husky/pre-commit`
+The repository does not use a Git hook framework — there is no hook manager configured, and
+`package.json` has no install-time hook script. Run the checks manually before committing:
 
 ```bash
-#!/bin/sh
-. "$(dirname "$0")/_/husky.sh"
-
-# Run tests before commit
+# Tests
 go test ./...
-pnpm test
+bunx vitest run
 
-# Run linters
-pnpm prettier --check .
+# Linters and formatting
+bunx prettier --check .
+bun run lint
 gofmt -l .
 ```
 
-**Installation**:
-
-```bash
-pnpm add -D husky
-pnpm exec husky install
-```
+The same checklist is in the root [`AGENTS.md`](../AGENTS.md). If you want it enforced
+automatically, wire it into your own local `.git/hooks/pre-commit`; nothing in the repository
+installs one for you.
 
 ## Coverage Analysis
 
@@ -671,7 +668,7 @@ open coverage.html
 **With Vitest**:
 
 ```bash
-pnpm exec vitest --coverage
+bunx vitest run --coverage
 ```
 
 **Configuration**: Update `vitest.config.ts`
