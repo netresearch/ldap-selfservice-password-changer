@@ -6,6 +6,7 @@ import (
 	"mime/multipart"
 	"mime/quotedprintable"
 	"net/textproto"
+	"time"
 )
 
 // Header field names written by the message builder, plus the MIME-Version
@@ -13,6 +14,7 @@ import (
 // "Mime-Version", which is what reservedMIMEHeader is keyed by.
 const (
 	headerFrom                    = "From"
+	headerDate                    = "Date"
 	headerTo                      = "To"
 	headerSubject                 = "Subject"
 	headerReplyTo                 = "Reply-To"
@@ -35,7 +37,7 @@ var reservedMIMEHeader = map[string]bool{
 
 // buildMIMEMessage assembles a multipart/alternative message (plain-text part
 // first, HTML part second) with quoted-printable bodies, and returns the raw
-// RFC 5322 message bytes. Header order: From, To, Subject, Reply-To, then
+// RFC 5322 message bytes. Header order: Date, From, To, Subject, Reply-To, then
 // operator overrides (applied last), then the structural MIME headers.
 func (s *Service) buildMIMEMessage(to, subject, textBody, htmlBody string) ([]byte, error) {
 	var body bytes.Buffer
@@ -51,7 +53,13 @@ func (s *Service) buildMIMEMessage(to, subject, textBody, htmlBody string) ([]by
 		return nil, fmt.Errorf("close multipart writer: %w", err)
 	}
 
+	// RFC 5322 section 3.6 makes orig-date REQUIRED and permits exactly one.
+	// Some MTAs backfill a missing Date and others do not, and spam filters
+	// score its absence, so the message carries its own. It sits with the other
+	// originator fields and before the overrides, so an operator who explicitly
+	// sets Date still wins — same as From and Reply-To.
 	fields := []headerField{
+		{key: headerDate, value: s.now().Format(time.RFC1123Z)},
 		{key: headerFrom, value: formatFrom(s.config.FromName, s.config.FromAddress)},
 		{key: headerTo, value: to},
 		{key: headerSubject, value: encodeSubject(subject)},

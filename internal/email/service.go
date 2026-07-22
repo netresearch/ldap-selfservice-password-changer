@@ -6,6 +6,7 @@ import (
 	"net/smtp"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // emailRegex is compiled once for performance.
@@ -34,6 +35,9 @@ type Config struct {
 type Service struct {
 	config   Config
 	renderer *renderer
+	// now supplies the instant written to the Date header. NewService sets it
+	// to time.Now; tests pin it to assert the exact header value.
+	now func() time.Time
 }
 
 // NewService creates an email service, loading and validating templates.
@@ -44,7 +48,7 @@ func NewService(config *Config) (*Service, error) {
 	if err != nil {
 		return nil, fmt.Errorf("initialize email templates: %w", err)
 	}
-	return &Service{config: *config, renderer: r}, nil
+	return &Service{config: *config, renderer: r, now: time.Now}, nil
 }
 
 // SendResetEmail renders and sends a password reset email with a token link.

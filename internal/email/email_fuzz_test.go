@@ -76,7 +76,7 @@ func FuzzValidateEmailAddress(f *testing.F) {
 // baseHeaderFields are the fields buildMIMEMessage always emits for a Service
 // configured with only a FromAddress (no FromName, no Reply-To). Canonical
 // casing, because header keys are compared after canonicalisation.
-var baseHeaderFields = []string{"From", "To", "Subject", "Mime-Version", "Content-Type"}
+var baseHeaderFields = []string{"Date", "From", "To", "Subject", "Mime-Version", "Content-Type"}
 
 // FuzzHeaderOverrideValidation fuzzes the operator header-override path.
 //
@@ -131,10 +131,10 @@ func FuzzHeaderOverrideValidation(f *testing.F) {
 			return
 		}
 
-		svc := &Service{config: Config{
+		svc := newClockedService(&Config{
 			FromAddress:     "noreply@acme.com",
 			HeaderOverrides: map[string]string{name: value},
-		}}
+		})
 		msg, err := svc.buildMIMEMessage(
 			"user@example.com", "Reset your password", "text body", "<p>html body</p>")
 
