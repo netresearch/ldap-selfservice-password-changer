@@ -382,20 +382,15 @@ func ParseArgs(args []string) (*Opts, error) {
 		}
 	}
 
-	// The sender address is only meaningful when reset emails are actually
-	// sent. Validate it at startup so a misconfiguration fails fast instead of
-	// producing an empty envelope sender on the first reset request.
-	if *fPasswordResetEnabled {
-		switch {
-		case *fSMTPFromAddress == "":
-			errs.Add("required options missing: smtp-from-address (SMTP_FROM_ADDRESS) " +
-				"is required when password reset is enabled")
-		case !email.ValidateEmailAddress(*fSMTPFromAddress):
-			errs.Add(fmt.Sprintf(
-				"invalid value for SMTP_FROM_ADDRESS: %q is not a valid email address",
-				*fSMTPFromAddress,
-			))
-		}
+	// A malformed sender address is a typo that would otherwise surface only on
+	// the first reset request, so reject it at startup. An *empty* one is NOT an
+	// error: it was accepted before this feature existed, and failing here would
+	// stop existing deployments from booting. main.go warns about it instead.
+	if *fSMTPFromAddress != "" && !email.ValidateEmailAddress(*fSMTPFromAddress) {
+		errs.Add(fmt.Sprintf(
+			"invalid value for SMTP_FROM_ADDRESS: %q is not a valid email address",
+			*fSMTPFromAddress,
+		))
 	}
 
 	headerOverrides := parseHeaderOverrides(os.Environ(), errs)

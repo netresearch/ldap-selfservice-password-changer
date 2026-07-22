@@ -157,6 +157,15 @@ func newHandlerWithoutResetServices(opts *options.Opts) (*rpchandler.Handler, er
 func buildRPCHandler(opts *options.Opts) (*rpchandler.Handler, error) {
 	if opts.PasswordResetEnabled {
 		slog.Info("password reset feature enabled")
+		if opts.SMTPFromAddress == "" {
+			// Not fatal: this was accepted before the email-template feature, so
+			// refusing to boot would break existing deployments. It is still
+			// broken in practice — an empty sender means MAIL FROM:<> (the null
+			// sender, reserved for bounces) and a From: header with no address.
+			slog.Warn("smtp_from_address_empty",
+				"detail", "SMTP_FROM_ADDRESS is not set; password reset emails will be sent "+
+					"with an empty sender and are likely to be rejected by the receiving MTA")
+		}
 		return newHandlerWithResetServices(opts)
 	}
 	return newHandlerWithoutResetServices(opts)

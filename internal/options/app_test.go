@@ -815,23 +815,35 @@ func TestParseArgs_InvalidFromName(t *testing.T) {
 	assert.Contains(t, err.Error(), "SMTP_FROM_NAME")
 }
 
-// TestParseArgs_SMTPFromAddress covers the sender-address requirement, which
-// only applies when the password reset feature is enabled.
+// TestParseArgs_SMTPFromAddress covers sender-address handling. A malformed
+// address is rejected at startup, but an empty one is deliberately NOT an
+// error: it was accepted before the email-template feature existed, and
+// failing here would stop existing deployments from booting. main.go logs a
+// warning for the empty case instead.
 func TestParseArgs_SMTPFromAddress(t *testing.T) {
-	t.Run("required when reset enabled", func(t *testing.T) {
+	t.Run("empty is accepted when reset enabled (pre-feature behavior)", func(t *testing.T) {
 		t.Chdir(t.TempDir())
 		t.Setenv("SMTP_FROM_ADDRESS", "")
 
-		_, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
-		require.Error(t, err)
-		assert.Contains(t, err.Error(), "smtp-from-address")
+		opts, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+		require.NoError(t, err)
+		assert.Empty(t, opts.SMTPFromAddress)
 	})
 
-	t.Run("must be a valid address when reset enabled", func(t *testing.T) {
+	t.Run("malformed is rejected when reset enabled", func(t *testing.T) {
 		t.Chdir(t.TempDir())
 		t.Setenv("SMTP_FROM_ADDRESS", "not-an-email")
 
 		_, err := ParseArgs(append(requiredArgs(), "--password-reset-enabled"))
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "invalid value for SMTP_FROM_ADDRESS")
+	})
+
+	t.Run("malformed is rejected even when reset disabled", func(t *testing.T) {
+		t.Chdir(t.TempDir())
+		t.Setenv("SMTP_FROM_ADDRESS", "not-an-email")
+
+		_, err := ParseArgs(requiredArgs())
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "invalid value for SMTP_FROM_ADDRESS")
 	})
@@ -845,7 +857,7 @@ func TestParseArgs_SMTPFromAddress(t *testing.T) {
 		assert.Equal(t, "noreply@acme.com", opts.SMTPFromAddress)
 	})
 
-	t.Run("not required when reset disabled", func(t *testing.T) {
+	t.Run("empty accepted when reset disabled", func(t *testing.T) {
 		t.Chdir(t.TempDir())
 		t.Setenv("SMTP_FROM_ADDRESS", "")
 
