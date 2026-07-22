@@ -50,8 +50,7 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 ### Prerequisites
 
 - **Go** 1.26 or higher
-- **Node.js** 24.x or higher
-- **pnpm** 10.18 or higher (install via `corepack enable`)
+- **Bun** (no version pinned; CI installs the latest — see [installation guide](https://bun.sh/docs/installation))
 - **Git** for version control
 - **Docker** (optional, for testing with LDAP)
 
@@ -67,7 +66,7 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 2. **Install dependencies**:
 
    ```bash
-   pnpm install
+   bun install
    ```
 
 3. **Configure environment**:
@@ -80,7 +79,7 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 4. **Start development server**:
 
    ```bash
-   pnpm dev
+   bun run dev
    ```
 
 5. **Verify setup**:
@@ -345,13 +344,13 @@ func TestPasswordReset_Integration(t *testing.T) {
 
    ```bash
    gofmt -w .
-   pnpm prettier --write .
+   bunx prettier --write .
    ```
 
 3. **Build assets**:
 
    ```bash
-   pnpm build:assets
+   bun run build:assets
    ```
 
 4. **Update documentation** if needed:

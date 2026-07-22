@@ -38,9 +38,13 @@ Source: `package.json` scripts + `go test`. Run from repo root.
 | Lint TS                 | `bun run lint` (or `bun run lint:fix`)                                                                  |
 | Lint Go                 | CI runs via `golangci/golangci-lint-action`. Locally: install `golangci-lint` then `golangci-lint run`. |
 
-**Toolchain install**: Bun and Go are installed separately (no `packageManager`/`engines` pins in `package.json`). `air` is declared as a bun script dep; `golangci-lint` is not — install via `go install` or your package manager.
+**Toolchain install**: Bun and Go are installed separately (no `packageManager`/`engines` pins in `package.json`). Neither `air` nor `golangci-lint` is a bun dependency — `bun run dev` invokes `air` as a bare command, so install both yourself (`go install github.com/air-verse/air@latest`, and `golangci-lint` via `go install` or your package manager).
+
+**Git hooks**: `make hooks` copies `githooks/pre-commit` and `githooks/commit-msg` into `.git/hooks/`. Husky is no longer used.
 
 **Docker-first**: `docker compose --profile dev up` is the canonical dev path; native Bun/Go is optional convenience.
+
+**Running it locally**: full runbook in [docs/development-guide.md](docs/development-guide.md). The `Dockerfile` is a binary-selector (`COPY bin/…-linux-<arch>`), so `docker compose --build` — including the `dev`/`test` profiles — fails on a clean checkout until you build binaries into `bin/` first.
 
 ## Workflow
 
@@ -119,5 +123,5 @@ Pipeline (see [.github/workflows/release.yml](.github/workflows/release.yml)):
 1. Scoped `AGENTS.md` for the area → code in `internal/` → [docs/](docs/).
 2. Similar patterns: search git history / existing tests.
 3. `go test -v ./...` surfaces many problems.
-4. Docker weirdness: `docker compose down -v && docker compose --profile dev up --build`.
+4. Docker weirdness: `docker compose down -v && docker compose --profile dev up --build`. If the build dies on `COPY bin/…: lstat /bin: no such file or directory`, that's the binary-selector — see [docs/development-guide.md](docs/development-guide.md).
 5. Env config: `.env.local` vs `.env.local.example`.

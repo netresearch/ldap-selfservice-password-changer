@@ -7,8 +7,7 @@ Progressive learning path for new developers joining the LDAP Selfservice Passwo
 Before starting, ensure you have:
 
 - [ ] Go 1.24+ installed (`go version`)
-- [ ] Node.js v16+ installed (`node --version`)
-- [ ] pnpm installed via Corepack (`corepack enable`)
+- [ ] Bun installed (`bun --version`) — package manager and JavaScript runtime for the frontend build
 - [ ] Git configured with your credentials
 - [ ] Access to LDAP/AD test server (or credentials for development)
 - [ ] Code editor with Go and TypeScript support
@@ -32,9 +31,9 @@ Before starting, ensure you have:
 ### Afternoon: Setup Development Environment
 
 - [ ] Clone repository: `git clone https://github.com/netresearch/ldap-selfservice-password-changer.git`
-- [ ] Install dependencies: `pnpm install`
-- [ ] Create `.env.local` with LDAP credentials (see [Development Guide](development-guide.md#4-configure-ldap-connection))
-- [ ] Build project: `pnpm build`
+- [ ] Install dependencies: `bun install`
+- [ ] Create `.env.local` with LDAP credentials (see [Development Guide](development-guide.md#3-configure-ldap-connection))
+- [ ] Build project: `bun run build`
 - [ ] Verify build output: `./ldap-selfservice-password-changer --help`
 
 **Success Criteria**:
@@ -45,7 +44,7 @@ Before starting, ensure you have:
 
 ### End of Day: First Run
 
-- [ ] Start development server: `pnpm dev`
+- [ ] Start development server: `bun run dev`
 - [ ] Open http://localhost:3000 in browser
 - [ ] Inspect form fields (username, current, new, new2)
 - [ ] Try password reveal toggle
@@ -216,7 +215,7 @@ Options (pick one):
 - [ ] Make changes following project conventions
 - [ ] Write tests for your changes
 - [ ] Run all tests: `go test ./...`
-- [ ] Format code: `pnpm prettier --write .` and `gofmt -w .`
+- [ ] Format code: `bunx prettier --write .` and `gofmt -w .`
 - [ ] Commit with conventional message: `feat: add password strength indicator`
 
 ### End of Day: Code Review
@@ -265,7 +264,7 @@ Options (pick one):
 #### E2E Testing
 
 - [ ] Read [Testing Guide: E2E Testing](testing-guide.md#end-to-end-testing)
-- [ ] Set up Playwright: `pnpm add -D @playwright/test`
+- [ ] Set up Playwright: `bun add -d @playwright/test`
 - [ ] Write first E2E test for password change flow
 - [ ] Run tests in headless mode
 - [ ] Debug with Playwright inspector
@@ -374,7 +373,7 @@ Can you trace the complete flow?
 2. [Architecture Patterns: Build and Deployment](architecture-patterns.md#build-and-deployment-patterns)
 3. [API Reference: Security Considerations](api-reference.md#security-considerations)
 
-**Key Files**: `Dockerfile`, `.env`, `pnpm scripts`
+**Key Files**: `Dockerfile`, `.env`, `package.json` scripts (run with `bun run <script>`)
 
 ### QA Engineer
 

@@ -69,9 +69,9 @@ Related to #
 
 - [ ] Code follows the project's style guidelines
 - [ ] golangci-lint passes (`golangci-lint run`)
-- [ ] ESLint passes (if frontend changes) (`pnpm lint`)
-- [ ] Prettier formatting applied (`pnpm prettier --write .`)
-- [ ] TypeScript type checks pass (if applicable) (`pnpm js:build`)
+- [ ] ESLint passes (if frontend changes) (`bun run lint`)
+- [ ] Prettier formatting applied (`bunx prettier --write .`)
+- [ ] TypeScript type checks pass (if applicable) (`bun run js:build`)
 - [ ] No new compiler warnings
 - [ ] No `TODO` comments for core functionality
 

@@ -31,7 +31,7 @@ Note: HTTP handlers, middleware, and server setup are in `main.go` at the projec
 
 ## Setup/Environment
 
-**Prerequisites**: Bun 1.1+ (install separately; `package.json` does not pin `packageManager` or `engines`). Node.js only needed for tooling that doesn't run under Bun.
+**Prerequisites**: Bun, no version pinned — `package.json` sets neither `packageManager` nor `engines`, and CI installs the latest. Install it separately. Node.js only needed for tooling that doesn't run under Bun.
 
 ```bash
 # From project root

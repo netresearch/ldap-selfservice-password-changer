@@ -5,15 +5,26 @@
 ### Required Tools
 
 - **Go**: 1.26+ (tested with 1.26.0)
-- **Node.js**: 24+ (tested with 24)
-- **pnpm**: 10.18.0+ (installed via Corepack)
+- **Bun**: no version pinned; CI installs the latest — runs the TypeScript and Tailwind toolchain
 - **Git**: For version control
+
+Bun and Go are installed **separately**, each with its own installer or package
+manager. `package.json` carries no `packageManager` or `engines` pin, so there is
+no shim or bootstrapper to enable first — install Bun, then run `bun install`.
+
+### Optional Tools
+
+- **Docker** + Compose: for the local OpenLDAP + Mailpit stack (see
+  [Running the Full Stack Locally](#running-the-full-stack-locally))
+- **air**: Go hot-reload used by `bun run dev`. Not a bun dependency — install it
+  yourself: `go install github.com/air-verse/air@latest`
+- **golangci-lint**: Go linting (CI runs it regardless)
 
 ### System Requirements
 
 - Linux, macOS, or Windows with WSL2
 - 2GB RAM minimum (4GB recommended)
-- LDAP/ActiveDirectory server for testing
+- LDAP/ActiveDirectory server for testing (or the Compose dev stack)
 
 ## Initial Setup
 
@@ -24,30 +35,27 @@ git clone https://github.com/netresearch/ldap-selfservice-password-changer.git
 cd ldap-selfservice-password-changer
 ```
 
-### 2. Enable Corepack
+### 2. Install Dependencies
 
 ```bash
-corepack enable
-```
-
-This ensures pnpm version matches package.json specification (10.18.0).
-
-### 3. Install Dependencies
-
-```bash
-pnpm install
+bun install
 ```
 
 **What this does**:
 
-- Installs TypeScript compiler
-- Installs Tailwind CSS and PostCSS tools
-- Installs development tools (nodemon, concurrently, prettier)
-- Downloads frontend dependencies (listed in package.json)
+- Installs the TypeScript compiler
+- Installs Tailwind CSS and the PostCSS CLI
+- Installs the linting and formatting tools (ESLint, Prettier + plugins)
 
 **Go dependencies** are handled automatically by Go modules.
 
-### 4. Configure LDAP Connection
+For a one-shot setup that also installs the git hooks:
+
+```bash
+make setup   # bun install + go mod download + git hooks
+```
+
+### 3. Configure LDAP Connection
 
 Create `.env.local` file:
 
@@ -80,10 +88,10 @@ PASSWORD_CAN_INCLUDE_USERNAME="false"
 - `.env` contains defaults (committed, no sensitive data)
 - Command-line flags override environment variables
 
-### 5. Verify Setup
+### 4. Verify Setup
 
 ```bash
-pnpm build
+bun run build
 ./ldap-selfservice-password-changer --help
 ```
 
@@ -96,24 +104,25 @@ pnpm build
 **Command**:
 
 ```bash
-pnpm dev
+bun run dev
 ```
 
 **What happens**:
 
-1. Builds initial assets (TypeScript + CSS)
+1. Builds initial assets (`bun run build:assets` — TypeScript + CSS)
 2. Starts three concurrent watchers:
    - **TypeScript watcher**: `tsc -w` (rebuilds on .ts changes)
    - **CSS watcher**: `postcss -w` (rebuilds on .css changes)
-   - **Go watcher**: `nodemon` (restarts server on any file change)
+   - **Go watcher**: `air` (rebuilds and restarts the server on any file change)
 
 **Output Example**:
 
 ```
-[js]  15:32:41 - Starting compilation in watch mode...
-[css] Rebuilding...
-[go]  [nodemon] starting `pnpm go:start`
-[go]  Server listening on :3000
+15:32:41 - Starting compilation in watch mode...
+Rebuilding...
+building...
+running...
+Server listening on :3000
 ```
 
 **File Change Behavior**:
@@ -134,15 +143,16 @@ pnpm dev
 **Command**:
 
 ```bash
-pnpm build
+bun run build
 ```
 
 **Steps**:
 
-1. Compile TypeScript to JavaScript
-2. Minify JavaScript with UglifyJS
-3. Build CSS with PostCSS + Tailwind + CSSnano
-4. Compile Go binary with all assets embedded
+1. Compile TypeScript to JavaScript (`tsc`)
+2. Build CSS with PostCSS + Tailwind
+3. Compile the Go binary with all assets embedded
+
+There is no separate minification step — no minifier is configured.
 
 **Output**: `./ldap-selfservice-password-changer` executable
 
@@ -162,11 +172,11 @@ pnpm build
 #### TypeScript Only
 
 ```bash
-# Development (with source maps)
-pnpm js:dev
+# Watch mode
+bun run js:dev
 
-# Production (minified)
-pnpm js:build
+# One-shot compile (doubles as the type check)
+bun run js:build
 ```
 
 **Output**: `internal/web/static/js/app.js`, `internal/web/static/js/validators.js`
@@ -174,24 +184,33 @@ pnpm js:build
 #### CSS Only
 
 ```bash
-# Development (with watch)
-pnpm css:dev
+# Watch mode
+bun run css:dev
 
-# Production (minified)
-pnpm css:build
+# One-shot build
+bun run css:build
 ```
 
 **Output**: `internal/web/static/styles.css`
 
+#### Both at Once
+
+```bash
+bun run build:assets
+```
+
 #### Go Only
 
 ```bash
-# Run without rebuild
-pnpm go:start
+# Run from source
+go run .
 
 # Build binary
-pnpm go:build
+go build
 ```
+
+The `bun run start` and `bun run build` scripts wrap these and rebuild the
+embedded assets first — prefer them unless the assets are already current.
 
 **Output**: `./ldap-selfservice-password-changer`
 
@@ -221,11 +240,13 @@ ok      github.com/netresearch/ldap-selfservice-password-changer/internal/valida
 
 ```bash
 # Format all files
-pnpm prettier --write .
+bunx prettier --write .
 
 # Check formatting without changes
-pnpm prettier --check .
+bunx prettier --check .
 ```
+
+`make format` and `make format-check` wrap these.
 
 **Files Formatted**:
 
@@ -285,7 +306,7 @@ golangci-lint run --fix
 - **Performance**: perfsprint, prealloc
 - **Complexity**: gocyclo (max 15), dupl
 
-**Pre-commit**: Runs automatically via Husky (`.husky/pre-commit`)
+**Pre-commit**: Runs automatically via the repo's git hook (`githooks/pre-commit`)
 
 #### TypeScript/JavaScript Linting (ESLint)
 
@@ -293,10 +314,10 @@ golangci-lint run --fix
 
 ```bash
 # Check for issues
-pnpm lint
+bun run lint
 
 # Auto-fix issues
-pnpm lint:fix
+bun run lint:fix
 ```
 
 **Configuration**: `eslint.config.js` - Modern flat config with:
@@ -308,7 +329,7 @@ pnpm lint:fix
 
 **Known Issues**: ~60 existing linting issues identified for gradual cleanup
 
-**Pre-commit**: Runs automatically via Husky (warnings only for now)
+**Pre-commit**: Runs automatically via the repo's git hook (warnings only for now)
 
 #### Code Coverage
 
@@ -328,15 +349,21 @@ go tool cover -html=coverage.out
 
 #### Pre-commit Hooks
 
-The project uses Husky for automatic quality checks before commits:
+The hooks live in `githooks/` and are copied into `.git/hooks/` — there is no
+hook manager and no `postinstall` step, so a fresh clone has no hooks until you
+install them:
 
-**What runs automatically**:
+```bash
+make hooks   # cp githooks/* .git/hooks/ && chmod +x …
+```
 
-1. ✅ Prettier formatting check
-2. ✅ TypeScript type checking
-3. ⚠️ ESLint (warning mode)
-4. ⚠️ golangci-lint --fast (warning mode)
-5. ✅ Go tests
+**What `githooks/pre-commit` runs**:
+
+1. ✅ `bunx prettier --check .` (blocking)
+2. ✅ `bun run js:build` — TypeScript type check (blocking)
+3. ⚠️ `bun run lint` — ESLint (warning only)
+4. ⚠️ `golangci-lint run` if installed, else `go vet ./...` (vet is blocking)
+5. ✅ `go test -short ./...` (blocking)
 
 **Bypassing checks** (emergency only):
 
@@ -344,10 +371,15 @@ The project uses Husky for automatic quality checks before commits:
 git commit --no-verify -m "emergency fix"
 ```
 
-**Updating hooks**:
+**Updating hooks**: re-run `make hooks` after `githooks/` changes — the copies in
+`.git/hooks/` do not update themselves.
+
+#### Dependency Auditing
 
 ```bash
-pnpm prepare  # Reinstalls Husky hooks
+bun audit                        # all advisories
+bun audit --audit-level=high     # high and critical only
+bun audit --json                 # machine-readable
 ```
 
 ## Project Structure
@@ -380,8 +412,13 @@ ldap-selfservice-password-changer/
 │       │       └── *.js.map         # Source maps (dev only)
 │       └── tailwind.css             # CSS entry point
 │
-├── scripts/
-│   └── minify.js                    # JavaScript minification
+├── dev/                             # Local Compose dev stack fixtures
+│   ├── seed.ldif                    # Seeded OpenLDAP users
+│   └── setup-acl.sh                 # Self-service + reset ACLs
+│
+├── githooks/                        # Git hooks (installed via `make hooks`)
+│   ├── pre-commit
+│   └── commit-msg
 │
 ├── docs/                            # Documentation
 │   ├── architecture.md
@@ -398,13 +435,16 @@ ldap-selfservice-password-changer/
 ├── .env.local                       # Local overrides (gitignored)
 ├── go.mod                           # Go dependencies
 ├── go.sum                           # Go dependency checksums
-├── package.json                     # Node.js dependencies
-├── pnpm-lock.yaml                   # pnpm lock file
+├── package.json                     # Frontend toolchain dependencies
+├── bun.lock                         # Bun lock file
 ├── tsconfig.json                    # TypeScript configuration
 ├── postcss.config.js                # PostCSS configuration
+├── .air.toml                        # air (Go hot-reload) configuration
 ├── .prettierrc.mjs                  # Prettier configuration
 ├── .prettierignore                  # Prettier ignore patterns
-├── Dockerfile                       # Multi-stage Docker build
+├── Makefile                         # Task shortcuts
+├── compose.yml                      # Local dev/test stack (OpenLDAP, Mailpit, app)
+├── Dockerfile                       # Binary-selector image build
 └── README.md                        # Project README
 ```
 
@@ -607,20 +647,140 @@ type Opts = {
 };
 ```
 
+## Running the Full Stack Locally
+
+For review and manual testing you want the whole thing: the app plus a seeded
+OpenLDAP directory plus an SMTP sink that catches reset mail. The `dev` Compose
+profile provides that.
+
+### The Dockerfile Is a Binary-Selector
+
+Read this before running `docker build` or `docker compose --build`.
+
+The production `Dockerfile` does **no** `go build` and **no** `bun install`. It
+`COPY`s pre-built binaries out of `bin/` — produced by the release CI's
+cross-compile matrix — and picks the right one per `TARGETARCH`. From a clean
+checkout `bin/` is empty, so the build fails with:
+
+```
+COPY bin/ldap-selfservice-password-changer-linux-* /tmp/: lstat /bin: no such file or directory
+```
+
+That is not a broken Dockerfile. It means you have to build the binary yourself
+first — which is exactly what Route A does.
+
+Two ways to get a running instance. Prefer **Route A**: everything sits on the
+Compose network, so the app can reach Mailpit's internal SMTP.
+
+### Route A: Build the Binary, Then Compose (recommended)
+
+The frontend assets are embedded via `go:embed`, so build the assets _before_ the
+Go binary. Cross-compile into the exact filename the Dockerfile expects
+(`bin/<repo>-linux-<arch>`):
+
+```bash
+ARCH=$(go env GOARCH)                       # amd64 on WSL2/x86_64
+bun install --frozen-lockfile
+bun run build:assets                        # writes internal/web/static/{styles.css,js/*.js}
+CGO_ENABLED=0 GOOS=linux GOARCH=$ARCH go build -trimpath \
+  -ldflags="-w -s -X main.version=vX.Y.Z-rc -X main.build=$(git rev-parse --short HEAD)" \
+  -o bin/ldap-selfservice-password-changer-linux-$ARCH .
+
+# Pick non-default host ports to avoid collisions; the app container listens on 3000.
+APP_PORT=3140 MAILPIT_WEB_PORT=8125 docker compose --profile dev up --build -d
+```
+
+The `dev` profile brings up `openldap` → `openldap-init` (seeds users, exits 0) →
+`mailpit` → `app`.
+
+- App: `http://localhost:3140` (change password) and `/forgot-password`
+- Mailpit (catches reset emails): `http://localhost:8125`
+- Health: `curl -s -o /dev/null -w '%{http_code}' http://localhost:3140/health/live` → `200`
+
+**Container names are fixed** (`gopherpass-openldap`, `gopherpass-mailpit`,
+`gopherpass-app`) and therefore _not_ project-scoped, so a stale container from an
+earlier run collides. Clear them and retry:
+
+```bash
+docker rm -f gopherpass-openldap gopherpass-mailpit gopherpass-app
+```
+
+### Route B: Native Binary Against Compose Infra
+
+Only if you don't want to rebuild the image. Note that Mailpit's SMTP port (1025)
+is **internal-only** — it is deliberately not host-mapped — so a natively running
+app **cannot send reset mail**. Use Route A if you need to exercise the reset
+email. LDAP (389) and the Mailpit web UI _are_ host-mapped. The command below sets
+no `MAILPIT_WEB_PORT`, so compose falls back to the default
+(`"${MAILPIT_WEB_PORT:-8025}:8025"`) and the UI is on `http://localhost:8025`.
+Prefix the command with `MAILPIT_WEB_PORT=<port>` to move it (Route A uses 8125).
+
+```bash
+docker compose up -d openldap openldap-init mailpit
+# Assets are go:embed'd, so build them before `go run .` (a clean checkout
+# otherwise fails with "pattern *.css: no matching files found").
+bun install --frozen-lockfile
+bun run build:assets
+go run . -ldap-server ldap://127.0.0.1:389 -base-dn dc=netresearch,dc=local \
+  -readonly-user cn=admin,dc=netresearch,dc=local -readonly-password admin -port 39443
+```
+
+### Seeded Users (`dev/seed.ldif`)
+
+The stack's password policy is ≥10 chars with 1 number, 1 symbol, 1 uppercase and
+1 lowercase.
+
+| uid                             | mail                         | password         |
+| ------------------------------- | ---------------------------- | ---------------- |
+| `jdoe`                          | john.doe@netresearch.local   | `password`       |
+| `jsmith`                        | jane.smith@netresearch.local | `password`       |
+| `password-reset` (service acct) | —                            | `reset-password` |
+
+### Driving a Reset by Username
+
+This exercises `RESET_IDENTIFIER_MODE`. Set it to `both` via `.env.local` in the
+worktree (Compose loads `.env.local` _after_ the inline environment, so it wins)
+and recreate `app`. Then submit a **username** and confirm Mailpit received mail
+addressed to the account's **registered** address, not the typed identifier:
+
+```bash
+printf 'RESET_IDENTIFIER_MODE=both\n' >> .env.local  # append — never clobber an existing .env.local
+APP_PORT=3140 MAILPIT_WEB_PORT=8125 docker compose --profile dev up -d --force-recreate app
+curl -s -X DELETE http://localhost:8125/api/v1/messages
+curl -s -X POST http://localhost:3140/api/rpc -H 'Content-Type: application/json' \
+  -d '{"method":"request-password-reset","params":["jdoe"]}'
+curl -s http://localhost:8125/api/v1/messages | \
+  python3 -c "import json,sys;[print(m['To'][0]['Address'],'|',m['Subject']) for m in json.load(sys.stdin)['messages']]"
+# → john.doe@netresearch.local | Password Reset Request   (NOT "jdoe")
+```
+
+### Teardown
+
+```bash
+docker compose --profile dev down -v      # or: docker rm -f gopherpass-{app,mailpit,openldap}
+```
+
+`make docker-up` / `make docker-down` wrap the plain up/down for the `dev`
+profile; `make docker-logs` tails them.
+
 ## Docker Development
 
-### Build Docker Image
+### Build the Image
+
+`docker build` consumes pre-built binaries from `bin/` — see
+[The Dockerfile Is a Binary-Selector](#the-dockerfile-is-a-binary-selector) above
+for why, and build them first:
 
 ```bash
 docker build -t ldap-password-changer .
 ```
 
-**Build Process**:
+**Build process**:
 
-1. Frontend build (Node.js 22)
-2. Backend build (Go 1.26-alpine)
-3. Tests run (build fails if tests fail)
-4. Runtime image (Alpine 3)
+1. `binary-selector` stage (Alpine): picks `bin/…-linux-<arch>` for the target arch
+2. Runtime stage: `scratch` — the binary plus the CA bundle, running as UID 65534
+
+`make build-docker` wraps this.
 
 ### Run Docker Container
 
@@ -675,13 +835,11 @@ docker run \
 
 ### Build Failures
 
-**Error**: `pnpm: command not found`
+**Error**: `bun: command not found`
 
-**Solution**: Enable Corepack
-
-```bash
-corepack enable
-```
+**Solution**: Bun is installed separately — there is no bootstrapper in this repo.
+Install it from [bun.com/docs/installation](https://bun.com/docs/installation) and
+make sure `~/.bun/bin` is on your `PATH`.
 
 **Error**: `go: module not found`
 
@@ -691,15 +849,29 @@ corepack enable
 go mod download
 ```
 
+**Error**: `pattern *.css: no matching files found`
+
+**Solution**: The frontend assets are embedded via `go:embed`, so they must exist
+before the Go build. Run `bun run build:assets` first (or use `bun run build`,
+which does it for you).
+
+**Error**: `COPY bin/… lstat /bin: no such file or directory` during
+`docker build` / `docker compose --build`
+
+**Solution**: Expected on a clean checkout — the Dockerfile only selects
+pre-built binaries. See
+[The Dockerfile Is a Binary-Selector](#the-dockerfile-is-a-binary-selector).
+
 ### Hot Reload Not Working
 
 **Issue**: Changes not reflected after file modification
 
 **Solutions**:
 
-1. Check nodemon is watching correct files (package.json:19)
-2. Verify file permissions (ensure files are writable)
-3. Restart development server: Ctrl+C, then `pnpm dev`
+1. Verify `air` is installed and on `PATH` (`go install github.com/air-verse/air@latest`)
+2. Check `air` is watching the right paths (`.air.toml`)
+3. Verify file permissions (ensure files are writable)
+4. Restart development server: Ctrl+C, then `bun run dev`
 
 ### TypeScript Errors
 
@@ -715,15 +887,16 @@ go mod download
 
 ### Development Mode
 
-- **Disable minification**: Already disabled in dev mode
-- **Use source maps**: Automatically generated (tsconfig.json:12)
-- **Skip tests**: Not run in dev mode (only during build)
+- **Use source maps**: Automatically generated (tsconfig.json)
+- **Skip tests**: Not run in dev mode (the pre-commit hook and CI run them)
+- **Rebuild only what changed**: `bun run js:build` or `bun run css:build` instead
+  of the full `bun run build:assets`
 
 ### Production Build
 
-- **Enable minification**: `pnpm js:minify` (package.json:14)
-- **Enable CSS optimization**: CSSnano active (postcss.config.js)
-- **Static build**: CGO_ENABLED=0 for portable binary (Dockerfile:24)
+- **Static binary**: `CGO_ENABLED=0` for a portable, scratch-image-compatible
+  binary — see the Route A build command above
+- **Strip debug info**: `-trimpath -ldflags="-w -s"`, as the release build does
 
 ## Related Documentation
 

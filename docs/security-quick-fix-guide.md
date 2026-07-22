@@ -372,7 +372,7 @@ go test -v ./internal/validators -run TestLDAP
 ### 2. Build
 
 ```bash
-pnpm build
+bun run build
 # Expected: No errors
 ```
 
@@ -433,7 +433,7 @@ See docs/security-assessment-2025-10-09.md for full details"
 
 ### Build & Deploy
 
-- [ ] `pnpm build` succeeds
+- [ ] `bun run build` succeeds
 - [ ] `go test ./...` passes
 - [ ] Manual testing with curl commands successful
 - [ ] Changes committed with security commit message
