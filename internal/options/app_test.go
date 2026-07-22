@@ -3,6 +3,7 @@ package options
 
 import (
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -683,5 +684,93 @@ func TestParseArgsResetIdentifierMode(t *testing.T) {
 		configErr, ok := errors.AsType[*ConfigError](err)
 		require.True(t, ok, "error should be *ConfigError")
 		assert.Contains(t, configErr.Error(), "invalid value for reset-identifier-mode")
+	})
+}
+
+func requiredArgs() []string {
+	return []string{
+		"--ldap-server", "ldaps://ldap.example.com",
+		"--base-dn", "dc=example,dc=com",
+		"--readonly-user", "cn=ro,dc=example,dc=com",
+		"--readonly-password", "secret",
+	}
+}
+
+func TestParseArgs_EmailTemplateOptions(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	t.Setenv("SMTP_FROM_NAME", "ACME IT")
+	t.Setenv("EMAIL_REPLY_TO", "help@acme.com")
+	t.Setenv("EMAIL_TEMPLATE_SUBJECT", "[ACME] Reset")
+	t.Setenv("EMAIL_TEMPLATE_HTML", "/config/reset.html")
+	t.Setenv("EMAIL_TEMPLATE_TEXT", "/config/reset.txt")
+
+	opts, err := ParseArgs(requiredArgs())
+	if err != nil {
+		t.Fatalf("ParseArgs: %v", err)
+	}
+	if opts.SMTPFromName != "ACME IT" {
+		t.Errorf("SMTPFromName = %q", opts.SMTPFromName)
+	}
+	if opts.EmailReplyTo != "help@acme.com" {
+		t.Errorf("EmailReplyTo = %q", opts.EmailReplyTo)
+	}
+	if opts.EmailTemplateSubject != "[ACME] Reset" {
+		t.Errorf("EmailTemplateSubject = %q", opts.EmailTemplateSubject)
+	}
+	if opts.EmailTemplateHTML != "/config/reset.html" || opts.EmailTemplateText != "/config/reset.txt" {
+		t.Errorf("template paths = %q / %q", opts.EmailTemplateHTML, opts.EmailTemplateText)
+	}
+}
+
+func TestParseArgs_InvalidReplyTo(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	t.Setenv("EMAIL_REPLY_TO", "not-an-email")
+	_, err := ParseArgs(requiredArgs())
+	if err == nil || !strings.Contains(err.Error(), "EMAIL_REPLY_TO") {
+		t.Fatalf("expected EMAIL_REPLY_TO validation error, got %v", err)
+	}
+}
+
+func TestParseArgs_HeaderOverrides(t *testing.T) {
+	// Run from a temp dir so no .env is loaded from the repo.
+	t.Chdir(t.TempDir())
+
+	t.Setenv("SMTP_HEADER_OVERRIDE_X_HELPDESK_TOPIC", "password-reset")
+	t.Setenv("SMTP_HEADER_OVERRIDE_LIST_UNSUBSCRIBE", "<mailto:unsub@acme.com>")
+
+	opts, err := ParseArgs(requiredArgs())
+	if err != nil {
+		t.Fatalf("ParseArgs: %v", err)
+	}
+	if opts.SMTPHeaderOverrides["X-HELPDESK-TOPIC"] != "password-reset" {
+		t.Errorf("override map = %#v", opts.SMTPHeaderOverrides)
+	}
+	if opts.SMTPHeaderOverrides["LIST-UNSUBSCRIBE"] != "<mailto:unsub@acme.com>" {
+		t.Errorf("override map = %#v", opts.SMTPHeaderOverrides)
+	}
+}
+
+func TestParseArgs_HeaderOverrideRejectsCRLFAndReserved(t *testing.T) {
+	t.Run("crlf", func(t *testing.T) {
+		// Run from a temp dir so no .env is loaded from the repo.
+		t.Chdir(t.TempDir())
+
+		t.Setenv("SMTP_HEADER_OVERRIDE_X_EVIL", "a\r\nInjected: yes")
+		if _, err := ParseArgs(requiredArgs()); err == nil {
+			t.Fatal("expected CRLF rejection")
+		}
+	})
+	t.Run("reserved", func(t *testing.T) {
+		// Run from a temp dir so no .env is loaded from the repo.
+		t.Chdir(t.TempDir())
+
+		t.Setenv("SMTP_HEADER_OVERRIDE_CONTENT_TYPE", "text/plain")
+		if _, err := ParseArgs(requiredArgs()); err == nil {
+			t.Fatal("expected reserved-header rejection")
+		}
 	})
 }
