@@ -255,14 +255,26 @@ func TestIsLDAPEncrypted(t *testing.T) {
 }
 
 // TestBuildEmailConfig verifies that options are mapped to the email config.
+// Every field of email.Config gets a distinct sentinel value so a crossed
+// mapping (e.g. TemplateHTMLPath fed from EmailTemplateText) fails here.
 func TestBuildEmailConfig(t *testing.T) {
 	opts := &options.Opts{
-		SMTPHost:        "smtp.example.com",
-		SMTPPort:        587,
-		SMTPUsername:    "user",
-		SMTPPassword:    "pass",
-		SMTPFromAddress: "noreply@example.com",
-		AppBaseURL:      "https://example.com",
+		SMTPHost:                "smtp.example.com",
+		SMTPPort:                587,
+		SMTPUsername:            "user",
+		SMTPPassword:            "pass",
+		SMTPFromAddress:         "noreply@example.com",
+		SMTPFromName:            "Sentinel From Name",
+		EmailReplyTo:            "sentinel-replyto@example.com",
+		AppBaseURL:              "https://example.com",
+		ResetTokenExpiryMinutes: 42,
+		EmailTemplateSubject:    "Sentinel subject {{.Recipient}}",
+		EmailTemplateHTML:       "/sentinel-html.html",
+		EmailTemplateText:       "/sentinel-text.txt",
+		SMTPHeaderOverrides: map[string]string{
+			"X-Helpdesk-Topic":  "sentinel-topic",
+			"X-Sentinel-Tenant": "sentinel-tenant",
+		},
 	}
 	got := buildEmailConfig(opts)
 	assert.Equal(t, "smtp.example.com", got.SMTPHost)
@@ -270,7 +282,17 @@ func TestBuildEmailConfig(t *testing.T) {
 	assert.Equal(t, "user", got.SMTPUsername)
 	assert.Equal(t, "pass", got.SMTPPassword)
 	assert.Equal(t, "noreply@example.com", got.FromAddress)
+	assert.Equal(t, "Sentinel From Name", got.FromName)
+	assert.Equal(t, "sentinel-replyto@example.com", got.ReplyTo)
 	assert.Equal(t, "https://example.com", got.BaseURL)
+	assert.Equal(t, uint(42), got.ExpiryMinutes)
+	assert.Equal(t, "Sentinel subject {{.Recipient}}", got.SubjectTemplate)
+	assert.Equal(t, "/sentinel-html.html", got.TemplateHTMLPath)
+	assert.Equal(t, "/sentinel-text.txt", got.TemplateTextPath)
+	assert.Equal(t, map[string]string{
+		"X-Helpdesk-Topic":  "sentinel-topic",
+		"X-Sentinel-Tenant": "sentinel-tenant",
+	}, got.HeaderOverrides)
 }
 
 // TestResetRateLimitSettings verifies the rate limit setting extraction.
