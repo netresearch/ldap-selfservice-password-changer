@@ -114,7 +114,7 @@ LDAP Selfservice Password Changer provides:
 | Web Framework | Fiber          | v2.52+  |
 | Frontend      | TypeScript     | 5.9+    |
 | CSS           | Tailwind CSS   | v4.1+   |
-| Build         | pnpm           | 10.18+  |
+| Build         | Bun            | 1.3+    |
 | Testing       | testcontainers | Latest  |
 
 ---
@@ -160,13 +160,13 @@ git clone https://github.com/netresearch/ldap-selfservice-password-changer.git
 cd ldap-selfservice-password-changer
 
 # 2. Install dependencies
-pnpm install
+bun install
 
 # 3. Copy environment template
 cp .env.local.example .env.local
 
 # 4. Start development server with hot reload
-pnpm dev
+bun run dev
 ```
 
 Server runs on `http://localhost:3000` (default)
@@ -181,7 +181,7 @@ docker pull ghcr.io/netresearch/ldap-selfservice-password-changer:latest
 docker run -p 3000:3000 --env-file .env ldap-selfservice-password-changer
 
 # Or build from source
-pnpm build
+bun run build:assets
 go build -o ldap-selfservice-password-changer
 ./ldap-selfservice-password-changer
 ```

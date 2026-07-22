@@ -287,11 +287,11 @@ git log --oneline main..origin/main | grep -i security
 
 # Update dependencies
 go get -u all
-pnpm update
+bun update
 
 # Run security scans
 gosec ./...
-pnpm audit
+bun audit
 ```
 
 ---
@@ -316,11 +316,19 @@ gosec ./...
 
 ```bash
 # Audit dependencies
-pnpm audit
+bun audit
 
-# Fix vulnerabilities
-pnpm audit --fix
+# Only fail on high/critical advisories
+bun audit --audit-level=high
+
+# Resolve findings by updating within the declared ranges, then re-audit
+bun update
+bun audit
 ```
+
+`bun audit` has no `--fix` flag. If an advisory needs a version outside the range in
+`package.json`, bump that range explicitly (`bun add <pkg>@<version>`) or pin the fixed
+transitive version via the top-level `overrides` block in `package.json`.
 
 **Container Scanning**:
 

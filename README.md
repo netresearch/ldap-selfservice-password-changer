@@ -57,8 +57,7 @@ Access at `http://localhost:3000`
 **Prerequisites:**
 
 - Go 1.26+
-- Node.js 24+
-- Corepack (`npm i -g corepack`)
+- Bun 1.3+ (see [installation guide](https://bun.sh/docs/installation))
 
 ```bash
 # Clone and build
@@ -67,9 +66,8 @@ Access at `http://localhost:3000`
 [![managed by netresearch/.github templates](https://img.shields.io/badge/template-netresearch%2F.github-2F99A4?logo=github)](https://github.com/netresearch/.github/tree/main/templates/go-app)
 git clone https://github.com/netresearch/ldap-selfservice-password-changer
 cd ldap-selfservice-password-changer
-corepack enable
-pnpm install
-pnpm build
+bun install
+bun run build
 
 # Configure (create .env.local or use flags)
 cp .env.local.example .env.local
@@ -226,14 +224,13 @@ docker compose --profile dev up
 ### Native Development
 
 ```bash
-corepack enable
-pnpm install
+bun install
 cp .env.local.example .env.local
 
 # Edit .env.local with your settings
 
 # Run with hot-reload
-pnpm dev
+bun run dev
 ```
 
 ## Project Background
