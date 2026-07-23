@@ -58,7 +58,10 @@ Source: `package.json` scripts + `go test`. Run from repo root.
 - **No secrets in git.** Use `.env.local` (gitignored). Never commit LDAP/SMTP credentials.
 - **LDAPS required** in production (`ldaps://` URLs).
 - **No PII logging** — passwords, tokens, session IDs never reach logs.
-- **Rate limiting** 3 req/hour/IP (configurable via `RATE_LIMIT_*`).
+- **Rate limiting** — two separate in-memory limiters, don't conflate them:
+  - **Per-IP**: 10 requests / 60 minutes, max 1000 tracked IPs. **Hardcoded** in `internal/ratelimit/ip_limiter.go` (`NewLimiterWithCapacity(10, 60*time.Minute, 1000)`); no environment variable configures it. Applies to `change-password` and `request-password-reset`.
+  - **Per-identifier (reset only)**: `RESET_RATE_LIMIT_REQUESTS` (default 3) per `RESET_RATE_LIMIT_WINDOW_MINUTES` (default 60), keyed by the typed identifier and again by the resolved account — not by IP.
+  - There is no `RATE_LIMIT_*` variable prefix.
 - **Cryptographic random tokens** with configurable expiry; single-use, server-side.
 - **Strict input validation** at boundaries — see `internal/validators/`.
 - **Container runs as UID 65534** (nobody), not root.

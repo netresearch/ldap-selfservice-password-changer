@@ -261,11 +261,14 @@ const form = document.querySelector("#form");
 
 ### Test Coverage Goals
 
-- **Validators**: 100% (maintain)
-- **RateLimit**: 70%+ (current: 72.3%)
-- **ResetToken**: 70%+ (current: 71.7%)
-- **RPC**: 50%+ (current: 45.6%)
-- **Email**: 30%+ (current: 31.2%)
+The coverage gate is enforced by Codecov; its project and patch targets live in
+the repository's Codecov configuration, which is the authority for the numbers.
+Current per-package coverage is on the
+[Codecov dashboard](https://codecov.io/gh/netresearch/ldap-selfservice-password-changer),
+and `go test -cover ./...` prints it locally.
+
+Per-package percentages are deliberately not restated here. They used to be, and
+every one of them had drifted from reality by the time anyone read them.
 
 ### Running Tests
 
@@ -310,14 +313,18 @@ func TestValidateMinLength(t *testing.T) {
 }
 ```
 
-**Integration Tests** (use testcontainers):
+**Integration Tests** — guarded by the `integration` build tag and driven by
+environment variables pointing at real services. There is no testcontainers
+dependency; the services come from `docker compose --profile test up`, and
+`make test-integration` runs `go test -v -race -tags=integration ./...`. A test
+whose variables are unset skips rather than fails.
 
 ```go
-func TestPasswordReset_Integration(t *testing.T) {
-    // Start LDAP container
-    ctx := context.Background()
-    ldapContainer, err := openldap.Run(ctx, "bitnami/openldap:latest")
-    // ... test with real LDAP server
+//go:build integration
+
+func TestIntegration_NewHandler(t *testing.T) {
+    ldapServer := getEnvOrSkip(t, "LDAP_SERVER")
+    // ... test against that server
 }
 ```
 

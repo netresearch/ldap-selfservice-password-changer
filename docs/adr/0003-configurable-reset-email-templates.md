@@ -53,7 +53,9 @@ A single global `GOPHERPASS_*` prefix for every variable in the application was 
 
 Header configuration is split into two layers with different ownership of correctness:
 
-**Structured and validated** — `SMTP_FROM_NAME`, `EMAIL_REPLY_TO`. The application owns correctness: the display name is quoted or RFC 2047 encoded-word encoded as needed via `net/mail`, and the reply address is checked with `ValidateEmailAddress`.
+**Structured and validated** — `SMTP_FROM_NAME`, `EMAIL_REPLY_TO`. The application owns correctness: the display name is quoted or RFC 2047 encoded-word encoded as needed via `net/mail`, and the reply address is checked with `ValidateConfiguredAddress`.
+
+`ValidateConfiguredAddress` is `mail.ParseAddress`, deliberately more permissive than the recipient-side `ValidateEmailAddress` regex. That regex demands a dotted TLD, which rejects `noreply@localhost`, `gopherpass@intranet` and IP-literal domains — senders a containerised app relaying through a local MTA uses routinely, and which booted on every previous release. Recipient addresses keep the strict regex: they derive from directory data rather than operator config, so narrowing what is accepted there limits attack surface instead of breaking a working deployment.
 
 **Raw verbatim escape hatch** — `SMTP_HEADER_OVERRIDE_<NAME>=value`, env-only, built by scanning `os.Environ()` during `ParseArgs`, with `_` in the suffix mapped to `-` in the field name. The value is used exactly as given, with no encoding or quoting. The operator owns correctness; the application enforces only structural integrity.
 
@@ -63,7 +65,7 @@ The escape hatch exists because routing headers are open-ended. A structured API
 
 `MIME-Version`, `Content-Type` and `Content-Transfer-Encoding` cannot be set through `SMTP_HEADER_OVERRIDE_*`.
 
-The message builder owns these and appends them **after** overrides are applied. Permitting an override would emit a second, conflicting copy and corrupt the multipart structure — a message whose declared boundary no longer matches the body it wraps.
+The message builder owns these: `MIME-Version` and `Content-Type` are appended **after** overrides are applied, and `Content-Transfer-Encoding` is written per MIME part. Permitting an override would emit a second, conflicting copy and corrupt the multipart structure — a message whose declared boundary no longer matches the body it wraps.
 
 This is enforced in **both** layers, by design:
 
@@ -78,7 +80,7 @@ Without this, a header value is a header injection vector: a raw CR or LF lets a
 
 This validation lives in the `internal/email` package and runs over the **override map** in the message builder, not only at config-parse time. Overrides reach the builder from more than one direction, so the package that writes the wire format re-checks the values it was handed rather than trusting the options layer.
 
-The builder's own `From:`, `To:` and `Reply-To:` fields do not pass through `ValidateHeaderValue`. They are constrained where they are produced instead: `EMAIL_REPLY_TO` and the recipient address are matched against the anchored `emailRegex`, and `SMTP_FROM_NAME` is both checked in `ParseArgs` and emitted through `mail.Address.String()`, which quotes or RFC 2047-encodes what it is given.
+The builder's own `From:`, `To:` and `Reply-To:` fields do not pass through `ValidateHeaderValue`. They are constrained where they are produced instead: the recipient address is matched against the anchored `emailRegex` in `SendResetEmail`, `SMTP_FROM_ADDRESS` and `EMAIL_REPLY_TO` are parsed with `ValidateConfiguredAddress` in `ParseArgs`, and `SMTP_FROM_NAME` is both checked with `ValidateHeaderValue` in `ParseArgs` and emitted through `mail.Address.String()`, which quotes or RFC 2047-encodes what it is given.
 
 ### 7. Envelope Sender and Delivery Semantics
 
@@ -94,8 +96,8 @@ A cross-domain `From:` header override can break SPF, DKIM and DMARC alignment. 
 
 The two validation layers have different reach, which is worth stating exactly:
 
-- **Unconditional**, in `ParseArgs`: an invalid `EMAIL_REPLY_TO`, an invalid `SMTP_FROM_NAME`, a malformed non-empty `SMTP_FROM_ADDRESS`, an invalid override field name, a control character in an override value, or an override naming a reserved structural header aborts boot with a non-zero exit, whatever `PASSWORD_RESET_ENABLED` is set to.
-- **Only when password reset is enabled**: template resolution, parsing and the dry run happen inside `NewService`, which `buildRPCHandler` constructs only for `PASSWORD_RESET_ENABLED=true`. So a missing template file, a parse error or an undefined field aborts boot only in that case; with the feature off, a broken `EMAIL_TEMPLATE_*` path is never read and the process starts normally.
+- **Unconditional**, in `ParseArgs`: an invalid `SMTP_FROM_NAME`, an invalid override field name, a control character in an override value, or an override naming a reserved structural header aborts boot with a non-zero exit, whatever `PASSWORD_RESET_ENABLED` is set to.
+- **Only when password reset is enabled**: the two address checks — a malformed non-empty `SMTP_FROM_ADDRESS` and an invalid `EMAIL_REPLY_TO` — sit inside `if *fPasswordResetEnabled` in `ParseArgs`. Template resolution, parsing and the dry run happen inside `NewService`, which `buildRPCHandler` constructs only for `PASSWORD_RESET_ENABLED=true`. So a malformed sender or Reply-To, a missing template file, a parse error or an undefined field aborts boot only in that case; with the feature off, neither address is used and a broken `EMAIL_TEMPLATE_*` path is never read, so the process starts normally.
 
 Fallback to embedded defaults applies only to an **unset** template, never to a **broken** one. Silently serving the default in place of a template the operator explicitly configured would hide the misconfiguration behind mail that still appears to work.
 
@@ -149,7 +151,7 @@ type resetEmailData struct {
 
 2. **`Bcc:` is not private**: an override sets a header on the message the requester receives. The name suggests otherwise, and this is documented rather than blocked.
 
-3. **Larger configuration surface**: six new variables plus an open-ended prefix scan, each a place a deployment can get it wrong.
+3. **Larger configuration surface**: five new variables plus an open-ended prefix scan, each a place a deployment can get it wrong.
 
 4. **Empty `SMTP_FROM_ADDRESS` still boots**: the warning-not-error exception above preserves upgrade compatibility at the cost of one misconfiguration that reaches runtime.
 

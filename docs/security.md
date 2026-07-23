@@ -102,10 +102,10 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 **Mitigations**:
 
 - Always return success response regardless of identifier validity
-- Rate limiting prevents mass enumeration (3 requests/hour per IP)
+- Rate limiting prevents mass enumeration: 10 requests/hour per IP, plus 3 requests/hour per typed identifier (`RESET_RATE_LIMIT_REQUESTS`)
 - No timing differences between valid/invalid identifiers
 
-**Residual Risk**: Medium - rate limiting can be circumvented with distributed IPs
+**Residual Risk**: Medium - the per-identifier limit does not slow enumeration across many different identifiers, and the per-IP limit can be circumvented with distributed IPs or by spoofing `X-Forwarded-For` when the application is reachable without a header-overwriting proxy
 
 **Detection**: Monitor for:
 
@@ -121,8 +121,8 @@ Time to guess: 2^256 / 1000 ≈ 10^73 years
 
 **Mitigations**:
 
-- Rate limiting per IP address (3 requests/hour for reset)
-- Reverse proxy rate limiting (recommended 10 req/sec globally)
+- Rate limiting per IP address: 10 requests/hour, on both the change and reset endpoints
+- Reverse proxy rate limiting (recommended 10 req/sec globally) — the only rate limit that is tunable without a rebuild
 - Lightweight Go application with low resource footprint
 - Stateless design enables horizontal scaling
 
@@ -370,20 +370,30 @@ export const isValidEmail = (email: string): string => {
 
 ```go
 type Limiter struct {
-    maxRequests int           // 3 (default)
-    window      time.Duration // 1 hour (default)
-    requests    map[string][]time.Time // IP -> timestamps
-    mu          sync.RWMutex
+    mu             sync.RWMutex
+    entries        map[string]*Entry // identifier -> recent timestamps
+    maxRequests    int               // Maximum requests allowed in window
+    window         time.Duration     // Time window for rate limiting
+    maxIdentifiers int               // Capacity limit on tracked identifiers
 }
 
-func (l *Limiter) Allow(ip string) bool {
+func (l *Limiter) AllowRequest(identifier string) bool {
     // Sliding window algorithm
     // Remove expired requests
-    // Check if under limit
+    // Check if under limit; fail closed when at capacity
 }
 ```
 
-**Configuration**:
+`Limiter` is key-agnostic — the caller decides what `identifier` means. Two
+instances are created, with different keys and different configurability:
+
+| Limiter                             | Key                                               | Limit                     | Endpoints                                   | Configurable                                                         |
+| ----------------------------------- | ------------------------------------------------- | ------------------------- | ------------------------------------------- | -------------------------------------------------------------------- |
+| `ratelimit.NewIPLimiter()`          | client IP from `extractClientIP`                  | 10 / 60 min, max 1000 IPs | `change-password`, `request-password-reset` | **No** — hardcoded in `internal/ratelimit/ip_limiter.go`             |
+| `ratelimit.NewLimiter(...)` (reset) | `typed:<input>` and `account:<resolved username>` | 3 / 60 min (defaults)     | `request-password-reset`                    | Yes — `RESET_RATE_LIMIT_REQUESTS`, `RESET_RATE_LIMIT_WINDOW_MINUTES` |
+
+**Configuration** (per-identifier reset limiter only — there is no
+`RATE_LIMIT_*` prefix and no variable for the per-IP limiter):
 
 ```bash
 RESET_RATE_LIMIT_REQUESTS=3
@@ -392,11 +402,10 @@ RESET_RATE_LIMIT_WINDOW_MINUTES=60
 
 **Properties**:
 
-- ✅ Per-IP rate limiting
 - ✅ Sliding window algorithm (more accurate than fixed window)
 - ✅ Automatic cleanup of expired entries
 - ✅ Thread-safe concurrent access
-- ✅ Memory-bounded (old entries cleaned)
+- ✅ Memory-bounded (capacity limit plus cleanup of old entries)
 
 **Effectiveness**:
 
@@ -406,8 +415,10 @@ RESET_RATE_LIMIT_WINDOW_MINUTES=60
 
 **Limitations**:
 
-- IP-based (can be circumvented with proxies/VPNs)
+- The per-IP key is derived from `X-Forwarded-For`/`X-Real-IP` with no trusted-proxy allow-list, so it can be spoofed unless a reverse proxy overwrites those headers
+- IP-based limits can be circumvented with proxies/VPNs
 - Shared IP (NAT) may affect legitimate users
+- The per-IP limit cannot be tuned without a rebuild
 - Recommend: Combine with reverse proxy rate limiting
 
 ### Transport Security
@@ -450,13 +461,15 @@ SMTP_PASSWORD=secret
 - ✅ Rotate credentials regularly
 - ✅ Use secret managers in production (Vault, AWS Secrets Manager)
 
-**Docker Secrets** (Swarm/Kubernetes):
-
-```yaml
-environment: LDAP_READONLY_PASSWORD_FILE=/run/secrets/ldap_password
-secrets:
-  - ldap_password
-```
+**Secrets are read from environment variables or CLI flags only.** In
+`internal/options/app.go` each environment variable supplies the default of a
+`flag.FlagSet` entry, so a passed flag wins over the environment; no `*_FILE`
+variant exists either way, so a
+file-mounted secret (Docker Swarm `/run/secrets/...`) cannot be consumed
+directly. A `..._FILE` variable configures nothing — for the optional
+`LDAP_RESET_PASSWORD` and `SMTP_PASSWORD` it fails silently and leaves the
+credential empty. In Kubernetes, inject secrets as environment variables with
+`secretKeyRef`. See [deployment.md](deployment.md) for the details.
 
 **Logging Safety**:
 
