@@ -1,14 +1,14 @@
 <!doctype html>
 <html lang="en" class="page-html">
   <head>
-    <title>GopherPass — Self-service password change & reset</title>
+    <title>{{ .branding.PageTitle }}</title>
     {{ template "html-head" }} {{ template "theme-init-script" }} {{ template "density-init-script" }}
     <link rel="modulepreload" href="/static/js/app.js" crossorigin="anonymous" />
   </head>
 
   <body class="page-body">
     <div class="page-card">
-      {{ template "page-header" }}
+      {{ template "page-header" .branding }}
 
       <main role="main">
         {{ template "page-title" (slice "Change Your Password" "" "Password Change Form") }}
@@ -53,7 +53,7 @@
         {{ end }}
       </main>
 
-      {{ template "page-footer" }} {{ template "toggle-buttons" }}
+      {{ template "page-footer" .branding }} {{ template "toggle-buttons" }}
     </div>
 
     <!-- Configuration via data attributes for CSP compliance -->

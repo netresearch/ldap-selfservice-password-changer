@@ -208,7 +208,12 @@ func logLDAPSecurityStatus(opts *options.Opts) {
 // buildApp builds a Fiber app with middleware preconfigured for this service.
 // Routes are not registered here; use registerCorePages (and optionally
 // registerResetPages when the reset feature is enabled) for that.
-func buildApp() *fiber.App {
+//
+// The whole Opts is taken rather than just the branding directory so that the
+// only production call site cannot drift from what the tests exercise: a
+// change that stopped forwarding the configured directory would have to happen
+// inside this function, where TestBuildApp_BrandingOverlayIsServed sees it.
+func buildApp(opts *options.Opts) (*fiber.App, error) {
 	app := fiber.New(fiber.Config{
 		AppName:      "netresearch/ldap-selfservice-password-changer",
 		BodyLimit:    defaultBodyLimit,
@@ -230,12 +235,17 @@ func buildApp() *fiber.App {
 		PermissionPolicy:      "geolocation=(), microphone=(), camera=()",
 	}))
 
+	assets, err := webstatic.NewOverlay(opts.Branding.Dir)
+	if err != nil {
+		return nil, fmt.Errorf("branding assets: %w", err)
+	}
+
 	app.Use("/static", static.New("", static.Config{
-		FS:     webstatic.Static,
+		FS:     assets,
 		MaxAge: staticCacheMaxAgeSeconds,
 	}))
 
-	return app
+	return app, nil
 }
 
 // rpcHandleFunc is the minimal surface of *rpchandler.Handler used by
@@ -298,7 +308,11 @@ func buildServer(opts *options.Opts) (*fiber.App, error) {
 		return nil, fmt.Errorf("render index page: %w", err)
 	}
 
-	app := buildApp()
+	app, err := buildApp(opts)
+	if err != nil {
+		return nil, err
+	}
+
 	registerCorePages(app, index, rpcHandler.Handle)
 
 	if opts.PasswordResetEnabled {

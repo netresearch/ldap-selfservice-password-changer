@@ -74,6 +74,11 @@ const (
 // optsKey is the template data key exposing configuration options.
 const optsKey = "opts"
 
+// brandingKey is the template data key exposing the branding configuration.
+// The header, footer and page title templates are invoked with this value
+// directly rather than the whole data map, so they stay usable in isolation.
+const brandingKey = "branding"
+
 // InputOpts holds configuration for rendering HTML input fields with validation and accessibility attributes.
 type InputOpts struct {
 	Name         string
@@ -131,6 +136,21 @@ func parseCommonTemplates(tpl *template.Template) error {
 	return nil
 }
 
+// brandingFor returns the branding to render with.
+//
+// An Opts assembled by hand rather than by options.ParseArgs carries a zero
+// Branding, which would render an empty <title> and an unnamed logo. Falling
+// back to the stock configuration keeps such a caller from producing a broken
+// page. NewBranding always derives a non-empty PageTitle, so an empty one is a
+// reliable marker that the value never went through it.
+func brandingFor(opts *options.Opts) options.Branding {
+	if opts.Branding.PageTitle == "" {
+		return options.DefaultBranding()
+	}
+
+	return opts.Branding
+}
+
 // renderTemplate renders a template with common setup logic.
 func renderTemplate(templateName, rawTemplate string, data any) ([]byte, error) {
 	funcs := template.FuncMap{
@@ -162,7 +182,8 @@ func renderTemplate(templateName, rawTemplate string, data any) ([]byte, error) 
 // RenderIndex renders the main password change page with the provided configuration options.
 func RenderIndex(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
-		optsKey: opts,
+		optsKey:     opts,
+		brandingKey: brandingFor(opts),
 	}
 	return renderTemplate("index", rawIndex, data)
 }
@@ -170,7 +191,8 @@ func RenderIndex(opts *options.Opts) ([]byte, error) {
 // RenderForgotPassword renders the password reset request page with the provided configuration options.
 func RenderForgotPassword(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
-		optsKey: opts,
+		optsKey:     opts,
+		brandingKey: brandingFor(opts),
 	}
 	return renderTemplate("forgot-password", rawForgotPassword, data)
 }
@@ -178,7 +200,8 @@ func RenderForgotPassword(opts *options.Opts) ([]byte, error) {
 // RenderResetPassword renders the password reset completion page with the provided configuration options.
 func RenderResetPassword(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
-		optsKey: opts,
+		optsKey:     opts,
+		brandingKey: brandingFor(opts),
 	}
 	return renderTemplate("reset-password", rawResetPassword, data)
 }

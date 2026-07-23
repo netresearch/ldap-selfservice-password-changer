@@ -127,6 +127,48 @@ and changing it requires a code change. Both limiters hold state in memory
 only, so a restart clears them and a multi-instance deployment limits per
 instance rather than globally.
 
+### Branding (optional)
+
+Every value is optional and the defaults reproduce the stock appearance, so an existing deployment looks unchanged after upgrading.
+
+- `BRANDING_PRODUCT_NAME` - Wordmark next to the logo (default: `GopherPass`)
+- `BRANDING_PAGE_TITLE` - Browser tab title of the start page (default: derived from the product name)
+- `BRANDING_LOGO_ALT` - Alternative text for the logo (default: empty, see below)
+- `BRANDING_SHOW_ATTRIBUTION` - Show the "Built by Netresearch" footer line (default: `true`)
+- `BRANDING_DIR` - Directory whose files replace the built-in assets
+
+**Replacing assets.** Mount a directory and drop in only the files you want to change:
+
+```bash
+docker run -v /srv/branding:/branding:ro -e BRANDING_DIR=/branding ...
+```
+
+| File                                                                                                                                                                                       | Purpose                                |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------- |
+| `logo.webp`                                                                                                                                                                                | Logo in the page header                |
+| `logo-dark.webp`                                                                                                                                                                           | Optional dark-mode variant — see below |
+| `favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png`, `android-chrome-192x192.png`, `android-chrome-512x512.png`, `mstile-150x150.png`, `safari-pinned-tab.svg` | Browser and home-screen icons          |
+| `site.webmanifest`                                                                                                                                                                         | Installed-app name and colours         |
+| `browserconfig.xml`                                                                                                                                                                        | Windows tile — see the caveat below    |
+
+Anything else in the directory **aborts startup** rather than being ignored, so a typo surfaces immediately. `styles.css` and `js/` are deliberately not replaceable: overriding them would let a deployment silently break the accessibility guarantees the templates rely on. Files must be regular files of at most 2 MiB, and must not be symbolic links pointing outside the directory. Assets you do not supply keep their built-in version.
+
+The directory must be **owned by the operator and not writable by anything less privileged** — mount it read-only, as above. A file placed there is served publicly and unauthenticated under `/static/`.
+
+The page's `theme-color` and `msapplication-TileColor` are set by `<meta>` tags in the template and take precedence over the manifest for the document itself; `browserconfig.xml` is not referenced by any page at all. Overriding `site.webmanifest` therefore affects the installed-app entry, not the browser chrome, and overriding `browserconfig.xml` currently has no effect. The manifest's `name` is also not derived from `BRANDING_PRODUCT_NAME` — a rebrand has to repeat it in the file.
+
+Kubernetes ConfigMap and Secret volumes work: entries whose name begins with a dot (`..data` and the timestamped directory kubelet creates) are skipped rather than rejected.
+
+**Logo shape and size.** The header renders the logo in a square box with `object-contain`, so a wide wordmark is letterboxed rather than stretched, but it will be small. A roughly square asset around 256×256 gives the best result. Both variants are downloaded on every page load — keep them well under the 2 MiB ceiling.
+
+**Dark mode.** The app has a light/dark switch, and a dark corporate logo disappears on a dark background. Supply `logo-dark.webp` and it is shown in dark mode. The switch is class-based, so the variant follows the in-page toggle rather than only the operating-system setting. Note that dark mode requires JavaScript; without it the light logo is always shown. If you remove `logo-dark.webp` from a running deployment the light logo is served in its place, so the page never shows a broken image — but adding one needs a restart, since the pages are rendered at startup.
+
+**Accessibility.** The logo is decorative (`alt=""`) as long as the wordmark beside it carries the name; setting `BRANDING_LOGO_ALT` as well is accepted, but the alt text is ignored while a wordmark is shown, because screen readers would otherwise announce the name twice. If you clear `BRANDING_PRODUCT_NAME` to show only a logo, you **must** set `BRANDING_LOGO_ALT` — otherwise the header consists of a decorative image alone and the brand reaches sighted users only. That combination aborts startup.
+
+The footer link keeps the name **GopherPass** even on a rebranded deployment: it points at the upstream project, not at your installation.
+
+Hiding the attribution is permitted — the MIT licence does not require it in the UI. The licence and copyright notice in the source still apply.
+
 ### Email Templates and Headers (optional)
 
 Unset values fall back to the built-in defaults. A bad header name or value, or a `SMTP_FROM_NAME` containing control characters, aborts startup unconditionally. A bad address (`SMTP_FROM_ADDRESS`, `EMAIL_REPLY_TO`) or a bad template (missing file, parse error, undefined field) aborts startup only when password reset is enabled, since neither is used otherwise. Addresses are checked with the RFC parser, so internal senders such as `noreply@localhost` are accepted.
