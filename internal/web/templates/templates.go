@@ -74,6 +74,11 @@ const (
 // optsKey is the template data key exposing configuration options.
 const optsKey = "opts"
 
+// brandingKey is the template data key exposing the branding configuration.
+// The header, footer and page title templates are invoked with this value
+// directly rather than the whole data map, so they stay usable in isolation.
+const brandingKey = "branding"
+
 // InputOpts holds configuration for rendering HTML input fields with validation and accessibility attributes.
 type InputOpts struct {
 	Name         string
@@ -162,7 +167,8 @@ func renderTemplate(templateName, rawTemplate string, data any) ([]byte, error) 
 // RenderIndex renders the main password change page with the provided configuration options.
 func RenderIndex(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
-		optsKey: opts,
+		optsKey:     opts,
+		brandingKey: opts.Branding.Normalized(),
 	}
 	return renderTemplate("index", rawIndex, data)
 }
@@ -170,7 +176,8 @@ func RenderIndex(opts *options.Opts) ([]byte, error) {
 // RenderForgotPassword renders the password reset request page with the provided configuration options.
 func RenderForgotPassword(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
-		optsKey: opts,
+		optsKey:     opts,
+		brandingKey: opts.Branding.Normalized(),
 	}
 	return renderTemplate("forgot-password", rawForgotPassword, data)
 }
@@ -178,7 +185,8 @@ func RenderForgotPassword(opts *options.Opts) ([]byte, error) {
 // RenderResetPassword renders the password reset completion page with the provided configuration options.
 func RenderResetPassword(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
-		optsKey: opts,
+		optsKey:     opts,
+		brandingKey: opts.Branding.Normalized(),
 	}
 	return renderTemplate("reset-password", rawResetPassword, data)
 }

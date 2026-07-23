@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -412,7 +413,7 @@ func TestLogLDAPSecurityStatusDoesNotPanic(t *testing.T) {
 // security middleware hooked up — a GET / on /static path returns a 404
 // because no routes are registered yet.
 func TestBuildApp(t *testing.T) {
-	app := buildApp()
+	app := buildApp("")
 	require.NotNil(t, app)
 
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/static/missing.txt", http.NoBody)
@@ -427,10 +428,39 @@ func TestBuildApp(t *testing.T) {
 	assert.NotEmpty(t, resp.Header.Get("Content-Security-Policy"))
 }
 
+// TestBuildApp_BrandingOverlayIsServed exercises the overlay through the real
+// Fiber static middleware rather than through fs.FS directly: the middleware
+// decides what path it hands to Open, so serving an overridden asset is the
+// only proof the layering actually takes effect over HTTP.
+func TestBuildApp_BrandingOverlayIsServed(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "logo.webp"), []byte("custom-logo-bytes"), 0o600))
+
+	app := buildApp(dir)
+
+	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/static/logo.webp", http.NoBody)
+	resp, err := app.Test(req)
+	require.NoError(t, err)
+	defer func() { _ = resp.Body.Close() }()
+
+	require.Equal(t, http.StatusOK, resp.StatusCode)
+	body, err := io.ReadAll(resp.Body)
+	require.NoError(t, err)
+	assert.Equal(t, "custom-logo-bytes", string(body), "the overlay file should win over the embedded logo")
+
+	// An asset the overlay does not provide must still come from the embedded FS.
+	req = httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/static/favicon.ico", http.NoBody)
+	fallback, err := app.Test(req)
+	require.NoError(t, err)
+	defer func() { _ = fallback.Body.Close() }()
+
+	assert.Equal(t, http.StatusOK, fallback.StatusCode, "unoverridden assets must fall back to the embedded FS")
+}
+
 // TestRegisterCorePages verifies the real registerCorePages function wires
 // up the / , /api/rpc and /health/live routes and serves them correctly.
 func TestRegisterCorePages(t *testing.T) {
-	app := buildApp()
+	app := buildApp("")
 
 	indexBytes := []byte("<html>hi</html>")
 	// Provide a tiny RPC handler stand-in to exercise the POST /api/rpc route.
@@ -576,7 +606,7 @@ func TestNewHandlerWithResetServicesEmailInitError(t *testing.T) {
 
 // TestRegisterResetPages verifies the reset pages render and respond correctly.
 func TestRegisterResetPages(t *testing.T) {
-	app := buildApp()
+	app := buildApp("")
 	opts := validPasswordResetOpts(t)
 
 	err := registerResetPages(app, opts)

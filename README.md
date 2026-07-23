@@ -127,6 +127,37 @@ and changing it requires a code change. Both limiters hold state in memory
 only, so a restart clears them and a multi-instance deployment limits per
 instance rather than globally.
 
+### Branding (optional)
+
+Every value is optional and the defaults reproduce the stock appearance, so an existing deployment looks unchanged after upgrading.
+
+- `BRANDING_PRODUCT_NAME` - Wordmark next to the logo (default: `GopherPass`)
+- `BRANDING_PAGE_TITLE` - Browser tab title of the start page (default: derived from the product name)
+- `BRANDING_LOGO_ALT` - Alternative text for the logo (default: empty, see below)
+- `BRANDING_SHOW_ATTRIBUTION` - Show the "Built by Netresearch" footer line (default: `true`)
+- `BRANDING_DIR` - Directory whose files replace the built-in assets
+
+**Replacing assets.** Mount a directory and drop in only the files you want to change:
+
+```bash
+docker run -v /srv/branding:/branding:ro -e BRANDING_DIR=/branding ...
+```
+
+| File                                                                                                                                                                                       | Purpose                                     |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ------------------------------------------- |
+| `logo.webp`                                                                                                                                                                                | Logo in the page header                     |
+| `logo-dark.webp`                                                                                                                                                                           | Optional dark-mode variant — see below      |
+| `favicon.ico`, `favicon-16x16.png`, `favicon-32x32.png`, `apple-touch-icon.png`, `android-chrome-192x192.png`, `android-chrome-512x512.png`, `mstile-150x150.png`, `safari-pinned-tab.svg` | Browser and home-screen icons               |
+| `site.webmanifest`, `browserconfig.xml`                                                                                                                                                    | PWA name, theme colour, Windows tile colour |
+
+Anything else in the directory **aborts startup** rather than being ignored, so a typo surfaces immediately. `styles.css` and `js/` are deliberately not replaceable: overriding them would let a deployment silently break the accessibility guarantees the templates rely on. Files must be regular files of at most 2 MiB. Assets you do not supply keep their built-in version.
+
+**Dark mode.** The app has a light/dark switch, and a dark corporate logo disappears on a dark background. Supply `logo-dark.webp` and it is shown in dark mode. The switch is class-based, so the variant follows the in-page toggle rather than only the operating-system setting.
+
+**Accessibility.** The logo is decorative (`alt=""`) as long as the wordmark beside it carries the name — that is why `BRANDING_LOGO_ALT` is empty by default; setting both would make screen readers announce the name twice. If you clear `BRANDING_PRODUCT_NAME` to show only a logo, you **must** set `BRANDING_LOGO_ALT`, otherwise the page has no accessible name at all. That combination aborts startup.
+
+Hiding the attribution is permitted — the MIT licence does not require it in the UI. The licence and copyright notice in the source still apply.
+
 ### Email Templates and Headers (optional)
 
 Unset values fall back to the built-in defaults. A bad header name or value, or a `SMTP_FROM_NAME` containing control characters, aborts startup unconditionally. A bad address (`SMTP_FROM_ADDRESS`, `EMAIL_REPLY_TO`) or a bad template (missing file, parse error, undefined field) aborts startup only when password reset is enabled, since neither is used otherwise. Addresses are checked with the RFC parser, so internal senders such as `noreply@localhost` are accepted.

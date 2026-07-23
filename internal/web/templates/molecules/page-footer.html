@@ -1,4 +1,8 @@
 {{ define "page-footer" }}
+{{/* The footer carries nothing but the attribution, so hiding it omits the
+whole element: an empty contentinfo landmark would be announced by screen
+readers as a region containing nothing. */}}
+{{ if .ShowAttribution }}
 <footer role="contentinfo" class="pt-8 border-t border-gray-200 dark:border-gray-700">
   <p class="flex items-center justify-center gap-1 comfortable:text-sm compact:text-xs text-gray-500 dark:text-gray-400">
     <span>Built by {{ template "link" (slice "https://www.netresearch.de/" "Netresearch DTT GmbH") }} —</span>
@@ -12,4 +16,5 @@
     </a>
   </p>
 </footer>
+{{ end }}
 {{ end }}

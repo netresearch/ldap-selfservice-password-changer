@@ -72,6 +72,9 @@ type Opts struct {
 	EmailTemplateSubject string
 	SMTPHeaderOverrides  map[string]string
 
+	// Branding customisation. The zero value reproduces the stock appearance.
+	Branding Branding
+
 	// Optional dedicated service account for password reset operations
 	// If not set, falls back to ReadonlyUser for backward compatibility
 	ResetUser     string
@@ -105,6 +108,21 @@ func checkRequired(name string, value *string, missing *[]string) {
 
 func envStringOrDefault(name, d string) string {
 	if v, exists := os.LookupEnv(name); exists && v != "" {
+		return v
+	}
+
+	return d
+}
+
+// envStringAllowEmpty is envStringOrDefault for variables where an explicitly
+// empty value is a meaningful setting rather than "unset".
+//
+// BRANDING_PRODUCT_NAME needs this: clearing the wordmark to show a logo alone
+// is a supported configuration, and the usual helper would silently restore
+// the default. Container deployments have only environment variables, so
+// falling back to the command-line flag is not an answer.
+func envStringAllowEmpty(name, d string) string {
+	if v, exists := os.LookupEnv(name); exists {
 		return v
 	}
 
@@ -344,6 +362,36 @@ func ParseArgs(args []string) (*Opts, error) {
 			"Subject line template (Go template). Empty uses \"Password Reset Request\".",
 		)
 
+		// Branding. Every value is optional; unset ones reproduce the stock
+		// appearance, so an existing deployment looks unchanged after upgrade.
+		fBrandingDir = fs.String(
+			"branding-dir",
+			envStringOrDefault("BRANDING_DIR", ""),
+			"Directory whose files override the built-in static assets (logo, favicons, manifest). "+
+				"Empty serves only the embedded assets.",
+		)
+		fBrandingProductName = fs.String(
+			"branding-product-name",
+			envStringAllowEmpty("BRANDING_PRODUCT_NAME", DefaultProductName),
+			"Product name shown next to the logo. Empty hides the wordmark and then requires branding-logo-alt.",
+		)
+		fBrandingPageTitle = fs.String(
+			"branding-page-title",
+			envStringOrDefault("BRANDING_PAGE_TITLE", ""),
+			"Browser tab title. Empty derives it from branding-product-name.",
+		)
+		fBrandingLogoAlt = fs.String(
+			"branding-logo-alt",
+			envStringOrDefault("BRANDING_LOGO_ALT", ""),
+			"Alternative text for the logo. Leave empty while a wordmark is shown: the logo is then "+
+				"decorative and a screen reader would otherwise announce the name twice.",
+		)
+		fBrandingShowAttribution = fs.Bool(
+			"branding-show-attribution",
+			envBoolOrDefault("BRANDING_SHOW_ATTRIBUTION", true, errs),
+			"Show the \"Built by Netresearch\" footer line.",
+		)
+
 		// Optional dedicated service account for password reset (recommended for security)
 		fResetUser = fs.String(
 			"reset-user",
@@ -404,6 +452,15 @@ func ParseArgs(args []string) (*Opts, error) {
 
 	headerOverrides := parseHeaderOverrides(os.Environ(), errs)
 
+	branding := buildBranding(
+		strings.TrimSpace(*fBrandingDir),
+		strings.TrimSpace(*fBrandingProductName),
+		strings.TrimSpace(*fBrandingPageTitle),
+		strings.TrimSpace(*fBrandingLogoAlt),
+		*fBrandingShowAttribution,
+		errs,
+	)
+
 	// Collect all missing required options
 	var missing []string
 	checkRequired("ldap-server", fLdapServer, &missing)
@@ -443,6 +500,7 @@ func ParseArgs(args []string) (*Opts, error) {
 		ResetTokenExpiryMinutes:     *fResetTokenExpiryMinutes,
 		ResetRateLimitRequests:      *fResetRateLimitRequests,
 		ResetRateLimitWindowMinutes: *fResetRateLimitWindowMinutes,
+		Branding:                    branding,
 		SMTPHost:                    *fSMTPHost,
 		SMTPPort:                    *fSMTPPort,
 		SMTPUsername:                *fSMTPUsername,

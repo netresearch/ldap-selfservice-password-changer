@@ -208,7 +208,10 @@ func logLDAPSecurityStatus(opts *options.Opts) {
 // buildApp builds a Fiber app with middleware preconfigured for this service.
 // Routes are not registered here; use registerCorePages (and optionally
 // registerResetPages when the reset feature is enabled) for that.
-func buildApp() *fiber.App {
+//
+// brandingDir layers operator-supplied assets over the embedded ones; empty
+// serves the embedded assets alone. options has already validated it.
+func buildApp(brandingDir string) *fiber.App {
 	app := fiber.New(fiber.Config{
 		AppName:      "netresearch/ldap-selfservice-password-changer",
 		BodyLimit:    defaultBodyLimit,
@@ -231,7 +234,7 @@ func buildApp() *fiber.App {
 	}))
 
 	app.Use("/static", static.New("", static.Config{
-		FS:     webstatic.Static,
+		FS:     webstatic.NewOverlay(brandingDir),
 		MaxAge: staticCacheMaxAgeSeconds,
 	}))
 
@@ -298,7 +301,7 @@ func buildServer(opts *options.Opts) (*fiber.App, error) {
 		return nil, fmt.Errorf("render index page: %w", err)
 	}
 
-	app := buildApp()
+	app := buildApp(opts.Branding.Dir)
 	registerCorePages(app, index, rpcHandler.Handle)
 
 	if opts.PasswordResetEnabled {
