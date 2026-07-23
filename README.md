@@ -104,7 +104,28 @@ GopherPass is configured via environment variables or command-line flags. Key se
 - `APP_BASE_URL` - Base URL for reset links
 - `RESET_IDENTIFIER_MODE` - Identifier the reset form accepts: `email`, `username`, or `both` (default: `email`)
 - `RESET_TOKEN_EXPIRY_MINUTES` - Token validity (default: 15)
-- `RESET_RATE_LIMIT_REQUESTS` - Max requests per window (default: 3)
+- `RESET_RATE_LIMIT_REQUESTS` - Max reset requests per window (default: 3)
+- `RESET_RATE_LIMIT_WINDOW_MINUTES` - Length of that window (default: 60)
+
+### Rate Limiting
+
+Two independent in-memory limiters apply. They are not the same thing and only
+one of them is configurable.
+
+| Limiter            | Limit                                                             | Applies to                                     | Configurable                                             |
+| ------------------ | ----------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------- |
+| **Per IP**         | 10 requests / 60 minutes, at most 1000 tracked addresses          | `change-password` and `request-password-reset` | **No** — hardcoded in `internal/ratelimit/ip_limiter.go` |
+| **Per identifier** | `RESET_RATE_LIMIT_REQUESTS` per `RESET_RATE_LIMIT_WINDOW_MINUTES` | `request-password-reset` only                  | Yes                                                      |
+
+The per-identifier limiter is keyed twice — once by the identifier as typed and
+again by the account it resolves to — so requesting a reset for the same account
+under different spellings does not multiply the allowance.
+
+There is no `RATE_LIMIT_*` variable prefix. If users report being blocked
+without having hit the reset limit, the per-IP limiter is the likely cause,
+and changing it requires a code change. Both limiters hold state in memory
+only, so a restart clears them and a multi-instance deployment limits per
+instance rather than globally.
 
 ### Email Templates and Headers (optional)
 
@@ -131,7 +152,7 @@ The password reset feature allows users to reset forgotten passwords via secure 
 
 - **Email-Based Verification**: Secure tokens sent via SMTP (Google Workspace supported)
 - **Cryptographic Security**: 32-byte tokens generated with `crypto/rand`
-- **Rate Limiting**: Configurable limits prevent abuse (default: 3 requests/hour per user)
+- **Rate Limiting**: 3 reset requests per account per hour by default, plus a separate hardcoded per-IP limit — see [Rate Limiting](#rate-limiting)
 - **Token Expiration**: Tokens expire after 15 minutes (configurable)
 - **Single-Use Tokens**: Tokens cannot be reused after password reset
 - **No User Enumeration**: Generic responses prevent account discovery
