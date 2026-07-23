@@ -1,24 +1,31 @@
 {{ define "page-header" }}
 <header role="banner">
   <div class="flex flex-col items-center gap-3">
-    {{/* The logo stays decorative (alt="") whenever a wordmark follows it, so a
-    screen reader does not announce the same name twice. Without a wordmark
-    LogoAlt carries the accessible name, and options refuses to start when both
-    are empty. The dark variant is toggled with Tailwind's class-based dark
-    mode rather than a prefers-color-scheme media query, so it follows the
-    in-page theme switch instead of drifting from it. */}}
+    {{/* The logo is decorative whenever a wordmark follows it: LogoAltText
+    returns "" in that case, so a screen reader does not announce the same name
+    twice. Without a wordmark it carries the accessible name, and options
+    refuses to start when neither is set.
+
+    object-contain matters now that the logo is operator-supplied: the box sets
+    both height and width, so a non-square corporate wordmark would otherwise
+    be stretched to a square by the default object-fit: fill.
+
+    The dark variant is toggled with Tailwind's class-based dark mode rather
+    than a prefers-color-scheme media query, so it follows the in-page theme
+    switch instead of drifting from it. Only the light logo is fetched at high
+    priority — browsers request display:none images too, and the hidden variant
+    would otherwise compete with the LCP candidate on every light-mode load. */}}
     <img
       src="/static/logo.webp"
       fetchpriority="high"
-      class="comfortable:h-28 comfortable:w-28 comfortable:sm:h-48 comfortable:sm:w-48 compact:h-24 compact:w-24 compact:sm:h-32 compact:sm:w-32 aspect-square {{ if .HasDarkLogo }}dark:hidden{{ end }}"
-      alt="{{ .LogoAlt }}"
+      class="comfortable:h-28 comfortable:w-28 comfortable:sm:h-48 comfortable:sm:w-48 compact:h-24 compact:w-24 compact:sm:h-32 compact:sm:w-32 aspect-square object-contain {{ if .HasDarkLogo }}dark:hidden{{ end }}"
+      alt="{{ .LogoAltText }}"
     />
     {{ if .HasDarkLogo }}
     <img
       src="/static/logo-dark.webp"
-      fetchpriority="high"
-      class="comfortable:h-28 comfortable:w-28 comfortable:sm:h-48 comfortable:sm:w-48 compact:h-24 compact:w-24 compact:sm:h-32 compact:sm:w-32 hidden aspect-square dark:block"
-      alt="{{ .LogoAlt }}"
+      class="comfortable:h-28 comfortable:w-28 comfortable:sm:h-48 comfortable:sm:w-48 compact:h-24 compact:w-24 compact:sm:h-32 compact:sm:w-32 hidden aspect-square object-contain dark:block"
+      alt="{{ .LogoAltText }}"
     />
     {{ end }} {{ if .ProductName }}
     <p class="text-2xl font-semibold text-gray-900 dark:text-gray-100">{{ .ProductName }}</p>

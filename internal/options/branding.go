@@ -1,6 +1,7 @@
 package options
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/static"
@@ -13,9 +14,17 @@ const DefaultProductName = "GopherPass"
 // title is configured.
 const defaultPageTitleSuffix = " — Self-service password change & reset"
 
-// Branding holds the customisable presentation of the web UI. The zero value
-// is not usable directly; build it with buildBranding so the derived fields
-// and accessibility guarantees hold.
+// ErrNoBrandName is returned when neither a wordmark nor logo alt text is
+// configured, leaving the page header with nothing but a decorative image.
+var ErrNoBrandName = errors.New(
+	"BRANDING_PRODUCT_NAME is empty, so the logo is the only branding left: " +
+		"set BRANDING_LOGO_ALT to the name it depicts, otherwise the header conveys the brand " +
+		"to sighted users only",
+)
+
+// Branding holds the customisable presentation of the web UI. Build it with
+// NewBranding — the derived fields and the accessibility guarantees do not
+// hold for a hand-assembled value.
 type Branding struct {
 	// Dir is the operator-supplied directory layered over the embedded static
 	// assets. Empty means no overrides.
@@ -25,11 +34,12 @@ type Branding struct {
 	// wordmark, which is only permitted alongside a non-empty LogoAlt.
 	ProductName string
 
-	// PageTitle is the browser tab title.
+	// PageTitle is the browser tab title of the start page. The reset pages
+	// keep their own prefix and append Name instead.
 	PageTitle string
 
-	// LogoAlt is the logo's alternative text. Empty marks the logo decorative,
-	// which is correct while a wordmark carries the accessible name.
+	// LogoAlt describes the logo for deployments that show no wordmark. It is
+	// deliberately ignored while a wordmark is rendered — see LogoAltText.
 	LogoAlt string
 
 	// ShowAttribution controls the "Built by Netresearch" footer line.
@@ -40,8 +50,51 @@ type Branding struct {
 	HasDarkLogo bool
 }
 
+// NewBranding derives and validates a branding configuration.
+//
+// The only rejected combination is an empty wordmark with no logo alt text:
+// the header would then consist of a decorative image alone, so the brand
+// would reach sighted users only. Everything else has a sensible default.
+func NewBranding(dir, productName, pageTitle, logoAlt string, showAttribution bool) (Branding, error) {
+	b := Branding{
+		Dir:             dir,
+		ProductName:     productName,
+		PageTitle:       pageTitle,
+		LogoAlt:         logoAlt,
+		ShowAttribution: showAttribution,
+	}
+
+	if productName == "" && logoAlt == "" {
+		return b, ErrNoBrandName
+	}
+
+	if b.PageTitle == "" {
+		b.PageTitle = b.Name() + defaultPageTitleSuffix
+	}
+
+	hasDarkLogo, err := static.ValidateOverlay(dir)
+	if err != nil {
+		return b, fmt.Errorf("branding directory: %w", err)
+	}
+	b.HasDarkLogo = hasDarkLogo
+
+	return b, nil
+}
+
+// DefaultBranding is the configuration a deployment that sets nothing ends up
+// with. Tests that assemble an Opts by hand should start from this rather than
+// from a zero Branding, which would render an empty title.
+func DefaultBranding() Branding {
+	b, err := NewBranding("", DefaultProductName, "", "", true)
+	if err != nil {
+		panic("default branding must be valid: " + err.Error())
+	}
+
+	return b
+}
+
 // Name returns the deployment's display name: the wordmark when one is shown,
-// otherwise the logo's alternative text. buildBranding guarantees at least one
+// otherwise the logo's alternative text. NewBranding guarantees at least one
 // of the two is set, so the result is never empty and sub-page titles never
 // degrade to a dangling separator.
 func (b Branding) Name() string {
@@ -52,60 +105,33 @@ func (b Branding) Name() string {
 	return b.LogoAlt
 }
 
-// Normalized fills in empty presentation fields so that rendering an Opts
-// built by hand — in tests, or by a future caller that bypasses LoadOptions —
-// still yields a titled page with an accessible name instead of an empty
-// <title> and an unnamed logo.
+// LogoAltText returns the alt attribute for the logo image.
 //
-// It only ever fills empty strings; it never overrides a configured value and
-// never flips ShowAttribution, so an operator who deliberately clears the
-// wordmark in favor of a logo keeps exactly what they asked for.
-func (b Branding) Normalized() Branding {
-	if b.ProductName == "" && b.LogoAlt == "" {
-		b.ProductName = DefaultProductName
-	}
-	if b.PageTitle == "" {
-		b.PageTitle = b.Name() + defaultPageTitleSuffix
+// The logo is decorative whenever the wordmark is rendered: the wordmark
+// already carries the name, and repeating it in alt text makes a screen reader
+// announce the brand twice. LogoAlt therefore takes effect only when no
+// wordmark is shown — configuring both is accepted, and the alt text is the
+// part that yields.
+func (b Branding) LogoAltText() string {
+	if b.ProductName != "" {
+		return ""
 	}
 
-	return b
+	return b.LogoAlt
 }
 
-// buildBranding derives the branding configuration and records any problem on
-// errs so startup fails before the first request rather than serving a broken
-// or inaccessible page.
+// buildBranding adapts NewBranding to the collecting error style used while
+// parsing options, so a bad value joins the other configuration errors
+// instead of aborting on the first one.
 func buildBranding(dir, productName, pageTitle, logoAlt string, showAttribution bool, errs *ConfigError) Branding {
-	// The logo is decorative (alt="") because the wordmark beside it carries
-	// the accessible name. Removing the wordmark without supplying alternative
-	// text would leave the page with no accessible name at all — a WCAG 1.1.1
-	// failure that is invisible to a sighted operator testing their own
-	// rebrand, so it is refused rather than warned about.
-	if productName == "" && logoAlt == "" {
-		errs.Add(
-			"BRANDING_PRODUCT_NAME is empty, so the logo is the only branding left: " +
-				"set BRANDING_LOGO_ALT to the name it depicts, otherwise the page has no accessible name",
-		)
-	}
-
-	if pageTitle == "" {
-		if productName == "" {
-			pageTitle = logoAlt + defaultPageTitleSuffix
+	b, err := NewBranding(dir, productName, pageTitle, logoAlt, showAttribution)
+	if err != nil {
+		if errors.Is(err, ErrNoBrandName) {
+			errs.Add(err.Error())
 		} else {
-			pageTitle = productName + defaultPageTitleSuffix
+			errs.Add(fmt.Sprintf("invalid value for BRANDING_DIR: %v", err))
 		}
 	}
 
-	hasDarkLogo, err := static.ValidateOverlay(dir)
-	if err != nil {
-		errs.Add(fmt.Sprintf("invalid value for BRANDING_DIR: %v", err))
-	}
-
-	return Branding{
-		Dir:             dir,
-		ProductName:     productName,
-		PageTitle:       pageTitle,
-		LogoAlt:         logoAlt,
-		ShowAttribution: showAttribution,
-		HasDarkLogo:     hasDarkLogo,
-	}
+	return b
 }

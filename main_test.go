@@ -413,7 +413,8 @@ func TestLogLDAPSecurityStatusDoesNotPanic(t *testing.T) {
 // security middleware hooked up — a GET / on /static path returns a 404
 // because no routes are registered yet.
 func TestBuildApp(t *testing.T) {
-	app := buildApp("")
+	app, err := buildApp(&options.Opts{})
+	require.NoError(t, err)
 	require.NotNil(t, app)
 
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/static/missing.txt", http.NoBody)
@@ -436,7 +437,10 @@ func TestBuildApp_BrandingOverlayIsServed(t *testing.T) {
 	dir := t.TempDir()
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "logo.webp"), []byte("custom-logo-bytes"), 0o600))
 
-	app := buildApp(dir)
+	// Built from an Opts exactly as buildServer does, so a change that stopped
+	// forwarding the configured directory fails here.
+	app, err := buildApp(&options.Opts{Branding: options.Branding{Dir: dir}})
+	require.NoError(t, err)
 
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/static/logo.webp", http.NoBody)
 	resp, err := app.Test(req)
@@ -460,7 +464,8 @@ func TestBuildApp_BrandingOverlayIsServed(t *testing.T) {
 // TestRegisterCorePages verifies the real registerCorePages function wires
 // up the / , /api/rpc and /health/live routes and serves them correctly.
 func TestRegisterCorePages(t *testing.T) {
-	app := buildApp("")
+	app, err := buildApp(&options.Opts{})
+	require.NoError(t, err)
 
 	indexBytes := []byte("<html>hi</html>")
 	// Provide a tiny RPC handler stand-in to exercise the POST /api/rpc route.
@@ -606,11 +611,11 @@ func TestNewHandlerWithResetServicesEmailInitError(t *testing.T) {
 
 // TestRegisterResetPages verifies the reset pages render and respond correctly.
 func TestRegisterResetPages(t *testing.T) {
-	app := buildApp("")
+	app, err := buildApp(&options.Opts{})
+	require.NoError(t, err)
 	opts := validPasswordResetOpts(t)
 
-	err := registerResetPages(app, opts)
-	require.NoError(t, err)
+	require.NoError(t, registerResetPages(app, opts))
 
 	// /forgot-password
 	req := httptest.NewRequestWithContext(context.Background(), http.MethodGet, "/forgot-password", http.NoBody)

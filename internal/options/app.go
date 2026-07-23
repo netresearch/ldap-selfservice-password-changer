@@ -378,13 +378,15 @@ func ParseArgs(args []string) (*Opts, error) {
 		fBrandingPageTitle = fs.String(
 			"branding-page-title",
 			envStringOrDefault("BRANDING_PAGE_TITLE", ""),
-			"Browser tab title. Empty derives it from branding-product-name.",
+			"Browser tab title of the start page. The reset pages keep their own prefix and append "+
+				"the product name. Empty derives this one from branding-product-name too.",
 		)
 		fBrandingLogoAlt = fs.String(
 			"branding-logo-alt",
 			envStringOrDefault("BRANDING_LOGO_ALT", ""),
-			"Alternative text for the logo. Leave empty while a wordmark is shown: the logo is then "+
-				"decorative and a screen reader would otherwise announce the name twice.",
+			"Alternative text for the logo, used only when no wordmark is shown. While a wordmark is "+
+				"rendered the logo stays decorative, because a screen reader would otherwise announce "+
+				"the name twice.",
 		)
 		fBrandingShowAttribution = fs.Bool(
 			"branding-show-attribution",

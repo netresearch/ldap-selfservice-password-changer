@@ -136,6 +136,21 @@ func parseCommonTemplates(tpl *template.Template) error {
 	return nil
 }
 
+// brandingFor returns the branding to render with.
+//
+// An Opts assembled by hand rather than by options.ParseArgs carries a zero
+// Branding, which would render an empty <title> and an unnamed logo. Falling
+// back to the stock configuration keeps such a caller from producing a broken
+// page. NewBranding always derives a non-empty PageTitle, so an empty one is a
+// reliable marker that the value never went through it.
+func brandingFor(opts *options.Opts) options.Branding {
+	if opts.Branding.PageTitle == "" {
+		return options.DefaultBranding()
+	}
+
+	return opts.Branding
+}
+
 // renderTemplate renders a template with common setup logic.
 func renderTemplate(templateName, rawTemplate string, data any) ([]byte, error) {
 	funcs := template.FuncMap{
@@ -168,7 +183,7 @@ func renderTemplate(templateName, rawTemplate string, data any) ([]byte, error) 
 func RenderIndex(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
 		optsKey:     opts,
-		brandingKey: opts.Branding.Normalized(),
+		brandingKey: brandingFor(opts),
 	}
 	return renderTemplate("index", rawIndex, data)
 }
@@ -177,7 +192,7 @@ func RenderIndex(opts *options.Opts) ([]byte, error) {
 func RenderForgotPassword(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
 		optsKey:     opts,
-		brandingKey: opts.Branding.Normalized(),
+		brandingKey: brandingFor(opts),
 	}
 	return renderTemplate("forgot-password", rawForgotPassword, data)
 }
@@ -186,7 +201,7 @@ func RenderForgotPassword(opts *options.Opts) ([]byte, error) {
 func RenderResetPassword(opts *options.Opts) ([]byte, error) {
 	data := map[string]any{
 		optsKey:     opts,
-		brandingKey: opts.Branding.Normalized(),
+		brandingKey: brandingFor(opts),
 	}
 	return renderTemplate("reset-password", rawResetPassword, data)
 }
