@@ -9,6 +9,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.5.0] - 2026-07-23
+
+### Added
+
+- **Configurable password-reset emails** ([#629](https://github.com/netresearch/ldap-selfservice-password-changer/pull/629), closes [#627](https://github.com/netresearch/ldap-selfservice-password-changer/issues/627)). The message was previously hardcoded: a `text/plain`-only body, the literal subject `Password Reset Request`, and a bare `From:` header. Operators can now supply Go templates for the HTML body, the plain-text body and the subject, set a sender display name and a `Reply-To`, and inject arbitrary routing headers. Everything is optional — unset values fall back to templates embedded in the binary, so an existing deployment behaves as before.
+  - New settings: `EMAIL_TEMPLATE_HTML`, `EMAIL_TEMPLATE_TEXT`, `EMAIL_TEMPLATE_SUBJECT`, `SMTP_FROM_NAME`, `EMAIL_REPLY_TO`, and `SMTP_HEADER_OVERRIDE_*` (one variable per header, suffix `_` maps to `-`).
+  - Template fields: `{{.ResetLink}}`, `{{.Token}}`, `{{.BaseURL}}`, `{{.Recipient}}`, `{{.ExpiryMinutes}}`.
+  - Messages are now `multipart/alternative` (plain-text part first, HTML second), both quoted-printable with `charset=UTF-8`. The plain-text path is retained rather than replaced.
+  - Templates are parsed and dry-run at startup, so a broken one aborts boot instead of surfacing on the first reset request.
+- **RFC 5322 `Date:` header** on reset emails. Its absence is scored by spam filters, and not every MTA backfills it.
+
+### Fixed
+
+- **Password changes and resets now work against OpenLDAP** ([#636](https://github.com/netresearch/ldap-selfservice-password-changer/pull/636), closes [#633](https://github.com/netresearch/ldap-selfservice-password-changer/issues/633)). `simple-ldap-go` wrote the Active-Directory-only `unicodePwd` attribute for every password write, so both flows failed against any non-AD directory with `LDAP Result Code 17 "Undefined Attribute Type"` — total failure on the first attempt, with no configuration that avoided it, while the README advertised OpenLDAP support. Fixed upstream in `v1.12.1` (RFC 3062 Password Modify on non-AD directories) and `v1.12.2` (the self-service change binds as the user rather than issuing the operation on the pooled service-account connection). Verified end to end against a real OpenLDAP stack, each write confirmed by binding to the directory directly.
+- **The email stated the wrong expiry.** The body was hardcoded to "15 minutes" while the real lifetime came from `RESET_TOKEN_EXPIRY_MINUTES`, so any deployment that changed the expiry told users something false. It now renders the configured value.
+- **Header injection in the message builder.** Override values were written verbatim into the header block, so a value containing CR/LF could smuggle arbitrary headers into the message. Names and values are now validated in the email package itself, not only at config-parse time; CR, LF, NUL, other C0 controls and DEL are rejected.
+- **A mistyped template path could hang startup.** `EMAIL_TEMPLATE_HTML=/dev/zero` blocked before the listener bound and grew until the OOM killer fired. Template reads now require a regular file and are capped at 1 MiB.
+- `SMTP_FROM_NAME` set without `SMTP_FROM_ADDRESS` produced the malformed header `From: "ACME IT" <@>`; the display name is now dropped and startup warns.
+
+### Changed
+
+- **`SMTP_FROM_ADDRESS` is validated when password reset is enabled.** A malformed value now aborts startup rather than failing on the first reset request. An _empty_ value still boots — that was accepted before this release and refusing it would stop existing deployments from starting — but logs a warning. Addresses are checked with Go's RFC 5322 parser rather than a stricter pattern, so internal senders such as `noreply@localhost` are accepted.
+- Documentation was consolidated and corrected across the repo: the local-run runbook moved out of a tool-specific directory into `docs/development-guide.md`, stale pnpm/Corepack instructions were replaced with the Bun reality, and several documented capabilities that the code never implemented (`RATE_LIMIT_*`, `TRUSTED_PROXIES`, a Docker-secrets `*_FILE` convention) were removed.
+- Design rationale for the email work is recorded in [`docs/adr/0003-configurable-reset-email-templates.md`](docs/adr/0003-configurable-reset-email-templates.md).
+
+### Internal
+
+- `email.NewService` now returns `(*Service, error)`. This is a breaking change to an `internal/` package, which Go does not permit importing from outside the module, so it affects no consumer and does not warrant a major version.
+
+---
+
 ## [v1.4.0] - 2026-07-21
 
 ### Added
