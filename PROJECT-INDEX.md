@@ -67,7 +67,6 @@
 | [Documentation Maintenance Guide](docs/maintenance.md)                          | Keeping documentation accurate as code evolves | Maintainers      |
 | [Security Assessment](docs/security-assessment-2025-10-09.md)                   | Security assessment report (2025-10-09)        | Security, DevOps |
 | [Security Assessment (Revised)](docs/security-assessment-revised-2025-10-09.md) | Revised security assessment report             | Security, DevOps |
-| [Security Quick Fix Guide](docs/security-quick-fix-guide.md)                    | Immediate actions for critical findings        | Developers       |
 
 ---
 

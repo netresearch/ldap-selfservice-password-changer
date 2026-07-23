@@ -345,7 +345,10 @@ go tool cover -html=coverage.out
 
 **CI Integration**: Coverage automatically uploaded to Codecov on PRs
 
-**Target**: 70% minimum coverage threshold
+**Target**: 80% minimum coverage threshold, enforced twice — in CI by
+`go-check.yml` (which fails the build outright) and by Codecov's project and
+patch statuses, configured in `.github/codecov.yml`. Total coverage currently
+sits above 90%.
 
 #### Pre-commit Hooks
 
