@@ -5,7 +5,7 @@ go 1.26
 require (
 	github.com/gofiber/fiber/v3 v3.4.0
 	github.com/joho/godotenv v1.5.1
-	github.com/netresearch/simple-ldap-go v1.12.2
+	github.com/netresearch/simple-ldap-go v1.13.0
 	github.com/stretchr/testify v1.11.1
 	github.com/valyala/fasthttp v1.72.0
 )
