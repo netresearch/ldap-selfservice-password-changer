@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Out-of-range numeric settings are rejected at startup instead of wrapping.** `SMTP_PORT`, `RESET_TOKEN_EXPIRY_MINUTES`, `RESET_RATE_LIMIT_WINDOW_MINUTES` and `RESET_RATE_LIMIT_REQUESTS` are parsed as `uint` over the full 64-bit range but converted to `int` / `time.Duration` afterwards. A value above that target range wrapped: a window of `18446744073709551615` minutes became `-1m`, which makes the sliding-window limiter drop every timestamp and let every request through, and a request count that large became `-1`, which blocks all of them. Both are now config errors, as is an `SMTP_PORT` above 65535.
+
 ---
 
 ## [v1.5.0] - 2026-07-23

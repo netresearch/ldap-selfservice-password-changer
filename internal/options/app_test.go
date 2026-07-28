@@ -3,6 +3,7 @@ package options
 
 import (
 	"errors"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -890,4 +891,54 @@ func TestParseArgs_SMTPFromAddress(t *testing.T) {
 		require.NoError(t, err)
 		assert.Empty(t, opts.SMTPFromAddress)
 	})
+}
+
+// TestParseArgs_NumericBoundsRejectOverflow covers the settings that are
+// converted to an int or a time.Duration downstream. A value that does not fit
+// the target type must be a config error instead of silently wrapping into a
+// negative rate limit or token validity.
+func TestParseArgs_NumericBoundsRejectOverflow(t *testing.T) {
+	overflowMinutes := strconv.FormatUint(maxDurationMinutes+1, 10)
+
+	tests := []struct {
+		name  string
+		flag  string
+		value string
+	}{
+		{"smtp port", "--smtp-port", strconv.FormatUint(maxSMTPPort+1, 10)},
+		{"token expiry", "--reset-token-expiry-minutes", overflowMinutes},
+		{"rate limit window", "--reset-rate-limit-window-minutes", overflowMinutes},
+		{"rate limit requests", "--reset-rate-limit-requests", strconv.FormatUint(maxRateLimitRequests+1, 10)},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+
+			_, err := ParseArgs(append(requiredArgs(), tt.flag, tt.value))
+			require.Error(t, err)
+
+			configErr, ok := errors.AsType[*ConfigError](err)
+			require.True(t, ok, "error should be *ConfigError")
+			assert.Contains(t, configErr.Error(), strings.TrimPrefix(tt.flag, "--"))
+		})
+	}
+}
+
+// TestParseArgs_NumericBoundsAcceptMaximum verifies the bounds are inclusive,
+// so the largest representable configuration still boots.
+func TestParseArgs_NumericBoundsAcceptMaximum(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	opts, err := ParseArgs(append(requiredArgs(),
+		"--smtp-port", strconv.FormatUint(maxSMTPPort, 10),
+		"--reset-token-expiry-minutes", strconv.FormatUint(maxDurationMinutes, 10),
+		"--reset-rate-limit-window-minutes", strconv.FormatUint(maxDurationMinutes, 10),
+		"--reset-rate-limit-requests", strconv.FormatUint(maxRateLimitRequests, 10),
+	))
+	require.NoError(t, err)
+	assert.Equal(t, uint64(maxSMTPPort), uint64(opts.SMTPPort))
+	assert.Equal(t, maxDurationMinutes, uint64(opts.ResetTokenExpiryMinutes))
+	assert.Equal(t, maxDurationMinutes, uint64(opts.ResetRateLimitWindowMinutes))
+	assert.Equal(t, maxRateLimitRequests, uint64(opts.ResetRateLimitRequests))
 }
