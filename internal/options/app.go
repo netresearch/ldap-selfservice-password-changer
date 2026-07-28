@@ -5,10 +5,12 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"math"
 	"net/textproto"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/joho/godotenv"
 	ldap "github.com/netresearch/simple-ldap-go"
@@ -139,6 +141,30 @@ func envIntOrDefault(name string, d uint64, errs *ConfigError) uint {
 	}
 
 	return uint(v)
+}
+
+// Upper bounds for the numeric settings. They are parsed as uint but converted
+// downstream — the SMTP port and the request count to int, the minute values to
+// a time.Duration. strconv.ParseUint and flag.Uint both accept the full uint
+// range, so without these bounds such a value would wrap silently into a
+// negative int (a rate limiter that blocks everything) or a negative duration
+// (a window that expires before it begins, a reset token that never expires).
+const (
+	// maxSMTPPort is the highest valid TCP port number.
+	maxSMTPPort = 65535
+	// maxDurationMinutes is the largest minute count that still fits into a
+	// time.Duration, which counts nanoseconds in an int64: about 292 years.
+	maxDurationMinutes = uint64(math.MaxInt64 / int64(time.Minute))
+	// maxRateLimitRequests is the largest request count representable as an int.
+	maxRateLimitRequests = uint64(math.MaxInt)
+)
+
+// checkUintMax records a config error when value exceeds max. name is the
+// command-line flag the value came from.
+func checkUintMax(name string, value uint, maxValue uint64, errs *ConfigError) {
+	if uint64(value) > maxValue {
+		errs.Add(fmt.Sprintf("invalid value for %s: %d exceeds the maximum of %d", name, value, maxValue))
+	}
 }
 
 func envBoolOrDefault(name string, d bool, errs *ConfigError) bool {
@@ -412,6 +438,12 @@ func ParseArgs(args []string) (*Opts, error) {
 	if err := fs.Parse(args); err != nil {
 		errs.Add(fmt.Sprintf("flag parsing error: %v", err))
 	}
+
+	// Keep the conversions at the use sites total: see the bound constants.
+	checkUintMax("smtp-port", *fSMTPPort, maxSMTPPort, errs)
+	checkUintMax("reset-token-expiry-minutes", *fResetTokenExpiryMinutes, maxDurationMinutes, errs)
+	checkUintMax("reset-rate-limit-window-minutes", *fResetRateLimitWindowMinutes, maxDurationMinutes, errs)
+	checkUintMax("reset-rate-limit-requests", *fResetRateLimitRequests, maxRateLimitRequests, errs)
 
 	// Normalize and validate the password reset identifier mode
 	resetIdentifierMode := ResetIdentifierMode(strings.ToLower(strings.TrimSpace(*fResetIdentifierMode)))
