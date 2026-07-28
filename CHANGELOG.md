@@ -7,9 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+---
+
+## [v1.6.0] - 2026-07-28
+
+### Added
+
+- **Custom branding** ([#639](https://github.com/netresearch/ldap-selfservice-password-changer/pull/639)). The product name, logo, page title and the Netresearch footer line were hardcoded. Five optional settings now cover them; a deployment that sets none of them looks exactly as before.
+  - `BRANDING_PRODUCT_NAME` — the wordmark rendered next to the logo (default `GopherPass`).
+  - `BRANDING_PAGE_TITLE` — the browser tab title of the start page only; the reset pages keep their own prefix and append the product name.
+  - `BRANDING_LOGO_ALT` — alternative text for the logo. It takes effect only while no wordmark is shown, because a screen reader would otherwise announce the brand twice. Clearing `BRANDING_PRODUCT_NAME` for a logo-only header therefore _requires_ it; the combination of neither aborts startup.
+  - `BRANDING_SHOW_ATTRIBUTION` — the "Built by Netresearch" footer line (default `true`). The footer link keeps pointing at the upstream project under any name.
+  - `BRANDING_DIR` — a directory layered over the embedded static assets, replacing them file by file: `logo.webp`, `logo-dark.webp`, the eight favicon and home-screen icons, `site.webmanifest`, `browserconfig.xml`. Assets not supplied keep their built-in version; `styles.css` and `js/` are deliberately not replaceable. Any other filename aborts startup rather than being silently ignored, as does a file over 2 MiB or one that is not a regular file. The runtime image is `FROM scratch` and declares no volumes, so the directory has to be bind-mounted explicitly. Kubernetes ConfigMap and Secret volumes work — the dot-prefixed entries kubelet materializes are skipped.
+  - `logo-dark.webp` is served in dark mode. The switch is class-based, so the variant follows the in-page toggle rather than only the OS setting, and dark mode needs JavaScript; without it the light logo is always shown. Deleting the dark variant from a running deployment falls back to the light logo instead of a broken image, but adding one needs a restart.
+  - Files under `BRANDING_DIR` are served publicly and unauthenticated under `/static/`, so the directory must be operator-owned and mounted read-only. Lookups go through `os.Root` with `O_NONBLOCK` and a stat after opening, so a symlink out of the directory, an oversized file or a FIFO swapped in after startup is rejected at serve time and not only at validation time.
+
 ### Fixed
 
-- **Out-of-range numeric settings are rejected at startup instead of wrapping.** `SMTP_PORT`, `RESET_TOKEN_EXPIRY_MINUTES`, `RESET_RATE_LIMIT_WINDOW_MINUTES` and `RESET_RATE_LIMIT_REQUESTS` are parsed as `uint` over the full 64-bit range but converted to `int` / `time.Duration` afterwards. A value above that target range wrapped: a window of `18446744073709551615` minutes became `-1m`, which makes the sliding-window limiter drop every timestamp and let every request through, and a request count that large became `-1`, which blocks all of them. Both are now config errors, as is an `SMTP_PORT` above 65535.
+- **Out-of-range numeric settings are rejected at startup instead of wrapping** ([#644](https://github.com/netresearch/ldap-selfservice-password-changer/pull/644)). `SMTP_PORT`, `RESET_TOKEN_EXPIRY_MINUTES`, `RESET_RATE_LIMIT_WINDOW_MINUTES` and `RESET_RATE_LIMIT_REQUESTS` are parsed as `uint` over the full 64-bit range but converted to `int` / `time.Duration` afterwards. A value above that target range wrapped: a window of `18446744073709551615` minutes became `-1m`, which makes the sliding-window limiter drop every timestamp and let every request through, and a request count that large became `-1`, which blocks all of them. Both are now config errors, as is an `SMTP_PORT` above 65535. The values come from the operator's own configuration, not from a request, so this is a footgun rather than a remotely exploitable flaw — but the failing-open case sits on the password-reset endpoint and gives no sign that limiting has stopped.
+- `browserconfig.xml` referenced the tile logo as `/mstile-150x150.png`, but static assets are served only under `/static`, and its tile colour disagreed with the `msapplication-TileColor` meta tag ([#640](https://github.com/netresearch/ldap-selfservice-password-changer/pull/640)). No template references the file and Windows probes it only at the site root, so it remains unreachable in practice; this makes its contents correct for a deployment that wires it up via `BRANDING_DIR`.
+
+### Changed
+
+- The per-IP rate limiter is documented ([#638](https://github.com/netresearch/ldap-selfservice-password-changer/pull/638)). Two independent in-memory limiters apply and only one of them is configurable: 10 requests per 60 minutes per IP across both endpoints, hardcoded, alongside the configurable per-identifier limit on reset requests. The README claim of a single configurable rate limit was corrected, and the completed `docs/security-quick-fix-guide.md` was removed. A stale root `.codecov.yml` targeting 70% was deleted: Codecov searches the root before `.github/`, so it shadowed the template-managed 80% config that the CI gate and `internal/AGENTS.md` both assume.
+- `go.mod` pins `toolchain go1.26.5`: govulncheck reported 15 standard-library advisories against 1.26.1, all fixed in 1.26.2 or later.
+- Dropped the sunset Go Report Card badge from the README ([#643](https://github.com/netresearch/ldap-selfservice-password-changer/pull/643)).
+
+### Dependencies
+
+- `netresearch/simple-ldap-go` → v1.13.0 ([#641](https://github.com/netresearch/ldap-selfservice-password-changer/pull/641))
+- Bun group: `tailwindcss` and `@tailwindcss/postcss` → 4.3.3, `postcss` → 8.5.20, `prettier-plugin-tailwindcss` → 0.8.1, `typescript-eslint` → 8.64.0, and `typescript` → 7.0.2, which lifts the 6.0.x pin v1.4.0 introduced ([#642](https://github.com/netresearch/ldap-selfservice-password-changer/pull/642))
 
 ---
 
