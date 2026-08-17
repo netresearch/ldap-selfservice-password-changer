@@ -10,7 +10,7 @@ require (
 	github.com/gofiber/fiber/v3 v3.5.0
 	github.com/joho/godotenv v1.5.1
 	github.com/netresearch/simple-ldap-go v1.14.0
-	github.com/stretchr/testify v1.11.1
+	github.com/stretchr/testify v1.12.0
 	github.com/valyala/fasthttp v1.73.0
 )
 
