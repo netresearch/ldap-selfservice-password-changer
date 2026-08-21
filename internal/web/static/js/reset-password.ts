@@ -26,6 +26,10 @@ interface Opts {
   minLowercase: number;
 }
 
+declare const turnstile: {
+  reset: () => void;
+};
+
 export const init = (opts: Opts) => {
   initThemeToggle();
   initDensityToggle();
@@ -219,10 +223,21 @@ export const init = (opts: Opts) => {
     const [newPassword] = fields.map((f) => f.getValue());
 
     try {
+      const turnstileToken =
+        form.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value ?? "";
+      if (form.querySelector(".cf-turnstile") && !turnstileToken) {
+        toggleFields(true);
+        return;
+      }
+
       const res = await fetch("/api/rpc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: "reset-password", params: [token, newPassword] })
+        body: JSON.stringify({
+          method: "reset-password",
+          params: [token, newPassword],
+          ...(turnstileToken && { turnstileToken })
+        })
       });
 
       const body = await res.text();
@@ -241,6 +256,11 @@ export const init = (opts: Opts) => {
       successContainer.classList.remove("hidden");
     } catch (err) {
       setSubmitError(submitErrorContainer, (err as Error).message);
+
+      if (form.querySelector(".cf-turnstile")) {
+        turnstile.reset();
+      }
+
       toggleFields(true);
     }
   };
