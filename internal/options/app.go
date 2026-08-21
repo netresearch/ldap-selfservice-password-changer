@@ -28,6 +28,8 @@ const (
 	ResetIdentifierUsername ResetIdentifierMode = "username"
 	// ResetIdentifierBoth accepts either an email address or a username in one field.
 	ResetIdentifierBoth ResetIdentifierMode = "both"
+	// maxCfTurnstileTimeoutSeconds limits Turnstile verification to stay within the server write timeout.
+	maxCfTurnstileTimeoutSeconds = 5
 )
 
 // Valid reports whether the mode is a recognized value.
@@ -81,6 +83,11 @@ type Opts struct {
 	// If not set, falls back to ReadonlyUser for backward compatibility
 	ResetUser     string
 	ResetPassword string
+
+	CfTurnstileEnabled bool
+	CfTurnstileSiteKey string
+	CfTurnstileSecret  string
+	CfTurnstileTimeout time.Duration
 }
 
 // ConfigError represents a configuration validation error.
@@ -432,6 +439,27 @@ func ParseArgs(args []string) (*Opts, error) {
 			envStringOrDefault("LDAP_RESET_PASSWORD", ""),
 			"Password for the dedicated reset user.",
 		)
+
+		fCfTurnstileEnabled = fs.Bool(
+			"cf-turnstile-enabled",
+			envBoolOrDefault("CF_TURNSTILE_ENABLED", false, errs),
+			"Enable Cloudflare Turnstile bot protection.",
+		)
+		fCfTurnstileSiteKey = fs.String(
+			"cf-turnstile-site-key",
+			envStringOrDefault("CF_TURNSTILE_SITE_KEY", ""),
+			"Cloudflare Turnstile site key.",
+		)
+		fCfTurnstileSecret = fs.String(
+			"cf-turnstile-secret",
+			envStringOrDefault("CF_TURNSTILE_SECRET", ""),
+			"Cloudflare Turnstile secret key.",
+		)
+		fCfTurnstileTimeoutSeconds = fs.Uint(
+			"cf-turnstile-timeout-seconds",
+			envIntOrDefault("CF_TURNSTILE_TIMEOUT_SECONDS", 5, errs),
+			"Timeout in seconds for Cloudflare Turnstile verification.",
+		)
 	)
 
 	// Parse the provided command-line arguments (caller passes args without program name)
@@ -439,11 +467,20 @@ func ParseArgs(args []string) (*Opts, error) {
 		errs.Add(fmt.Sprintf("flag parsing error: %v", err))
 	}
 
+	validateCfTurnstileConfig(
+		*fCfTurnstileEnabled,
+		*fCfTurnstileSiteKey,
+		*fCfTurnstileSecret,
+		*fCfTurnstileTimeoutSeconds,
+		errs,
+	)
+
 	// Keep the conversions at the use sites total: see the bound constants.
 	checkUintMax("smtp-port", *fSMTPPort, maxSMTPPort, errs)
 	checkUintMax("reset-token-expiry-minutes", *fResetTokenExpiryMinutes, maxDurationMinutes, errs)
 	checkUintMax("reset-rate-limit-window-minutes", *fResetRateLimitWindowMinutes, maxDurationMinutes, errs)
 	checkUintMax("reset-rate-limit-requests", *fResetRateLimitRequests, maxRateLimitRequests, errs)
+	checkUintMax("cf-turnstile-timeout-seconds", *fCfTurnstileTimeoutSeconds, maxCfTurnstileTimeoutSeconds, errs)
 
 	// Normalize and validate the password reset identifier mode
 	resetIdentifierMode := ResetIdentifierMode(strings.ToLower(strings.TrimSpace(*fResetIdentifierMode)))
@@ -512,6 +549,11 @@ func ParseArgs(args []string) (*Opts, error) {
 		return nil, errs
 	}
 
+	cfTurnstileTimeout, err := uintSecondsToDuration(*fCfTurnstileTimeoutSeconds)
+	if err != nil {
+		return nil, err
+	}
+
 	return &Opts{
 		Port: *fPort,
 		LDAP: ldap.Config{
@@ -551,6 +593,11 @@ func ParseArgs(args []string) (*Opts, error) {
 
 		ResetUser:     *fResetUser,
 		ResetPassword: *fResetPassword,
+
+		CfTurnstileEnabled: *fCfTurnstileEnabled,
+		CfTurnstileSiteKey: *fCfTurnstileSiteKey,
+		CfTurnstileSecret:  *fCfTurnstileSecret,
+		CfTurnstileTimeout: cfTurnstileTimeout,
 	}, nil
 }
 
@@ -566,4 +613,32 @@ func MustParse() *Opts {
 		os.Exit(1)
 	}
 	return opts
+}
+
+func uintSecondsToDuration(value uint) (time.Duration, error) {
+	if uint64(value) > uint64(math.MaxInt64/int64(time.Second)) {
+		return 0, fmt.Errorf("seconds value %d overflows time.Duration", value)
+	}
+
+	return time.Duration(int64(value)) * time.Second, nil
+}
+
+func validateCfTurnstileConfig(
+	enabled bool,
+	siteKey, secret string,
+	timeoutSeconds uint,
+	errs *ConfigError,
+) {
+	if enabled {
+		if siteKey == "" {
+			errs.Add("cf-turnstile-site-key is required when cf-turnstile-enabled is true")
+		}
+		if secret == "" {
+			errs.Add("cf-turnstile-secret is required when cf-turnstile-enabled is true")
+		}
+	}
+
+	if timeoutSeconds == 0 {
+		errs.Add("cf-turnstile-timeout-seconds must be greater than zero")
+	}
 }

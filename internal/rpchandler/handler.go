@@ -1,13 +1,16 @@
 package rpchandler
 
 import (
+	"errors"
 	"fmt"
+	"log/slog"
 	"net/http"
 
 	"github.com/gofiber/fiber/v3"
 	ldap "github.com/netresearch/simple-ldap-go"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/turnstile"
 )
 
 // Func is a type alias for RPC handler functions that process string parameters and return results or errors.
@@ -36,6 +39,10 @@ type Handler struct {
 type IPLimiter interface {
 	AllowRequest(ipAddress string) bool
 }
+
+const msgTurnstileVerificationFailed = "Turnstile verification failed"
+
+var errTurnstileVerification = errors.New("turnstile verification failed")
 
 // New creates a basic Handler for password change operations without password reset services.
 func New(opts *options.Opts) (*Handler, error) {
@@ -103,19 +110,22 @@ func (h *Handler) Handle(c fiber.Ctx) error {
 
 	switch body.Method {
 	case "change-password":
-		return h.handleChangePassword(c, body.Params, clientIP)
+		return h.handleChangePassword(c, body.Params, clientIP, body.TurnstileToken)
 	case "request-password-reset":
-		return h.handleRequestPasswordReset(c, body.Params, clientIP)
+		return h.handleRequestPasswordReset(c, body.Params, clientIP, body.TurnstileToken)
 	case "reset-password":
-		return h.handleResetPassword(c, body.Params)
+		return h.handleResetPassword(c, body.Params, clientIP, body.TurnstileToken)
 	default:
 		return sendErrorResponse(c, http.StatusBadRequest, "method not found")
 	}
 }
 
 // handleChangePassword processes change-password requests with IP-based rate limiting.
-func (h *Handler) handleChangePassword(c fiber.Ctx, params []string, clientIP string) error {
-	data, err := h.changePasswordWithIP(params, clientIP)
+func (h *Handler) handleChangePassword(c fiber.Ctx, params []string, clientIP, turnstileToken string) error {
+	data, err := h.changePasswordWithIP(params, clientIP, turnstileToken)
+	if errors.Is(err, errTurnstileVerification) {
+		return sendErrorResponse(c, http.StatusForbidden, msgTurnstileVerificationFailed)
+	}
 	if err != nil {
 		return sendErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -123,11 +133,14 @@ func (h *Handler) handleChangePassword(c fiber.Ctx, params []string, clientIP st
 }
 
 // handleRequestPasswordReset processes request-password-reset requests with IP-based rate limiting.
-func (h *Handler) handleRequestPasswordReset(c fiber.Ctx, params []string, clientIP string) error {
+func (h *Handler) handleRequestPasswordReset(c fiber.Ctx, params []string, clientIP, turnstileToken string) error {
 	if h.tokenStore == nil {
 		return sendErrorResponse(c, http.StatusBadRequest, "password reset feature not enabled")
 	}
-	data, err := h.requestPasswordResetWithIP(params, clientIP)
+	data, err := h.requestPasswordResetWithIP(params, clientIP, turnstileToken)
+	if errors.Is(err, errTurnstileVerification) {
+		return sendErrorResponse(c, http.StatusForbidden, msgTurnstileVerificationFailed)
+	}
 	if err != nil {
 		return sendErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
@@ -135,9 +148,19 @@ func (h *Handler) handleRequestPasswordReset(c fiber.Ctx, params []string, clien
 }
 
 // handleResetPassword processes reset-password requests.
-func (h *Handler) handleResetPassword(c fiber.Ctx, params []string) error {
+func (h *Handler) handleResetPassword(c fiber.Ctx, params []string, clientIP, turnstileToken string) error {
 	if h.tokenStore == nil {
 		return sendErrorResponse(c, http.StatusBadRequest, "password reset feature not enabled")
+	}
+	if h.ipLimiter != nil && !h.ipLimiter.AllowRequest(clientIP) {
+		return sendErrorResponse(
+			c,
+			http.StatusTooManyRequests,
+			"too many password reset attempts from your IP address, please try again later",
+		)
+	}
+	if err := h.verifyTurnstile(turnstileToken, clientIP); err != nil {
+		return sendErrorResponse(c, http.StatusForbidden, msgTurnstileVerificationFailed)
 	}
 	data, err := h.resetPassword(params)
 	if err != nil {
@@ -165,5 +188,25 @@ func sendErrorResponse(c fiber.Ctx, statusCode int, message string) error {
 	}); jsonErr != nil {
 		return fmt.Errorf("failed to send error response: %w", jsonErr)
 	}
+	return nil
+}
+
+// verifyTurnstile verifies the provided Turnstile token when Cloudflare
+// Turnstile protection is enabled.
+func (h *Handler) verifyTurnstile(token, clientIP string) error {
+	if !h.opts.CfTurnstileEnabled {
+		return nil
+	}
+
+	if err := turnstile.Verify(
+		h.opts.CfTurnstileSecret,
+		token,
+		clientIP,
+		h.opts.CfTurnstileTimeout,
+	); err != nil {
+		slog.Warn("turnstile_verification_failed", "ip", clientIP, "error", err)
+		return errTurnstileVerification
+	}
+
 	return nil
 }

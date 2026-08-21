@@ -17,6 +17,7 @@ import {
   updateErrorSummary
 } from "./error-utils.js";
 import { renderPolicyList } from "./policy-ui.js";
+import { getTurnstileToken, isTurnstileTokenMissing, resetTurnstile, turnstileRequestFields } from "./turnstile.js";
 
 interface Opts {
   minLength: number;
@@ -219,10 +220,21 @@ export const init = (opts: Opts) => {
     const [newPassword] = fields.map((f) => f.getValue());
 
     try {
+      const turnstileToken = getTurnstileToken(form);
+      if (isTurnstileTokenMissing(form, turnstileToken)) {
+        setSubmitError(submitErrorContainer, "Please complete the verification challenge.");
+        toggleFields(true);
+        return;
+      }
+
       const res = await fetch("/api/rpc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: "reset-password", params: [token, newPassword] })
+        body: JSON.stringify({
+          method: "reset-password",
+          params: [token, newPassword],
+          ...turnstileRequestFields(turnstileToken)
+        })
       });
 
       const body = await res.text();
@@ -241,6 +253,7 @@ export const init = (opts: Opts) => {
       successContainer.classList.remove("hidden");
     } catch (err) {
       setSubmitError(submitErrorContainer, (err as Error).message);
+      resetTurnstile(form);
       toggleFields(true);
     }
   };
