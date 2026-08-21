@@ -81,6 +81,10 @@ type Opts struct {
 	// If not set, falls back to ReadonlyUser for backward compatibility
 	ResetUser     string
 	ResetPassword string
+
+	CfTurnstileSiteKey        string
+	CfTurnstileSecret         string
+	CfTurnstileTimeoutSeconds uint
 }
 
 // ConfigError represents a configuration validation error.
@@ -432,11 +436,35 @@ func ParseArgs(args []string) (*Opts, error) {
 			envStringOrDefault("LDAP_RESET_PASSWORD", ""),
 			"Password for the dedicated reset user.",
 		)
+
+		fCfTurnstileSiteKey = fs.String(
+			"cf-turnstile-site-key",
+			envStringOrDefault("CF_TURNSTILE_SITEKEY", ""),
+			"Cloudflare Turnstile site key. Empty disables Turnstile.",
+		)
+		fCfTurnstileSecret = fs.String(
+			"cf-turnstile-secret",
+			envStringOrDefault("CF_TURNSTILE_SECRET", ""),
+			"Cloudflare Turnstile secret key.",
+		)
+		fCfTurnstileTimeoutSeconds = fs.Uint(
+			"cf-turnstile-timeout-seconds",
+			envIntOrDefault("CF_TURNSTILE_TIMEOUT_SECONDS", 15, errs),
+			"Timeout in seconds for Cloudflare Turnstile verification.",
+		)
 	)
 
 	// Parse the provided command-line arguments (caller passes args without program name)
 	if err := fs.Parse(args); err != nil {
 		errs.Add(fmt.Sprintf("flag parsing error: %v", err))
+	}
+
+	if (*fCfTurnstileSiteKey == "") != (*fCfTurnstileSecret == "") {
+		errs.Add("cf-turnstile-site-key and cf-turnstile-secret must be configured together")
+	}
+
+	if *fCfTurnstileTimeoutSeconds == 0 {
+		errs.Add("cf-turnstile-timeout-seconds must be greater than zero")
 	}
 
 	// Keep the conversions at the use sites total: see the bound constants.
@@ -551,6 +579,10 @@ func ParseArgs(args []string) (*Opts, error) {
 
 		ResetUser:     *fResetUser,
 		ResetPassword: *fResetPassword,
+
+		CfTurnstileSiteKey:        *fCfTurnstileSiteKey,
+		CfTurnstileSecret:         *fCfTurnstileSecret,
+		CfTurnstileTimeoutSeconds: *fCfTurnstileTimeoutSeconds,
 	}, nil
 }
 

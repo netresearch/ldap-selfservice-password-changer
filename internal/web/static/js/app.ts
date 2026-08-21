@@ -30,6 +30,10 @@ interface Opts {
   passwordCanIncludeUsername: boolean;
 }
 
+declare const turnstile: {
+  reset: () => void;
+};
+
 export const init = (opts: Opts) => {
   initThemeToggle();
   initDensityToggle();
@@ -223,12 +227,20 @@ export const init = (opts: Opts) => {
     const [username, oldPassword, newPassword] = fields.map((f) => f.getValue());
 
     try {
+      const turnstileToken =
+        form.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value ?? "";
+      if (form.querySelector(".cf-turnstile") && !turnstileToken) {
+        toggleFields(true);
+        return;
+      }
+
       const res = await fetch("/api/rpc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           method: "change-password",
-          params: [username, oldPassword, newPassword]
+          params: [username, oldPassword, newPassword],
+          ...(turnstileToken && { turnstileToken })
         })
       });
 
@@ -248,6 +260,11 @@ export const init = (opts: Opts) => {
       successContainer.classList.remove("hidden");
     } catch (err) {
       setSubmitError(submitErrorContainer, (err as Error).message);
+
+      if (form.querySelector(".cf-turnstile")) {
+        turnstile.reset();
+      }
+
       toggleFields(true);
     }
   };

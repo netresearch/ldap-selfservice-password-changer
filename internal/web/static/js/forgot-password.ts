@@ -21,6 +21,10 @@ const identifierField = (mode: IdentifierMode): { label: string; validators: ((v
   }
 };
 
+declare const turnstile: {
+  reset: () => void;
+};
+
 export const init = (rawMode: string) => {
   const mode = asMode(rawMode);
   initThemeToggle();
@@ -146,10 +150,21 @@ export const init = (rawMode: string) => {
     const [email] = fields.map((f) => f.getValue());
 
     try {
+      const turnstileToken =
+        form.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value ?? "";
+      if (form.querySelector(".cf-turnstile") && !turnstileToken) {
+        toggleFields(true);
+        return;
+      }
+
       const res = await fetch("/api/rpc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: "request-password-reset", params: [email] })
+        body: JSON.stringify({
+           method: "request-password-reset",
+           params: [email],
+           ...(turnstileToken && { turnstileToken })
+        })
       });
 
       const body = await res.text();
@@ -168,6 +183,11 @@ export const init = (rawMode: string) => {
       successContainer.classList.remove("hidden");
     } catch (err) {
       setSubmitError(submitErrorContainer, (err as Error).message);
+
+      if (form.querySelector(".cf-turnstile")) {
+        turnstile.reset();
+      }
+
       toggleFields(true);
     }
   };

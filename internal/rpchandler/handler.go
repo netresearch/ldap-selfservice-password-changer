@@ -3,11 +3,13 @@ package rpchandler
 import (
 	"fmt"
 	"net/http"
+	"time"
 
 	"github.com/gofiber/fiber/v3"
 	ldap "github.com/netresearch/simple-ldap-go"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/turnstile"
 )
 
 // Func is a type alias for RPC handler functions that process string parameters and return results or errors.
@@ -100,6 +102,18 @@ func (h *Handler) Handle(c fiber.Ctx) error {
 
 	// Extract client IP for rate limiting
 	clientIP := extractClientIP(c)
+
+	// Verify Cloudflare Turnstile when configured.
+	if h.opts.CfTurnstileSiteKey != "" && h.opts.CfTurnstileSecret != "" {
+		if err := turnstile.Verify(
+			h.opts.CfTurnstileSecret,
+			body.TurnstileToken,
+			clientIP,
+			time.Duration(h.opts.CfTurnstileTimeoutSeconds)*time.Second,
+		); err != nil {
+			return sendErrorResponse(c, http.StatusForbidden, "Turnstile verification failed")
+		}
+	}
 
 	switch body.Method {
 	case "change-password":
