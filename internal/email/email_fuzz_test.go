@@ -136,7 +136,8 @@ func FuzzHeaderOverrideValidation(f *testing.F) {
 			HeaderOverrides: map[string]string{name: value},
 		})
 		msg, err := svc.buildMIMEMessage(
-			"user@example.com", "Reset your password", "text body", "<p>html body</p>")
+			"user@example.com", "Reset your password", "text body", "<p>html body</p>",
+		)
 
 		if nameErr != nil || valueErr != nil {
 			if err == nil {

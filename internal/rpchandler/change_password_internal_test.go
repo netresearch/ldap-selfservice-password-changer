@@ -129,7 +129,8 @@ func TestPasswordCanIncludeUsername(t *testing.T) {
 			} else if err != nil {
 				t.Errorf(
 					"Expected password %q to be accepted when username is %q and PasswordCanIncludeUsername=%v, got error: %v",
-					tt.password, tt.username, tt.passwordCanIncludeUsername, err)
+					tt.password, tt.username, tt.passwordCanIncludeUsername, err,
+				)
 			}
 		})
 	}
