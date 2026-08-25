@@ -4,7 +4,7 @@
 
 ### Required Tools
 
-- **Go**: 1.26+ (tested with 1.26.0)
+- **Go**: 1.26+ (CI tests the `go.mod` toolchain, currently go1.27.0)
 - **Bun**: no version pinned; CI installs the latest — runs the TypeScript and Tailwind toolchain
 - **Git**: For version control
 
