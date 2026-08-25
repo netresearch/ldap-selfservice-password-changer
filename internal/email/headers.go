@@ -63,7 +63,8 @@ func ValidateHeaderValue(value string) error {
 		}
 		if c < 0x20 || c == 0x7f {
 			return fmt.Errorf(
-				"header value must not contain control characters (found 0x%02x at offset %d)", c, i)
+				"header value must not contain control characters (found 0x%02x at offset %d)", c, i,
+			)
 		}
 	}
 	return nil

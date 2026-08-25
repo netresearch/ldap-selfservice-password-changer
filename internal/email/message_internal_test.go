@@ -135,7 +135,8 @@ func TestBuildMIMEMessage_LineEndings(t *testing.T) {
 func TestBuildMIMEMessage_Structure(t *testing.T) {
 	s := newClockedService(&Config{FromAddress: "noreply@example.com"})
 	raw, err := s.buildMIMEMessage(
-		"user@example.org", "Password Reset Request", "TEXT BODY link=x", "<p>HTML BODY link=x</p>")
+		"user@example.org", "Password Reset Request", "TEXT BODY link=x", "<p>HTML BODY link=x</p>",
+	)
 	if err != nil {
 		t.Fatalf("buildMIMEMessage: %v", err)
 	}

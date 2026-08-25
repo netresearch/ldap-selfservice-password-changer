@@ -123,7 +123,8 @@ func TestHandleInvalidJSON(t *testing.T) {
 
 	body := `{invalid json`
 	req := httptest.NewRequestWithContext(
-		context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(body))
+		context.Background(), http.MethodPost, "/api/rpc", strings.NewReader(body),
+	)
 	req.Header.Set("Content-Type", "application/json")
 
 	resp, err := app.Test(req)

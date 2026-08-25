@@ -32,8 +32,6 @@ func newResetHandler(
 	}
 }
 
-func strptr(s string) *string { return &s }
-
 // TestRequestPasswordResetUsernameModeSendsToRegisteredMail is the security-
 // critical regression: when looked up by username, the reset link must go to
 // the account's LDAP-registered address, never to the typed identifier.
@@ -42,7 +40,7 @@ func TestRequestPasswordResetUsernameModeSendsToRegisteredMail(t *testing.T) {
 	mockEmail := &mockEmailService{}
 	mockLDAP := &mockLDAPClient{
 		usersBySAM: map[string]*ldap.User{
-			"jdoe": {SAMAccountName: "jdoe", Mail: strptr("john.doe@example.com")},
+			"jdoe": {SAMAccountName: "jdoe", Mail: new("john.doe@example.com")},
 		},
 	}
 	handler := newResetHandler(options.ResetIdentifierUsername, mockLDAP, mockEmail, tokenStore)
@@ -88,7 +86,7 @@ func TestRequestPasswordResetBothModeRouting(t *testing.T) {
 		mockEmail := &mockEmailService{}
 		mockLDAP := &mockLDAPClient{
 			users: map[string]*ldap.User{
-				"john.doe@example.com": {SAMAccountName: "jdoe", Mail: strptr("john.doe@example.com")},
+				"john.doe@example.com": {SAMAccountName: "jdoe", Mail: new("john.doe@example.com")},
 			},
 		}
 		handler := newResetHandler(options.ResetIdentifierBoth, mockLDAP, mockEmail, tokenStore)
@@ -103,7 +101,7 @@ func TestRequestPasswordResetBothModeRouting(t *testing.T) {
 		mockEmail := &mockEmailService{}
 		mockLDAP := &mockLDAPClient{
 			usersBySAM: map[string]*ldap.User{
-				"jdoe": {SAMAccountName: "jdoe", Mail: strptr("john.doe@example.com")},
+				"jdoe": {SAMAccountName: "jdoe", Mail: new("john.doe@example.com")},
 			},
 		}
 		handler := newResetHandler(options.ResetIdentifierBoth, mockLDAP, mockEmail, tokenStore)
@@ -121,7 +119,7 @@ func TestRequestPasswordResetEmailModeRejectsUsername(t *testing.T) {
 	mockEmail := &mockEmailService{}
 	mockLDAP := &mockLDAPClient{
 		usersBySAM: map[string]*ldap.User{
-			"jdoe": {SAMAccountName: "jdoe", Mail: strptr("john.doe@example.com")},
+			"jdoe": {SAMAccountName: "jdoe", Mail: new("john.doe@example.com")},
 		},
 	}
 	handler := newResetHandler(options.ResetIdentifierEmail, mockLDAP, mockEmail, tokenStore)
@@ -157,7 +155,7 @@ func TestRequestPasswordResetDuplicatedMail(t *testing.T) {
 func TestRequestPasswordResetAccountRateLimitAcrossIdentifiers(t *testing.T) {
 	tokenStore := resettoken.NewStore()
 	mockEmail := &mockEmailService{}
-	user := &ldap.User{SAMAccountName: "jdoe", Mail: strptr("john.doe@example.com")}
+	user := &ldap.User{SAMAccountName: "jdoe", Mail: new("john.doe@example.com")}
 	mockLDAP := &mockLDAPClient{
 		users:      map[string]*ldap.User{"john.doe@example.com": user},
 		usersBySAM: map[string]*ldap.User{"jdoe": user},
@@ -196,7 +194,7 @@ func TestRequestPasswordResetAccountBucketNotPoisonableViaTypedInput(t *testing.
 	mockEmail := &mockEmailService{}
 	mockLDAP := &mockLDAPClient{
 		usersBySAM: map[string]*ldap.User{
-			"jdoe": {SAMAccountName: "jdoe", Mail: strptr("john.doe@example.com")},
+			"jdoe": {SAMAccountName: "jdoe", Mail: new("john.doe@example.com")},
 		},
 	}
 	handler := &Handler{
@@ -261,10 +259,10 @@ func TestRequestPasswordResetEmptyModeDefaultsToEmail(t *testing.T) {
 	mockEmail := &mockEmailService{}
 	mockLDAP := &mockLDAPClient{
 		users: map[string]*ldap.User{
-			"john.doe@example.com": {SAMAccountName: "jdoe", Mail: strptr("john.doe@example.com")},
+			"john.doe@example.com": {SAMAccountName: "jdoe", Mail: new("john.doe@example.com")},
 		},
 		usersBySAM: map[string]*ldap.User{
-			"jdoe": {SAMAccountName: "jdoe", Mail: strptr("john.doe@example.com")},
+			"jdoe": {SAMAccountName: "jdoe", Mail: new("john.doe@example.com")},
 		},
 	}
 	// Zero-value mode ("") must default to email.

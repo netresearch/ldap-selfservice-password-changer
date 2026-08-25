@@ -2,9 +2,7 @@ module github.com/netresearch/ldap-selfservice-password-changer
 
 go 1.26
 
-// 1.26.5 carries the fixes for the standard library advisories govulncheck
-// reports against 1.26.1 (crypto/x509, html/template and others).
-toolchain go1.26.6
+toolchain go1.27.0
 
 require (
 	github.com/gofiber/fiber/v3 v3.5.0
@@ -17,7 +15,6 @@ require (
 require (
 	github.com/Azure/go-ntlmssp v0.1.1 // indirect
 	github.com/andybalholm/brotli v1.2.2 // indirect
-	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/docker/go-connections v0.7.0 // indirect
 	github.com/go-asn1-ber/asn1-ber v1.5.8 // indirect
 	github.com/go-ldap/ldap/v3 v3.4.14 // indirect
@@ -30,7 +27,6 @@ require (
 	github.com/mattn/go-colorable v0.1.15 // indirect
 	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/philhofer/fwd v1.2.0 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/rogpeppe/go-internal v1.14.1 // indirect
 	github.com/tinylib/msgp v1.6.4 // indirect
 	github.com/valyala/bytebufferpool v1.0.0 // indirect

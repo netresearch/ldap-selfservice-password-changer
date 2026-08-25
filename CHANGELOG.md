@@ -7,6 +7,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- `go.mod` pins `toolchain go1.27.0` (was go1.26.6); the 1.26.x advisory rationale no longer applies. `go mod tidy` under the new toolchain pruned stale go.sum entries left over from the fiber 3.4→3.5 bump — dropping the `go-spew`/`go-difflib` indirects testify ≥ 1.11 no longer needs and moving `shamaton/msgpack/v3` to the v3.2.0 that fiber v3.5.0 already required. Test files were reformatted per Go 1.27 gofumpt and the `strptr` test helper was inlined to Go 1.26's `new(expr)`.
+
 ---
 
 ## [v1.6.0] - 2026-07-28
