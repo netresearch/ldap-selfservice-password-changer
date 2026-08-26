@@ -1,0 +1,21 @@
+# Codecov configuration
+# https://docs.codecov.com/docs/codecov-yaml
+
+codecov:
+  branch: main
+
+coverage:
+  status:
+    project:
+      default:
+        target: auto
+        threshold: 1%
+    patch:
+      default:
+        target: auto
+
+# Ignore generated and test scaffolding that would otherwise drag the
+# default `unittests` flag down — integration/e2e coverage is reported
+# under separate flags by the go-check reusable workflow.
+ignore:
+  - "node_modules/**"
