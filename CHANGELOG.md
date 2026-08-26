@@ -9,6 +9,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.6.2] - 2026-08-26
+
+### Changed
+
+- `simple-ldap-go` updated to [v1.16.0](https://github.com/netresearch/simple-ldap-go/releases/tag/v1.16.0), which closes the `CheckPasswordForDN` user-enumeration timing oracle upstream ([simple-ldap-go#219](https://github.com/netresearch/simple-ldap-go/issues/219)); this app authenticates via the sAMAccountName path, which already had the constant-time treatment, so this is hardening of the bundled library rather than a fix for an exposed path ([#671](https://github.com/netresearch/ldap-selfservice-password-changer/pull/671)).
+- All Go dependencies updated across the module graph (indirect-only version moves) ([#669](https://github.com/netresearch/ldap-selfservice-password-changer/pull/669)); bun dev-dependency group updated ([#660](https://github.com/netresearch/ldap-selfservice-password-changer/pull/660)).
+
+---
+
 ## [v1.6.1] - 2026-08-26
 
 ### Fixed
