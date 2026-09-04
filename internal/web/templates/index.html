@@ -4,6 +4,13 @@
     <title>{{ .branding.PageTitle }}</title>
     {{ template "html-head" }} {{ template "theme-init-script" }} {{ template "density-init-script" }}
     <link rel="modulepreload" href="/static/js/app.js" crossorigin="anonymous" />
+    {{ if .opts.CfTurnstileEnabled }}
+    <script
+      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
+      async
+      defer
+    ></script>
+    {{ end }}
   </head>
 
   <body class="page-body">
@@ -42,6 +49,10 @@
           ></ul>
           <!-- prettier-ignore -->
           {{ template "input" InputOpts "confirm_password" "Confirm New Password" "password" "new-password" "Re-enter your new password to confirm" }}
+
+          {{ if .opts.CfTurnstileEnabled }}
+          {{ template "turnstile" .opts.CfTurnstileSiteKey }}
+          {{ end }}
 
           {{ template "form-submit" "Update Password" }}
         </form>
