@@ -64,6 +64,9 @@ var rawSuccessMessage string
 //go:embed molecules/page-title.html
 var rawPageTitle string
 
+//go:embed molecules/turnstile.html
+var rawTurnstile string
+
 // HTML input types accepted by MakeInputOpts.
 const (
 	inputTypePassword = "password"
@@ -125,6 +128,7 @@ func parseCommonTemplates(tpl *template.Template) error {
 		rawFormSubmit,
 		rawSuccessMessage,
 		rawPageTitle,
+		rawTurnstile,
 	}
 
 	for _, tmpl := range templates {

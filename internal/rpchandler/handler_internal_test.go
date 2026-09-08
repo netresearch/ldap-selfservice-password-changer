@@ -526,6 +526,41 @@ func TestHandleResetPasswordSuccess(t *testing.T) {
 	}
 }
 
+// TestHandleResetPasswordIPRateLimitBeforeTurnstile verifies that IP rate
+// limiting rejects reset-password requests before Turnstile verification.
+func TestHandleResetPasswordIPRateLimitBeforeTurnstile(t *testing.T) {
+	handler := createTestHandlerWithResetEnabled()
+	handler.opts.CfTurnstileEnabled = true
+
+	handler.ipLimiter = &mockHandlerIPLimiter{allowed: false}
+
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
+
+	body := `{"method":"reset-password","params":["validtoken","NewPass123!"]}`
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/api/rpc",
+		strings.NewReader(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusTooManyRequests {
+		t.Errorf(
+			"status = %d, want %d",
+			resp.StatusCode,
+			http.StatusTooManyRequests,
+		)
+	}
+}
+
 // TestHandleChangePasswordSuccess tests successful password change with full response validation.
 func TestHandleChangePasswordSuccess(t *testing.T) {
 	handler := createTestHandler()
@@ -677,4 +712,101 @@ func (m *mockHandlerTokenStoreWithToken) CleanupExpired() int {
 
 func (m *mockHandlerTokenStoreWithToken) Count() int {
 	return 1
+}
+
+// TestHandleTurnstileMissingToken verifies that all protected RPC methods
+// return HTTP 403 when Turnstile is enabled and the token is missing.
+func TestHandleTurnstileMissingToken(t *testing.T) {
+	tests := []struct {
+		name string
+		body string
+	}{
+		{
+			name: "change-password",
+			body: `{"method":"change-password","params":["testuser","OldPass123!","NewPass456!"]}`,
+		},
+		{
+			name: "request-password-reset",
+			body: `{"method":"request-password-reset","params":["user@example.com"]}`,
+		},
+		{
+			name: "reset-password",
+			body: `{"method":"reset-password","params":["validtoken","NewPass123!"]}`,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := createTestHandlerWithResetEnabled()
+			handler.opts.CfTurnstileEnabled = true
+
+			app := fiber.New()
+			app.Post("/api/rpc", handler.Handle)
+
+			req := httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodPost,
+				"/api/rpc",
+				strings.NewReader(tt.body),
+			)
+			req.Header.Set("Content-Type", "application/json")
+
+			resp, err := app.Test(req)
+			if err != nil {
+				t.Fatalf("app.Test failed: %v", err)
+			}
+			defer func() { _ = resp.Body.Close() }()
+
+			if resp.StatusCode != http.StatusForbidden {
+				bodyBytes, readErr := io.ReadAll(resp.Body)
+				if readErr != nil {
+					t.Fatalf("failed to read response body: %v", readErr)
+				}
+				t.Errorf(
+					"status = %d, want %d (body: %s)",
+					resp.StatusCode,
+					http.StatusForbidden,
+					string(bodyBytes),
+				)
+			}
+		})
+	}
+}
+
+// TestHandleTurnstileDisabledPassthrough verifies that requests without a
+// Turnstile token are allowed through when Turnstile protection is disabled.
+func TestHandleTurnstileDisabledPassthrough(t *testing.T) {
+	handler := createTestHandler()
+	handler.opts.CfTurnstileEnabled = false
+
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
+
+	body := `{"method":"change-password","params":["testuser","OldPass123!","NewPass456!"]}`
+	req := httptest.NewRequestWithContext(
+		context.Background(),
+		http.MethodPost,
+		"/api/rpc",
+		strings.NewReader(body),
+	)
+	req.Header.Set("Content-Type", "application/json")
+
+	resp, err := app.Test(req)
+	if err != nil {
+		t.Fatalf("app.Test failed: %v", err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+
+	if resp.StatusCode != http.StatusOK {
+		bodyBytes, readErr := io.ReadAll(resp.Body)
+		if readErr != nil {
+			t.Fatalf("failed to read response body: %v", readErr)
+		}
+		t.Errorf(
+			"status = %d, want %d (body: %s)",
+			resp.StatusCode,
+			http.StatusOK,
+			string(bodyBytes),
+		)
+	}
 }

@@ -291,6 +291,58 @@ func TestRenderResetPassword(t *testing.T) {
 	}
 }
 
+func TestRenderTurnstileEnabledState(t *testing.T) {
+	tests := []struct {
+		name   string
+		render func(*options.Opts) ([]byte, error)
+	}{
+		{
+			name:   "index",
+			render: RenderIndex,
+		},
+		{
+			name:   "forgot-password",
+			render: RenderForgotPassword,
+		},
+		{
+			name:   "reset-password",
+			render: RenderResetPassword,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Run("disabled", func(t *testing.T) {
+				result, err := tt.render(&options.Opts{
+					CfTurnstileEnabled: false,
+					CfTurnstileSiteKey: "test-site-key",
+				})
+				require.NoError(t, err)
+
+				html := string(result)
+
+				assert.NotContains(t, html, `class="cf-turnstile"`)
+				assert.NotContains(t, html, `data-sitekey="test-site-key"`)
+				assert.NotContains(t, html, "https://challenges.cloudflare.com/turnstile/v0/api.js")
+			})
+
+			t.Run("enabled", func(t *testing.T) {
+				result, err := tt.render(&options.Opts{
+					CfTurnstileEnabled: true,
+					CfTurnstileSiteKey: "test-site-key",
+				})
+				require.NoError(t, err)
+
+				html := string(result)
+
+				assert.Contains(t, html, `class="cf-turnstile"`)
+				assert.Contains(t, html, `data-sitekey="test-site-key"`)
+				assert.Contains(t, html, "https://challenges.cloudflare.com/turnstile/v0/api.js")
+			})
+		})
+	}
+}
+
 // TestRenderIndexIdempotent tests that RenderIndex produces consistent output.
 func TestRenderIndexIdempotent(t *testing.T) {
 	opts := &options.Opts{

@@ -10,7 +10,7 @@ import (
 const msgPasswordChanged = "password changed successfully"
 
 // changePasswordWithIP handles password change requests with IP-based rate limiting.
-func (c *Handler) changePasswordWithIP(params []string, clientIP string) ([]string, error) {
+func (c *Handler) changePasswordWithIP(params []string, clientIP, turnstileToken string) ([]string, error) {
 	if len(params) != 3 {
 		return nil, ErrInvalidArgumentCount
 	}
@@ -23,6 +23,10 @@ func (c *Handler) changePasswordWithIP(params []string, clientIP string) ([]stri
 	if c.ipLimiter != nil && !c.ipLimiter.AllowRequest(clientIP) {
 		slog.Warn("password_change_ip_rate_limited", "ip", clientIP, "username", sAMAccountName)
 		return nil, errors.New("too many password change attempts from your IP address, please try again later")
+	}
+
+	if err := c.verifyTurnstile(turnstileToken, clientIP); err != nil {
+		return nil, err
 	}
 
 	if sAMAccountName == "" {

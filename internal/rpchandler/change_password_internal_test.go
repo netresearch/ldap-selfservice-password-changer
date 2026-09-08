@@ -244,6 +244,7 @@ func TestChangePasswordIPRateLimiting(t *testing.T) {
 		result, err := handler.changePasswordWithIP(
 			[]string{"testuser", "OldPass123!", "NewPass456!"},
 			clientIP,
+			"",
 		)
 		if err != nil {
 			t.Fatalf("Request %d failed: %v", i, err)
@@ -259,6 +260,7 @@ func TestChangePasswordIPRateLimiting(t *testing.T) {
 	result, err := handler.changePasswordWithIP(
 		[]string{"testuser", "OldPass123!", "NewPass456!"},
 		clientIP,
+		"",
 	)
 
 	if err == nil {
@@ -344,7 +346,7 @@ func TestChangePasswordEmptyInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := handler.changePasswordWithIP(tt.params, testClientIP)
+			result, err := handler.changePasswordWithIP(tt.params, testClientIP, "")
 			if err == nil {
 				t.Errorf("Expected error containing %q, got nil", tt.wantError)
 				return
@@ -380,6 +382,7 @@ func TestChangePasswordSamePassword(t *testing.T) {
 	result, err := handler.changePasswordWithIP(
 		[]string{"testuser", "SamePass123!", "SamePass123!"},
 		testClientIP,
+		"",
 	)
 
 	if err == nil {
@@ -417,6 +420,7 @@ func TestChangePasswordLDAPError(t *testing.T) {
 	result, err := handler.changePasswordWithIP(
 		[]string{"testuser", "OldPass123!", "NewPass456!"},
 		testClientIP,
+		"",
 	)
 
 	if err == nil {
@@ -455,7 +459,7 @@ func TestChangePasswordInvalidArgumentCount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := handler.changePasswordWithIP(tt.params, testClientIP)
+			_, err := handler.changePasswordWithIP(tt.params, testClientIP, "")
 			if !errors.Is(err, ErrInvalidArgumentCount) {
 				t.Errorf("Expected ErrInvalidArgumentCount, got: %v", err)
 			}
@@ -483,6 +487,7 @@ func TestChangePasswordNoIPLimiter(t *testing.T) {
 	result, err := handler.changePasswordWithIP(
 		[]string{"testuser", "OldPass123!", "NewPass456!"},
 		testClientIP,
+		"",
 	)
 	if err != nil {
 		t.Errorf("Unexpected error: %v", err)
@@ -543,6 +548,7 @@ func TestChangePasswordValidationFailure(t *testing.T) {
 			result, err := handler.changePasswordWithIP(
 				[]string{tt.username, "OldPass123!", tt.newPassword},
 				testClientIP,
+				"",
 			)
 			if err == nil {
 				t.Errorf("Expected error containing %q, got nil", tt.wantError)

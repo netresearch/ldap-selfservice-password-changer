@@ -697,6 +697,55 @@ func requiredArgs() []string {
 	}
 }
 
+func TestParseArgs_CloudflareTurnstileValidation(t *testing.T) {
+	tests := []struct {
+		name string
+		args []string
+		want string
+	}{
+		{
+			name: "enabled without site key",
+			args: []string{
+				"--cf-turnstile-enabled",
+				"--cf-turnstile-secret", "secret",
+			},
+			want: "cf-turnstile-site-key is required",
+		},
+		{
+			name: "enabled without secret",
+			args: []string{
+				"--cf-turnstile-enabled",
+				"--cf-turnstile-site-key", "site-key",
+			},
+			want: "cf-turnstile-secret is required",
+		},
+		{
+			name: "zero timeout",
+			args: []string{
+				"--cf-turnstile-timeout-seconds", "0",
+			},
+			want: "cf-turnstile-timeout-seconds must be greater than zero",
+		},
+		{
+			name: "timeout above maximum",
+			args: []string{
+				"--cf-turnstile-timeout-seconds", "6",
+			},
+			want: "cf-turnstile-timeout-seconds",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+
+			_, err := ParseArgs(append(requiredArgs(), tt.args...))
+			require.Error(t, err)
+			assert.Contains(t, err.Error(), tt.want)
+		})
+	}
+}
+
 func TestParseArgs_EmailTemplateOptions(t *testing.T) {
 	// Run from a temp dir so no .env is loaded from the repo.
 	t.Chdir(t.TempDir())
