@@ -113,7 +113,7 @@ one of them is configurable.
 
 | Limiter            | Limit                                                             | Applies to                                     | Configurable                                             |
 | ------------------ | ----------------------------------------------------------------- | ---------------------------------------------- | -------------------------------------------------------- |
-| **Per IP**         | 10 requests / 60 minutes, at most 1000 tracked addresses          | `change-password` and `request-password-reset` | **No** — hardcoded in `internal/ratelimit/ip_limiter.go` |
+| **Per IP**         | 10 requests / 60 minutes, at most 1000 tracked addresses          | `change-password`, `request-password-reset` and `reset-password` | **No** — hardcoded in `internal/ratelimit/ip_limiter.go` |
 | **Per identifier** | `RESET_RATE_LIMIT_REQUESTS` per `RESET_RATE_LIMIT_WINDOW_MINUTES` | `request-password-reset` only                  | Yes                                                      |
 
 The per-identifier limiter is keyed twice — once by the identifier as typed and
