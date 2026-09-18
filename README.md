@@ -126,6 +126,26 @@ and changing it requires a code change. Both limiters hold state in memory
 only, so a restart clears them and a multi-instance deployment limits per
 instance rather than globally.
 
+### Cloudflare Turnstile
+
+Cloudflare Turnstile can optionally protect password operations from automated requests.
+
+- `CF_TURNSTILE_ENABLED` - Enable Cloudflare Turnstile protection (default: `false`)
+- `CF_TURNSTILE_SITE_KEY` - Cloudflare Turnstile site key (required when `CF_TURNSTILE_ENABLED=true`)
+- `CF_TURNSTILE_SECRET` - Cloudflare Turnstile secret key (required when `CF_TURNSTILE_ENABLED=true`)
+- `CF_TURNSTILE_TIMEOUT_SECONDS` - Cloudflare Turnstile verification timeout in seconds (default and maximum: `5`)
+
+When Turnstile is enabled:
+
+- Startup fails if either the site key or secret key is missing.
+- The Content Security Policy permits scripts, connections, and frames from `https://challenges.cloudflare.com` so the Turnstile widget can operate.
+
+**Privacy:** Enabling Turnstile causes visitors' browsers to communicate with Cloudflare and may send visitor data to Cloudflare. Operators, particularly those running self-hosted deployments in the EU, should evaluate the applicable privacy and data-protection requirements before enabling it.
+
+Cloudflare Turnstile protection is fail-closed. When enabled, requests cannot proceed unless verification with Cloudflare succeeds. If Cloudflare's verification service is unavailable, password operations protected by Turnstile remain unavailable until the service recovers or Turnstile is disabled.
+
+Verification failures are logged server-side, including Cloudflare-provided error codes when available, while the client receives only a generic error message.
+
 ### Branding (optional)
 
 Every value is optional and the defaults reproduce the stock appearance, so an existing deployment looks unchanged after upgrading.

@@ -429,6 +429,27 @@ func TestBuildApp(t *testing.T) {
 	assert.NotEmpty(t, resp.Header.Get("Content-Security-Policy"))
 }
 
+func TestBuildContentSecurityPolicyTurnstile(t *testing.T) {
+	t.Run("disabled", func(t *testing.T) {
+		got := buildContentSecurityPolicy(&options.Opts{
+			CfTurnstileEnabled: false,
+		})
+
+		assert.Equal(t, contentSecurityPolicyHeader, got)
+		assert.NotContains(t, got, "https://challenges.cloudflare.com")
+	})
+
+	t.Run("enabled", func(t *testing.T) {
+		got := buildContentSecurityPolicy(&options.Opts{
+			CfTurnstileEnabled: true,
+		})
+
+		assert.Contains(t, got, "script-src 'self' https://challenges.cloudflare.com")
+		assert.Contains(t, got, "connect-src 'self' https://challenges.cloudflare.com")
+		assert.Contains(t, got, "frame-src https://challenges.cloudflare.com")
+	})
+}
+
 // TestBuildApp_BrandingOverlayIsServed exercises the overlay through the real
 // Fiber static middleware rather than through fs.FS directly: the middleware
 // decides what path it hands to Open, so serving an overridden asset is the

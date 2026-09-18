@@ -49,12 +49,43 @@ type TokenStore interface {
 func (h *Handler) requestPasswordReset(params []string) ([]string, error) {
 	// For backward compatibility, call the IP-aware version with a placeholder IP
 	// In production, this should not be called - Handle() uses requestPasswordResetWithIP
-	return h.requestPasswordResetWithIP(params, "0.0.0.0")
+	return h.requestPasswordResetWithIP(params, "0.0.0.0", "")
+}
+
+// allowPasswordResetRequest applies IP rate limiting and Turnstile verification
+// before a password reset request is processed.
+func (h *Handler) allowPasswordResetRequest(clientIP, emailOrUsername, turnstileToken string) (bool, error) {
+	// FIRST: Check IP-based rate limit (stricter, catches flooding)
+	// This prevents attackers from using different emails to bypass rate limiting
+	if h.ipLimiter != nil && !h.ipLimiter.AllowRequest(clientIP) {
+		// IP is rate limited - return success but don't proceed
+		slog.Warn("password_reset_ip_rate_limited", "ip", clientIP)
+		return false, nil
+	}
+
+	// SECOND: Check the rate limit for the typed identifier (per-user
+	// protection). The "typed:" prefix keeps these buckets disjoint from the
+	// post-resolution "account:" buckets below — without it, an attacker could
+	// pre-exhaust a victim's account bucket by literally typing
+	// "account:<username>" into the form.
+	if !h.rateLimiter.AllowRequest("typed:" + emailOrUsername) {
+		// User is rate limited - return success but don't proceed
+		slog.Warn("password_reset_rate_limited", "email", emailOrUsername)
+		return false, nil
+	}
+
+	// THIRD: Verify Turnstile only after local rate limiting to avoid unmetered
+	// outbound verification requests to Cloudflare.
+	if err := h.verifyTurnstile(turnstileToken, clientIP); err != nil {
+		return false, err
+	}
+
+	return true, nil
 }
 
 // requestPasswordResetWithIP handles password reset requests with IP-based rate limiting.
 // Always returns a generic success message to prevent user enumeration.
-func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) ([]string, error) {
+func (h *Handler) requestPasswordResetWithIP(params []string, clientIP, turnstileToken string) ([]string, error) {
 	// Validate parameter count
 	if len(params) != 1 {
 		return nil, ErrInvalidArgumentCount
@@ -73,22 +104,13 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 		return genericSuccess, nil
 	}
 
-	// FIRST: Check IP-based rate limit (stricter, catches flooding)
-	// This prevents attackers from using different emails to bypass rate limiting
-	if h.ipLimiter != nil && !h.ipLimiter.AllowRequest(clientIP) {
-		// IP is rate limited - return success but don't proceed
-		slog.Warn("password_reset_ip_rate_limited", "ip", clientIP)
-		return genericSuccess, nil
+	// Apply local rate limiting and Turnstile verification before performing
+	// expensive token generation or LDAP operations.
+	allowed, err := h.allowPasswordResetRequest(clientIP, emailOrUsername, turnstileToken)
+	if err != nil {
+		return nil, err
 	}
-
-	// SECOND: Check the rate limit for the typed identifier (per-user
-	// protection). The "typed:" prefix keeps these buckets disjoint from the
-	// post-resolution "account:" buckets below — without it, an attacker could
-	// pre-exhaust a victim's account bucket by literally typing
-	// "account:<username>" into the form.
-	if !h.rateLimiter.AllowRequest("typed:" + emailOrUsername) {
-		// User is rate limited - return success but don't proceed
-		slog.Warn("password_reset_rate_limited", "email", emailOrUsername)
+	if !allowed {
 		return genericSuccess, nil
 	}
 
@@ -114,7 +136,7 @@ func (h *Handler) requestPasswordResetWithIP(params []string, clientIP string) (
 
 	username := user.SAMAccountName
 
-	// THIRD: Check the rate limit for the RESOLVED account. The pre-lookup
+	// Check the rate limit for the RESOLVED account. The pre-lookup
 	// check above is keyed on the typed string, so one mailbox reachable via
 	// several identifiers (email and username in "both" mode, or an account
 	// with multiple mail values) would otherwise get one bucket per spelling,

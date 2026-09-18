@@ -23,10 +23,10 @@ Note: HTTP handlers, middleware, and server setup are in `main.go` at the projec
 
 **Key characteristics**:
 
-- **WCAG 2.2 AAA**: 7:1 contrast, keyboard navigation, screen reader support, adaptive density
+- **WCAG 2.2 AAA target**: 7:1 contrast, keyboard navigation, screen reader support, adaptive density; third-party Turnstile content is outside this scope
 - **Ultra-strict TypeScript**: All strict flags enabled, no `any` types
 - **Tailwind CSS 4**: Utility-first, dark mode, responsive, accessible patterns
-- **Progressive enhancement**: Works without JavaScript (forms submit via HTTP)
+- **Progressive enhancement**: Works without JavaScript (forms submit via HTTP) when Cloudflare Turnstile is disabled
 - **Password manager friendly**: Proper autocomplete attributes
 
 ## Setup/Environment
@@ -323,7 +323,7 @@ console.log(items[0].toUpperCase()); // ❌ may crash if empty array
 - **Autocomplete hygiene.** New-password fields MUST set `autocomplete="new-password"`; current-password fields use `autocomplete="current-password"`. Wrong or missing autocomplete confuses password managers and can cause them to fill wrong values.
 - **Password-manager-friendly forms.** Every password input sits inside a `<form>` with proper `<label>`. Don't hide real `<input type="password">` behind a fake div — managers won't detect it.
 - **No PII in client logs.** Never `console.log` passwords, tokens, usernames, or email addresses. Strip diagnostic logs before committing.
-- **No third-party scripts.** Keep the CSP strict; no CDN-hosted libraries, no analytics, no remote fonts. All assets ship from the same origin via Go's embedded FS.
+- **No third-party scripts by default.** Keep the CSP strict; no CDN-hosted libraries, analytics, or remote fonts. The sole approved exception is the opt-in Cloudflare Turnstile integration, which loads `https://challenges.cloudflare.com/turnstile/v0/api.js` only when `CF_TURNSTILE_ENABLED` is explicitly enabled. All other assets ship from the same origin via Go's embedded FS.
 - **Focus trap on modals.** Any dialog must trap focus while open (for security + a11y). Escape must close and restore focus.
 - **Subresource integrity.** If a local asset ever must reference an external URL (shouldn't happen here), pin with SRI hashes.
 - **Tailwind classes are static.** Never template-compose class names from user data — JIT won't pick them up and the attacker could produce unexpected styling. Always full static strings.

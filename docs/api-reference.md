@@ -13,8 +13,9 @@ Content-Type: application/json
 
 ```typescript
 {
-  "method": string,  // RPC method name
-  "params": string[] // Method parameters
+  "method": string,         // RPC method name
+  "params": string[],       // Method parameters
+  "turnstileToken"?: string // Cloudflare Turnstile token when Turnstile is enabled
 }
 ```
 
@@ -42,7 +43,8 @@ Changes a user's password in the LDAP/ActiveDirectory server.
     "username", // sAMAccountName
     "currentPassword", // Current password for authentication
     "newPassword" // New password to set
-  ]
+  ],
+  "turnstileToken": "<turnstile-token>" // Cloudflare Turnstile token when Turnstile is enabled
 }
 ```
 
@@ -82,6 +84,19 @@ Changes a user's password in the LDAP/ActiveDirectory server.
 - `"the new password must contain at least {N} uppercase letter(s)"`
 - `"the new password must contain at least {N} lowercase letter(s)"`
 - `"the new password must not include the username"`
+
+##### Turnstile Verification Error
+
+When Cloudflare Turnstile protection is enabled, a missing or invalid `turnstileToken`, or a failure to verify the token with Cloudflare, causes the request to fail closed.
+
+```json
+{
+  "success": false,
+  "data": ["Turnstile verification failed"]
+}
+```
+
+**HTTP Status**: 403 Forbidden
 
 ##### LDAP Errors
 
@@ -168,7 +183,8 @@ form.onsubmit = async (e) => {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       method: "change-password",
-      params: [username, oldPassword, newPassword]
+      params: [username, oldPassword, newPassword],
+      turnstileToken
     })
   });
 

@@ -372,7 +372,7 @@ func TestRequestPasswordResetIPRateLimitingIntegration(t *testing.T) {
 	// These should all succeed (within IP rate limit)
 	for i := 1; i <= 10; i++ {
 		email := fmt.Sprintf("user%d@example.com", i)
-		result, err := handler.requestPasswordResetWithIP([]string{email}, clientIP)
+		result, err := handler.requestPasswordResetWithIP([]string{email}, clientIP, "")
 		require.NoError(t, err, "Request %d failed", i)
 		if len(result) != 1 {
 			t.Errorf("Request %d: expected 1 result, got %d", i, len(result))
@@ -385,7 +385,7 @@ func TestRequestPasswordResetIPRateLimitingIntegration(t *testing.T) {
 	}
 
 	// 11th request from same IP should be rate limited by IP limiter
-	result, err := handler.requestPasswordResetWithIP([]string{"user11@example.com"}, clientIP)
+	result, err := handler.requestPasswordResetWithIP([]string{"user11@example.com"}, clientIP, "")
 	if err != nil {
 		t.Errorf("Rate limited request should not error, got: %v", err)
 	}
@@ -430,7 +430,7 @@ func TestRequestPasswordResetIPRateLimitCheckedBeforeEmail(t *testing.T) {
 	for i := 1; i <= 10; i++ {
 		email := fmt.Sprintf("user%d@example.com", i)
 		mockLDAP.users[email] = &ldap.User{SAMAccountName: fmt.Sprintf("user%d", i)}
-		if _, err := handler.requestPasswordResetWithIP([]string{email}, clientIP); err != nil {
+		if _, err := handler.requestPasswordResetWithIP([]string{email}, clientIP, ""); err != nil {
 			t.Fatalf("Failed to request password reset: %v", err)
 		}
 	}
@@ -442,7 +442,7 @@ func TestRequestPasswordResetIPRateLimitCheckedBeforeEmail(t *testing.T) {
 
 	initialEmailLimiterCount := emailLimiter.Count()
 
-	result, err := handler.requestPasswordResetWithIP([]string{newEmail}, clientIP)
+	result, err := handler.requestPasswordResetWithIP([]string{newEmail}, clientIP, "")
 	if err != nil {
 		t.Errorf("Should not error, got: %v", err)
 	}

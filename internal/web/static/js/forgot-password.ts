@@ -1,6 +1,7 @@
 import { mustNotBeEmpty, isValidEmail } from "./validators.js";
 import { initThemeToggle, initDensityToggle } from "./toggles.js";
 import { type FieldError, setFieldErrors, setSubmitError, updateErrorSummary } from "./error-utils.js";
+import { getTurnstileToken, isTurnstileTokenMissing, resetTurnstile, turnstileRequestFields } from "./turnstile.js";
 
 type IdentifierMode = "email" | "username" | "both";
 
@@ -146,10 +147,21 @@ export const init = (rawMode: string) => {
     const [email] = fields.map((f) => f.getValue());
 
     try {
+      const turnstileToken = getTurnstileToken(form);
+      if (isTurnstileTokenMissing(form, turnstileToken)) {
+        setSubmitError(submitErrorContainer, "Please complete the verification challenge.");
+        toggleFields(true);
+        return;
+      }
+
       const res = await fetch("/api/rpc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ method: "request-password-reset", params: [email] })
+        body: JSON.stringify({
+          method: "request-password-reset",
+          params: [email],
+          ...turnstileRequestFields(turnstileToken)
+        })
       });
 
       const body = await res.text();
@@ -168,6 +180,7 @@ export const init = (rawMode: string) => {
       successContainer.classList.remove("hidden");
     } catch (err) {
       setSubmitError(submitErrorContainer, (err as Error).message);
+      resetTurnstile(form);
       toggleFields(true);
     }
   };

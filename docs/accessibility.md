@@ -2,11 +2,11 @@
 
 ## Overview
 
-This application achieves **WCAG 2.2 Level AAA compliance** with adaptive features that respond to user preferences and device capabilities. This guide explains the accessibility features, compliance details, and testing procedures.
+This application targets **WCAG 2.2 Level AAA compliance** with adaptive features that respond to user preferences and device capabilities. When the optional Cloudflare Turnstile integration is enabled, its third-party challenge iframe is provided by Cloudflare and is outside the application's direct accessibility control; the AAA claim therefore applies to the application's own frontend rather than third-party Turnstile content. Turnstile-protected password operations require JavaScript to obtain the client-side verification token. This guide explains the accessibility features, compliance details, and testing procedures.
 
 ## WCAG 2.2 Compliance Summary
 
-### Level AAA Criteria Met
+### Level AAA Criteria Targeted
 
 | Criterion | Level | Description                 | Implementation                          |
 | --------- | ----- | --------------------------- | --------------------------------------- |
