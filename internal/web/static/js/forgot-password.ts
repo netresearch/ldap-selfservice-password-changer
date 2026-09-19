@@ -1,7 +1,13 @@
 import { mustNotBeEmpty, isValidEmail } from "./validators.js";
 import { initThemeToggle, initDensityToggle } from "./toggles.js";
 import { type FieldError, setFieldErrors, setSubmitError, updateErrorSummary } from "./error-utils.js";
-import { getTurnstileToken, isTurnstileTokenMissing, resetTurnstile, turnstileRequestFields } from "./turnstile.js";
+import {
+  ensureTurnstileWidget,
+  getTurnstileToken,
+  isTurnstileTokenMissing,
+  resetTurnstile,
+  turnstileRequestFields
+} from "./turnstile.js";
 
 type IdentifierMode = "email" | "username" | "both";
 
@@ -149,6 +155,7 @@ export const init = (rawMode: string) => {
     try {
       const turnstileToken = getTurnstileToken(form);
       if (isTurnstileTokenMissing(form, turnstileToken)) {
+        ensureTurnstileWidget();
         setSubmitError(submitErrorContainer, "Please complete the verification challenge.");
         toggleFields(true);
         return;
@@ -180,7 +187,7 @@ export const init = (rawMode: string) => {
       successContainer.classList.remove("hidden");
     } catch (err) {
       setSubmitError(submitErrorContainer, (err as Error).message);
-      resetTurnstile(form);
+      resetTurnstile();
       toggleFields(true);
     }
   };

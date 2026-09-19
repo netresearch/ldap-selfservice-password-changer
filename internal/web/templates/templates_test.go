@@ -3,6 +3,9 @@ package templates
 
 import (
 	"html/template"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -323,6 +326,7 @@ func TestRenderTurnstileEnabledState(t *testing.T) {
 
 				assert.NotContains(t, html, `class="cf-turnstile"`)
 				assert.NotContains(t, html, `data-sitekey="test-site-key"`)
+				assert.NotContains(t, html, `id="cf-turnstile-widget"`)
 				assert.NotContains(t, html, "https://challenges.cloudflare.com/turnstile/v0/api.js")
 			})
 
@@ -337,10 +341,70 @@ func TestRenderTurnstileEnabledState(t *testing.T) {
 
 				assert.Contains(t, html, `class="cf-turnstile"`)
 				assert.Contains(t, html, `data-sitekey="test-site-key"`)
-				assert.Contains(t, html, "https://challenges.cloudflare.com/turnstile/v0/api.js")
+
+				// The widget is rendered explicitly so its theme can follow the
+				// application's own theme toggle: the container needs the id
+				// turnstile.ts renders into, and the script needs both
+				// parameters — render=explicit alone would never render, the
+				// onload callback alone would render with the default theme.
+				assert.Contains(t, html, `id="cf-turnstile-widget"`)
+				assert.Contains(
+					t,
+					html,
+					"https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCallback",
+				)
 			})
 		})
 	}
+}
+
+// TestTurnstileMarkupMatchesClientContract ties the rendered markup to the
+// client that consumes it. The two halves of both contracts — the container id
+// turnstile.ts renders into, and the name of the callback it registers on
+// window — live in different languages, so renaming one of them would
+// otherwise leave every assertion above green while the widget never renders.
+func TestTurnstileMarkupMatchesClientContract(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("..", "static", "js", "turnstile.ts"))
+	require.NoError(t, err)
+
+	widgetID := captureOne(t, `const widgetSelector = "#([A-Za-z0-9_-]+)"`, string(source))
+	// The right-hand side is deliberately unconstrained beyond "not ==": what
+	// the template needs is the name, and how turnstile.ts produces the
+	// function is its own business. captureOne takes the first match, so an
+	// unrelated window assignment placed earlier in the file fails this test
+	// rather than passing it with the wrong name — the safe direction.
+	callback := captureOne(t, `window\.([A-Za-z0-9_$]+)\s*=[^=]`, string(source))
+
+	renderers := map[string]func(*options.Opts) ([]byte, error){
+		"index":           RenderIndex,
+		"forgot-password": RenderForgotPassword,
+		"reset-password":  RenderResetPassword,
+	}
+
+	for name, render := range renderers {
+		t.Run(name, func(t *testing.T) {
+			html, err := render(&options.Opts{
+				CfTurnstileEnabled: true,
+				CfTurnstileSiteKey: "test-site-key",
+			})
+			require.NoError(t, err)
+
+			assert.Contains(t, string(html), `id="`+widgetID+`"`)
+			assert.Contains(t, string(html), "onload="+callback)
+		})
+	}
+}
+
+// captureOne returns the single capture group of pattern in source, failing
+// the test when the pattern no longer matches — which is itself the signal
+// that the client-side contract moved.
+func captureOne(t *testing.T, pattern, source string) string {
+	t.Helper()
+
+	match := regexp.MustCompile(pattern).FindStringSubmatch(source)
+	require.Len(t, match, 2, "pattern %q no longer matches turnstile.ts", pattern)
+
+	return match[1]
 }
 
 // TestRenderIndexIdempotent tests that RenderIndex produces consistent output.

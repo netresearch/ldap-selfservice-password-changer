@@ -20,7 +20,13 @@ import {
   updateErrorSummary
 } from "./error-utils.js";
 import { renderPolicyList } from "./policy-ui.js";
-import { getTurnstileToken, isTurnstileTokenMissing, resetTurnstile, turnstileRequestFields } from "./turnstile.js";
+import {
+  ensureTurnstileWidget,
+  getTurnstileToken,
+  isTurnstileTokenMissing,
+  resetTurnstile,
+  turnstileRequestFields
+} from "./turnstile.js";
 
 interface Opts {
   minLength: number;
@@ -226,6 +232,7 @@ export const init = (opts: Opts) => {
     try {
       const turnstileToken = getTurnstileToken(form);
       if (isTurnstileTokenMissing(form, turnstileToken)) {
+        ensureTurnstileWidget();
         setSubmitError(submitErrorContainer, "Please complete the verification challenge.");
         toggleFields(true);
         return;
@@ -257,7 +264,7 @@ export const init = (opts: Opts) => {
       successContainer.classList.remove("hidden");
     } catch (err) {
       setSubmitError(submitErrorContainer, (err as Error).message);
-      resetTurnstile(form);
+      resetTurnstile();
       toggleFields(true);
     }
   };
