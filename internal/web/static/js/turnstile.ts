@@ -2,6 +2,7 @@ declare const turnstile:
   | {
       reset: () => void;
     }
+  | null
   | undefined;
 
 export const getTurnstileToken = (form: HTMLFormElement): string =>
@@ -21,7 +22,11 @@ export const resetTurnstile = (form: HTMLFormElement): void => {
     return;
   }
 
-  if (typeof turnstile === "undefined" || typeof turnstile.reset !== "function") {
+  // typeof first: the global is undeclared when the script never loaded, and
+  // reading an undeclared name any other way is itself a ReferenceError. The
+  // null check follows because typeof null is "object", so the property access
+  // below would throw ahead of the try.
+  if (typeof turnstile === "undefined" || turnstile === null || typeof turnstile.reset !== "function") {
     return;
   }
 

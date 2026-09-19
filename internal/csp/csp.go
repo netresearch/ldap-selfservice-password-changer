@@ -23,7 +23,8 @@ const base = "default-src 'self'; " +
 const directiveSeparator = "; "
 
 // turnstileExtends names the directives the Cloudflare origin is appended to.
-// frame-src is handled separately because base does not carry one.
+// frame-src is in the list for a base that carries one; where it does not,
+// Build inserts the directive instead.
 var turnstileExtends = []string{"script-src", "connect-src", "frame-src"}
 
 // isDirective reports whether the directive is the named one. The name is

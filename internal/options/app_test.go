@@ -757,7 +757,9 @@ func TestParseArgs_CloudflareTurnstileValidation(t *testing.T) {
 // direction of the validation above: with Turnstile off the timeout is never
 // read, so a leftover value must not keep the application from starting.
 func TestParseArgs_CloudflareTurnstileDisabledIgnoresTimeout(t *testing.T) {
-	for _, seconds := range []string{"0", "6"} {
+	overMaximum := strconv.Itoa(maxCfTurnstileTimeoutSeconds + 1)
+
+	for _, seconds := range []string{"0", overMaximum} {
 		t.Run(seconds, func(t *testing.T) {
 			t.Chdir(t.TempDir())
 
@@ -769,7 +771,7 @@ func TestParseArgs_CloudflareTurnstileDisabledIgnoresTimeout(t *testing.T) {
 			// cfTurnstileSecondsToDuration: with Turnstile enabled, 6 is
 			// rejected before the conversion runs.
 			want := time.Duration(0)
-			if seconds == "6" {
+			if seconds == overMaximum {
 				want = maxCfTurnstileTimeoutSeconds * time.Second
 			}
 			assert.Equal(t, want, opts.CfTurnstileTimeout)

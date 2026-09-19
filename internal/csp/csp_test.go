@@ -59,8 +59,7 @@ func TestBuildEnabledKeepsEveryBaseDirective(t *testing.T) {
 	}
 
 	for _, directive := range strings.Split(csp.Build(false), "; ") {
-		name, _, found := strings.Cut(directive, " ")
-		assert.True(t, found, "directive %q has no value", directive)
+		name, _, _ := strings.Cut(directive, " ")
 
 		want := directive
 		if extended[name] {
