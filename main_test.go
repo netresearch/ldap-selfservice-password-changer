@@ -20,6 +20,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/csp"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/rpchandler"
 )
@@ -429,25 +430,38 @@ func TestBuildApp(t *testing.T) {
 	assert.NotEmpty(t, resp.Header.Get("Content-Security-Policy"))
 }
 
-func TestBuildContentSecurityPolicyTurnstile(t *testing.T) {
-	t.Run("disabled", func(t *testing.T) {
-		got := buildContentSecurityPolicy(&options.Opts{
-			CfTurnstileEnabled: false,
+// TestBuildAppServesTurnstilePolicy pins the wiring rather than the policy
+// text: the policy itself is tested in internal/csp, what is tested here is
+// that buildApp passes the Turnstile setting into it.
+func TestBuildAppServesTurnstilePolicy(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		enabled bool
+	}{
+		{name: "disabled", enabled: false},
+		{name: "enabled", enabled: true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			app, err := buildApp(&options.Opts{CfTurnstileEnabled: tc.enabled})
+			require.NoError(t, err)
+
+			req := httptest.NewRequestWithContext(
+				context.Background(),
+				http.MethodGet,
+				"/static/missing.txt",
+				http.NoBody,
+			)
+			resp, err := app.Test(req)
+			require.NoError(t, err)
+			defer func() { _ = resp.Body.Close() }()
+
+			assert.Equal(t, csp.Build(tc.enabled), resp.Header.Get("Content-Security-Policy"))
+			assert.Equal(t, tc.enabled, strings.Contains(
+				resp.Header.Get("Content-Security-Policy"),
+				csp.TurnstileOrigin,
+			))
 		})
-
-		assert.Equal(t, contentSecurityPolicyHeader, got)
-		assert.NotContains(t, got, "https://challenges.cloudflare.com")
-	})
-
-	t.Run("enabled", func(t *testing.T) {
-		got := buildContentSecurityPolicy(&options.Opts{
-			CfTurnstileEnabled: true,
-		})
-
-		assert.Contains(t, got, "script-src 'self' https://challenges.cloudflare.com")
-		assert.Contains(t, got, "connect-src 'self' https://challenges.cloudflare.com")
-		assert.Contains(t, got, "frame-src https://challenges.cloudflare.com")
-	})
+	}
 }
 
 // TestBuildApp_BrandingOverlayIsServed exercises the overlay through the real

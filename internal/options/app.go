@@ -480,7 +480,6 @@ func ParseArgs(args []string) (*Opts, error) {
 	checkUintMax("reset-token-expiry-minutes", *fResetTokenExpiryMinutes, maxDurationMinutes, errs)
 	checkUintMax("reset-rate-limit-window-minutes", *fResetRateLimitWindowMinutes, maxDurationMinutes, errs)
 	checkUintMax("reset-rate-limit-requests", *fResetRateLimitRequests, maxRateLimitRequests, errs)
-	checkUintMax("cf-turnstile-timeout-seconds", *fCfTurnstileTimeoutSeconds, maxCfTurnstileTimeoutSeconds, errs)
 
 	// Normalize and validate the password reset identifier mode
 	resetIdentifierMode := ResetIdentifierMode(strings.ToLower(strings.TrimSpace(*fResetIdentifierMode)))
@@ -549,11 +548,6 @@ func ParseArgs(args []string) (*Opts, error) {
 		return nil, errs
 	}
 
-	cfTurnstileTimeout, err := uintSecondsToDuration(*fCfTurnstileTimeoutSeconds)
-	if err != nil {
-		return nil, err
-	}
-
 	return &Opts{
 		Port: *fPort,
 		LDAP: ldap.Config{
@@ -597,7 +591,7 @@ func ParseArgs(args []string) (*Opts, error) {
 		CfTurnstileEnabled: *fCfTurnstileEnabled,
 		CfTurnstileSiteKey: *fCfTurnstileSiteKey,
 		CfTurnstileSecret:  *fCfTurnstileSecret,
-		CfTurnstileTimeout: cfTurnstileTimeout,
+		CfTurnstileTimeout: cfTurnstileSecondsToDuration(*fCfTurnstileTimeoutSeconds),
 	}, nil
 }
 
@@ -615,12 +609,17 @@ func MustParse() *Opts {
 	return opts
 }
 
-func uintSecondsToDuration(value uint) (time.Duration, error) {
-	if uint64(value) > uint64(math.MaxInt64/int64(time.Second)) {
-		return 0, fmt.Errorf("seconds value %d overflows time.Duration", value)
+// cfTurnstileSecondsToDuration converts the verification timeout into a
+// duration. checkUintMax has already rejected anything above
+// maxCfTurnstileTimeoutSeconds and ParseArgs returns on errs before this runs,
+// so the clamp below is a belt on the conversion rather than a reachable
+// branch — it keeps the function total for any caller.
+func cfTurnstileSecondsToDuration(seconds uint) time.Duration {
+	if seconds > maxCfTurnstileTimeoutSeconds {
+		return maxCfTurnstileTimeoutSeconds * time.Second
 	}
 
-	return time.Duration(int64(value)) * time.Second, nil
+	return time.Duration(seconds) * time.Second
 }
 
 func validateCfTurnstileConfig(
@@ -629,16 +628,21 @@ func validateCfTurnstileConfig(
 	timeoutSeconds uint,
 	errs *ConfigError,
 ) {
-	if enabled {
-		if siteKey == "" {
-			errs.Add("cf-turnstile-site-key is required when cf-turnstile-enabled is true")
-		}
-		if secret == "" {
-			errs.Add("cf-turnstile-secret is required when cf-turnstile-enabled is true")
-		}
+	// Every check below is scoped to the enabled case: with Turnstile off the
+	// values are never read, so a leftover or zeroed setting must not keep the
+	// application from starting.
+	if !enabled {
+		return
 	}
 
+	if siteKey == "" {
+		errs.Add("cf-turnstile-site-key is required when cf-turnstile-enabled is true")
+	}
+	if secret == "" {
+		errs.Add("cf-turnstile-secret is required when cf-turnstile-enabled is true")
+	}
 	if timeoutSeconds == 0 {
 		errs.Add("cf-turnstile-timeout-seconds must be greater than zero")
 	}
+	checkUintMax("cf-turnstile-timeout-seconds", timeoutSeconds, maxCfTurnstileTimeoutSeconds, errs)
 }

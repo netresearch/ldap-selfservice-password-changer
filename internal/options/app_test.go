@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -720,15 +721,21 @@ func TestParseArgs_CloudflareTurnstileValidation(t *testing.T) {
 			want: "cf-turnstile-secret is required",
 		},
 		{
-			name: "zero timeout",
+			name: "enabled with zero timeout",
 			args: []string{
+				"--cf-turnstile-enabled",
+				"--cf-turnstile-site-key", "site-key",
+				"--cf-turnstile-secret", "secret",
 				"--cf-turnstile-timeout-seconds", "0",
 			},
 			want: "cf-turnstile-timeout-seconds must be greater than zero",
 		},
 		{
-			name: "timeout above maximum",
+			name: "enabled with timeout above maximum",
 			args: []string{
+				"--cf-turnstile-enabled",
+				"--cf-turnstile-site-key", "site-key",
+				"--cf-turnstile-secret", "secret",
 				"--cf-turnstile-timeout-seconds", "6",
 			},
 			want: "cf-turnstile-timeout-seconds",
@@ -744,6 +751,36 @@ func TestParseArgs_CloudflareTurnstileValidation(t *testing.T) {
 			assert.Contains(t, err.Error(), tt.want)
 		})
 	}
+}
+
+// TestParseArgs_CloudflareTurnstileDisabledIgnoresTimeout is the other
+// direction of the validation above: with Turnstile off the timeout is never
+// read, so a leftover value must not keep the application from starting.
+func TestParseArgs_CloudflareTurnstileDisabledIgnoresTimeout(t *testing.T) {
+	for _, seconds := range []string{"0", "6"} {
+		t.Run(seconds, func(t *testing.T) {
+			t.Chdir(t.TempDir())
+
+			opts, err := ParseArgs(append(requiredArgs(), "--cf-turnstile-timeout-seconds", seconds))
+			require.NoError(t, err)
+			assert.False(t, opts.CfTurnstileEnabled)
+		})
+	}
+}
+
+// TestParseArgs_CloudflareTurnstileTimeoutDuration pins the second-to-duration
+// conversion, including the clamp at the maximum.
+func TestParseArgs_CloudflareTurnstileTimeoutDuration(t *testing.T) {
+	t.Chdir(t.TempDir())
+
+	opts, err := ParseArgs(append(requiredArgs(),
+		"--cf-turnstile-enabled",
+		"--cf-turnstile-site-key", "site-key",
+		"--cf-turnstile-secret", "secret",
+		"--cf-turnstile-timeout-seconds", "3",
+	))
+	require.NoError(t, err)
+	assert.Equal(t, 3*time.Second, opts.CfTurnstileTimeout)
 }
 
 func TestParseArgs_EmailTemplateOptions(t *testing.T) {

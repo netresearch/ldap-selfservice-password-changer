@@ -18,6 +18,7 @@ import (
 	"github.com/gofiber/fiber/v3/middleware/helmet"
 	"github.com/gofiber/fiber/v3/middleware/static"
 
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/csp"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/email"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/ratelimit"
@@ -31,39 +32,13 @@ const (
 	healthCheckTimeout  = 3 * time.Second
 	healthCheckEndpoint = "http://localhost:3000/health/live"
 
-	defaultBodyLimit            = 4 * 1024
-	defaultReadTimeout          = 10 * time.Second
-	defaultWriteTimeout         = 10 * time.Second
-	defaultIdleTimeout          = 120 * time.Second
-	cleanupIntervalMinutes      = 5 * time.Minute
-	staticCacheMaxAgeSeconds    = 24 * 60 * 60
-	contentSecurityPolicyHeader = "default-src 'self'; " +
-		"script-src 'self'; " +
-		"style-src 'self' 'unsafe-inline'; " + // unsafe-inline needed for browser password managers (Bitwarden etc.)
-		"img-src 'self' data:; " +
-		"font-src 'self'; " +
-		"connect-src 'self'; " +
-		"frame-ancestors 'none'; " +
-		"base-uri 'self'; " +
-		"form-action 'self'"
+	defaultBodyLimit         = 4 * 1024
+	defaultReadTimeout       = 10 * time.Second
+	defaultWriteTimeout      = 10 * time.Second
+	defaultIdleTimeout       = 120 * time.Second
+	cleanupIntervalMinutes   = 5 * time.Minute
+	staticCacheMaxAgeSeconds = 24 * 60 * 60
 )
-
-func buildContentSecurityPolicy(opts *options.Opts) string {
-	if !opts.CfTurnstileEnabled {
-		return contentSecurityPolicyHeader
-	}
-
-	return "default-src 'self'; " +
-		"script-src 'self' https://challenges.cloudflare.com; " +
-		"style-src 'self' 'unsafe-inline'; " +
-		"img-src 'self' data:; " +
-		"font-src 'self'; " +
-		"connect-src 'self' https://challenges.cloudflare.com; " +
-		"frame-src https://challenges.cloudflare.com; " +
-		"frame-ancestors 'none'; " +
-		"base-uri 'self'; " +
-		"form-action 'self'"
-}
 
 // healthCheckFlag is the CLI flag that triggers a standalone health-check run.
 const healthCheckFlag = "--health-check"
@@ -244,7 +219,7 @@ func buildApp(opts *options.Opts) (*fiber.App, error) {
 
 	// Security headers middleware
 	app.Use(helmet.New(helmet.Config{
-		ContentSecurityPolicy: buildContentSecurityPolicy(opts),
+		ContentSecurityPolicy: csp.Build(opts.CfTurnstileEnabled),
 		XFrameOptions:         "DENY",
 		ContentTypeNosniff:    "nosniff",
 		ReferrerPolicy:        "strict-origin-when-cross-origin",
