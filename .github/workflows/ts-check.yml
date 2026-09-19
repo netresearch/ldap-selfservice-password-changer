@@ -1,0 +1,24 @@
+name: TS Check
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  merge_group:
+
+permissions: {}
+
+jobs:
+  ts:
+    uses: netresearch/.github/.github/workflows/ts-check.yml@main
+    with:
+      # The type check is `bun run js:build`, which emits into
+      # internal/web/static/js — the same files go:embed picks up, so this job
+      # also proves the assets the Go build needs can be produced.
+      type-check-cmd: "bun run js:build"
+      # Format-check stays off: ten files in this repository predate Prettier
+      # and are not formatted, so the job would be red from the first run.
+      enable-format-check: false
+    permissions:
+      contents: read
