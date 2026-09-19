@@ -217,7 +217,9 @@ func TestMalformedRequestIsRefusedBeforeTheLimiters(t *testing.T) {
 }
 
 // TestChangePasswordWithoutIPLimiterIsServed covers the nil limiter, which is
-// the state New() leaves the handler in until SetIPLimiter is called.
+// the state New() leaves the handler in until SetIPLimiter is called. It
+// replaces TestChangePasswordNoIPLimiter, which drove changePassword directly
+// and stopped covering anything once the limiter moved into a guard.
 func TestChangePasswordWithoutIPLimiterIsServed(t *testing.T) {
 	handler := createTestHandler()
 	handler.ipLimiter = nil

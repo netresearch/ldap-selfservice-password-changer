@@ -1,9 +1,11 @@
 package rpchandler
 
 import (
+	"net/http"
 	"testing"
 	"time"
 
+	"github.com/gofiber/fiber/v3"
 	ldap "github.com/netresearch/simple-ldap-go"
 	"github.com/stretchr/testify/require"
 
@@ -208,18 +210,24 @@ func TestRequestPasswordResetAccountBucketNotPoisonableViaTypedInput(t *testing.
 		},
 	}
 
+	// The typed-string bucket is consulted by a guard, so the requests go
+	// through Handle — calling the method directly would skip the very check
+	// this test exists for.
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
+
 	// Attacker tries to pre-exhaust the victim's account bucket by typing the
 	// raw bucket key. Resolution fails (no such username), generic success.
 	for range 3 {
-		result, err := handler.requestPasswordReset([]string{"account:jdoe"})
-		require.NoError(t, err)
-		require.Equal(t, []string{msgResetEmailSent}, result)
+		got := postResetRequest(t, app, "account:jdoe")
+		require.Equal(t, http.StatusOK, got.status, got.body)
+		require.Contains(t, got.body, msgResetEmailSent)
 	}
 	require.Zero(t, tokenStore.Count())
 
 	// The victim's own request must still go through.
-	_, err := handler.requestPasswordReset([]string{"jdoe"})
-	require.NoError(t, err)
+	got := postResetRequest(t, app, "jdoe")
+	require.Equal(t, http.StatusOK, got.status, got.body)
 	require.Equal(t, "john.doe@example.com", mockEmail.lastTo, "victim's reset must not be denied")
 	require.Equal(t, 1, tokenStore.Count())
 }

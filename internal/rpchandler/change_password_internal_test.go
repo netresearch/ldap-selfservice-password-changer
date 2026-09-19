@@ -454,33 +454,6 @@ func TestChangePasswordInvalidArgumentCount(t *testing.T) {
 	}
 }
 
-// TestChangePasswordNoIPLimiter tests when IP limiter is nil.
-func TestChangePasswordNoIPLimiter(t *testing.T) {
-	mockLDAP := &mockChangePasswordLDAP{}
-	opts := &options.Opts{
-		MinLength:    8,
-		MinNumbers:   1,
-		MinSymbols:   1,
-		MinUppercase: 1,
-		MinLowercase: 1,
-	}
-
-	handler := &Handler{
-		ldap:      mockLDAP,
-		opts:      opts,
-		ipLimiter: nil, // No IP limiter
-	}
-
-	result, err := handler.changePassword([]string{"testuser", "OldPass123!", "NewPass456!"})
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-		return
-	}
-	if len(result) != 1 || result[0] != "password changed successfully" {
-		t.Errorf("Expected success message, got %v", result)
-	}
-}
-
 // TestChangePasswordValidationFailure tests password policy violations.
 func TestChangePasswordValidationFailure(t *testing.T) {
 	mockLDAP := &mockChangePasswordLDAP{}

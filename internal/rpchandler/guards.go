@@ -26,7 +26,9 @@ type guardFunc func(h *Handler, c fiber.Ctx, in guardInput) (stop bool, err erro
 // guardStep is a guard under a name. The name is what the ordering test
 // asserts on: comparing function pointers would reject a guard wrapped in a
 // closure and, worse, would report two closures made by one factory as the
-// same guard.
+// same guard. The cost is that a name cannot vouch for the function beside it
+// — a step whose name and run disagree passes the ordering test and is caught
+// only by the behavioral ones.
 type guardStep struct {
 	name string
 	run  guardFunc
@@ -131,7 +133,7 @@ func guardResetRequestParams(_ *Handler, c fiber.Ctx, in guardInput) (bool, erro
 // email address. It answers like a served request, for the same reason the
 // limiters below do.
 func guardResetRequestIdentifierLength(_ *Handler, c fiber.Ctx, in guardInput) (bool, error) {
-	if len(in.params[0]) <= maxIdentifierLength {
+	if len(in.params) != 1 || len(in.params[0]) <= maxIdentifierLength {
 		return false, nil
 	}
 
@@ -146,7 +148,7 @@ func guardChangePasswordIPLimit(h *Handler, c fiber.Ctx, in guardInput) (bool, e
 		return false, nil
 	}
 
-	slog.Warn("password_change_ip_rate_limited", "ip", in.clientIP, "username", in.params[0])
+	slog.Warn("password_change_ip_rate_limited", "ip", in.clientIP, "username", firstParam(in.params))
 
 	return true, sendErrorResponse(
 		c,
@@ -196,13 +198,25 @@ func guardResetRequestIPLimit(h *Handler, c fiber.Ctx, in guardInput) (bool, err
 // handler without one never reaches here. Moving that guard later would break
 // this assumption as well as the feature check itself.
 func guardResetRequestIdentifierLimit(h *Handler, c fiber.Ctx, in guardInput) (bool, error) {
-	if h.rateLimiter.AllowRequest("typed:" + in.params[0]) {
+	if len(in.params) != 1 || h.rateLimiter.AllowRequest("typed:"+in.params[0]) {
 		return false, nil
 	}
 
 	slog.Warn("password_reset_rate_limited", "email", in.params[0])
 
 	return true, sendSuccessResponse(c, []string{msgResetEmailSent})
+}
+
+// firstParam is the bounds-safe read the guards that log or key on the first
+// parameter use. A policy always places its param-count guard first, so an
+// empty slice cannot reach them today; this keeps a reordering a wrong answer
+// rather than a panic, since main.go installs no recover middleware.
+func firstParam(params []string) string {
+	if len(params) == 0 {
+		return ""
+	}
+
+	return params[0]
 }
 
 // guardTurnstile verifies the Cloudflare Turnstile token when the feature is

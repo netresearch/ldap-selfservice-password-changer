@@ -472,22 +472,39 @@ func TestRequestPasswordResetEmailTooLong(t *testing.T) {
 		},
 	}
 
-	// Create an email longer than 254 characters
-	longEmail := strings.Repeat("a", 256) + "@example.com"
+	// The length check is a guard, so the request goes through Handle: calling
+	// the method directly would pass for want of a matching user rather than
+	// for the length.
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
 
-	params := []string{longEmail}
-	result, err := handler.requestPasswordReset(params)
-	// Should return generic success without error (don't reveal validation failure)
-	if err != nil {
-		t.Errorf("Should not error on too-long email, got: %v", err)
-	}
-	if len(result) != 1 {
-		t.Errorf("Expected 1 result, got %d", len(result))
-	}
+	// One character over RFC 5321's maximum, and one exactly at it.
+	tooLong := strings.Repeat("a", maxIdentifierLength+1)
+	atMaximum := strings.Repeat("b", maxIdentifierLength-len("@example.com")) + "@example.com"
 
-	// No email should have been sent
+	got := postResetRequest(t, app, tooLong)
+	if got.status != http.StatusOK {
+		t.Errorf("status = %d, want %d (body: %s)", got.status, http.StatusOK, got.body)
+	}
+	if !strings.Contains(got.body, msgResetEmailSent) {
+		t.Errorf("body = %s, want the generic success message", got.body)
+	}
 	if mockEmail.lastTo != "" {
 		t.Errorf("Email should not be sent for too-long email address")
+	}
+	if limiter.Count() != 0 {
+		t.Errorf("the per-identifier limiter was consulted %d times for an impossible identifier", limiter.Count())
+	}
+
+	// The boundary itself is allowed through the guard: it reaches the method,
+	// which then finds no such user and answers the same way. The limiter
+	// having been consulted is what distinguishes the two.
+	got = postResetRequest(t, app, atMaximum)
+	if got.status != http.StatusOK {
+		t.Errorf("status = %d, want %d (body: %s)", got.status, http.StatusOK, got.body)
+	}
+	if limiter.Count() == 0 {
+		t.Errorf("an identifier of exactly %d characters was refused by the length guard", maxIdentifierLength)
 	}
 }
 
