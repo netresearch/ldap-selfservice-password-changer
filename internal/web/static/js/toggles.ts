@@ -1,5 +1,12 @@
 // Shared theme and density toggle functionality
 
+/**
+ * Dispatched on `document` whenever a theme has been applied. Shared so that a
+ * rename cannot silently detach a listener — TypeScript resolves the import,
+ * a string literal in two files would not.
+ */
+export const THEME_CHANGE_EVENT = "themechange";
+
 export type ThemeMode = "light" | "dark" | "auto";
 export type DensityMode = "auto" | "comfortable" | "compact";
 export type DensityState = "comfortable" | "compact"; // actual applied state
@@ -53,8 +60,10 @@ export const initThemeToggle = () => {
 
       // Anything that has to follow the applied theme but cannot read a CSS
       // class — the Cloudflare Turnstile widget, whose theme is fixed at
-      // render time — listens for this.
-      document.dispatchEvent(new CustomEvent("themechange", { detail: { theme } }));
+      // render time — listens for this. Listeners read the applied theme from
+      // the `dark` class; the event carries no detail, because the mode this
+      // function receives ("auto") is not the theme that ends up applied.
+      document.dispatchEvent(new CustomEvent(THEME_CHANGE_EVENT));
     };
 
     // Initialize on load

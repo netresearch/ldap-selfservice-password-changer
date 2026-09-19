@@ -11,6 +11,8 @@
 // remove, and a ReferenceError in a submit handler would leave the form
 // disabled with no way back except a page reload.
 
+import { THEME_CHANGE_EVENT } from "./toggles.js";
+
 declare const turnstile: TurnstileApi | null | undefined;
 
 declare global {
@@ -61,6 +63,12 @@ const currentTheme = (): TurnstileTheme => (document.documentElement.classList.c
 
 /** Renders the widget in the current theme. Reports whether a widget exists afterwards. */
 const renderWidget = (): boolean => {
+  if (widgetId !== undefined) {
+    // A render into an occupied container is rejected, and the rejection is
+    // indistinguishable from a failure — so never issue one.
+    return true;
+  }
+
   const element = widgetElement();
   const api = turnstileApi();
   if (element === null || api === null) {
@@ -74,18 +82,23 @@ const renderWidget = (): boolean => {
 
   const theme = currentTheme();
 
+  let id: string | undefined;
   try {
-    // A render into a container that still holds a widget is rejected with a
-    // console warning and an undefined return rather than a throw, so the
-    // return value is the only reliable signal.
-    widgetId = api.render(widgetSelector, { sitekey, theme });
+    // A rejected render returns undefined rather than throwing, so the return
+    // value is the only reliable signal that a widget exists.
+    id = api.render(widgetSelector, { sitekey, theme });
   } catch {
-    widgetId = undefined;
+    return false;
   }
 
-  renderedTheme = widgetId === undefined ? undefined : theme;
+  if (id === undefined) {
+    return false;
+  }
 
-  return widgetId !== undefined;
+  widgetId = id;
+  renderedTheme = theme;
+
+  return true;
 };
 
 /**
@@ -99,7 +112,21 @@ const renderWidget = (): boolean => {
  */
 const applyThemeToWidget = (): void => {
   const api = turnstileApi();
-  if (widgetId === undefined || api === null || currentTheme() === renderedTheme) {
+  if (api === null) {
+    return;
+  }
+
+  if (widgetId === undefined) {
+    // An earlier render failed and the page carries the marker without a
+    // widget, which blocks every submit. A theme change is the one recurring
+    // event that can rebuild it, so it is used as the recovery point rather
+    // than being skipped.
+    renderWidget();
+
+    return;
+  }
+
+  if (currentTheme() === renderedTheme) {
     return;
   }
 
@@ -112,12 +139,9 @@ const applyThemeToWidget = (): void => {
   widgetId = undefined;
   renderedTheme = undefined;
 
-  // Without a widget the submit handlers block on a challenge that is not on
-  // screen, so a failed render is retried once before the page is left in that
-  // state.
-  if (!renderWidget()) {
-    renderWidget();
-  }
+  // An immediate second attempt would fail for the same reason the first did,
+  // so recovery is left to the next theme change.
+  renderWidget();
 };
 
 export const getTurnstileToken = (form: HTMLFormElement): string =>
@@ -167,7 +191,7 @@ const bootstrapTurnstile = (): void => {
     return; // Turnstile is not configured for this deployment.
   }
 
-  document.addEventListener("themechange", applyThemeToWidget);
+  document.addEventListener(THEME_CHANGE_EVENT, applyThemeToWidget);
 
   if (turnstileApi() !== null) {
     renderWidget();

@@ -368,16 +368,26 @@ func TestTurnstileMarkupMatchesClientContract(t *testing.T) {
 	require.NoError(t, err)
 
 	widgetID := captureOne(t, `const widgetSelector = "#([A-Za-z0-9_-]+)"`, string(source))
-	callback := captureOne(t, `window\.([A-Za-z0-9_$]+) = renderWidget`, string(source))
+	callback := captureOne(t, `window\.([A-Za-z0-9_$]+)\s*=\s*\w+`, string(source))
 
-	html, err := RenderIndex(&options.Opts{
-		CfTurnstileEnabled: true,
-		CfTurnstileSiteKey: "test-site-key",
-	})
-	require.NoError(t, err)
+	renderers := map[string]func(*options.Opts) ([]byte, error){
+		"index":           RenderIndex,
+		"forgot-password": RenderForgotPassword,
+		"reset-password":  RenderResetPassword,
+	}
 
-	assert.Contains(t, string(html), `id="`+widgetID+`"`)
-	assert.Contains(t, string(html), "onload="+callback)
+	for name, render := range renderers {
+		t.Run(name, func(t *testing.T) {
+			html, err := render(&options.Opts{
+				CfTurnstileEnabled: true,
+				CfTurnstileSiteKey: "test-site-key",
+			})
+			require.NoError(t, err)
+
+			assert.Contains(t, string(html), `id="`+widgetID+`"`)
+			assert.Contains(t, string(html), "onload="+callback)
+		})
+	}
 }
 
 // captureOne returns the single capture group of pattern in source, failing
