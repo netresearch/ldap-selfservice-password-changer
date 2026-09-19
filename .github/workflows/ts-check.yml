@@ -14,8 +14,9 @@ jobs:
     uses: netresearch/.github/.github/workflows/ts-check.yml@main
     with:
       # The type check is `bun run js:build`, which emits into
-      # internal/web/static/js — the same files go:embed picks up, so this job
-      # also proves the assets the Go build needs can be produced.
+      # internal/web/static/js — the JavaScript half of what static.go embeds,
+      # so this job also proves those files can be produced. styles.css comes
+      # from css:build and is covered by ci.yml's pre-build-cmd.
       type-check-cmd: "bun run js:build"
       # Format-check stays off: ten files in this repository predate Prettier
       # and are not formatted, so the job would be red from the first run.
