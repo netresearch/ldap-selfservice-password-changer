@@ -145,6 +145,12 @@ const applyThemeToWidget = (): void => {
 export const getTurnstileToken = (form: HTMLFormElement): string =>
   form.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value ?? "";
 
+/**
+ * Whether this form is protected by Turnstile and has no token yet, i.e.
+ * whether the submit has to be refused. Pure: rebuilding a missing widget is
+ * ensureTurnstileWidget's job, so that a caller wiring this to an input event
+ * cannot trigger a render per keystroke.
+ */
 export const isTurnstileTokenMissing = (form: HTMLFormElement, token: string): boolean =>
   form.querySelector(".cf-turnstile") !== null && !token;
 
