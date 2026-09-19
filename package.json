@@ -7,7 +7,7 @@
     "start": "bun run build:assets && go run .",
     "dev": "bun run build:assets && (bun run js:dev & bun run css:dev & air)",
     "build": "bun run build:assets && go build",
-    "build:assets": "tsc & postcss ./internal/web/tailwind.css -o ./internal/web/static/styles.css & wait",
+    "build:assets": "tsc & tsc_pid=$!; postcss ./internal/web/tailwind.css -o ./internal/web/static/styles.css & css_pid=$!; wait $tsc_pid && wait $css_pid",
     "js:build": "tsc",
     "js:dev": "tsc -w --preserveWatchOutput",
     "css:build": "postcss ./internal/web/tailwind.css -o ./internal/web/static/styles.css",
