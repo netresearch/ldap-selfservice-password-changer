@@ -368,7 +368,10 @@ func TestTurnstileMarkupMatchesClientContract(t *testing.T) {
 	require.NoError(t, err)
 
 	widgetID := captureOne(t, `const widgetSelector = "#([A-Za-z0-9_-]+)"`, string(source))
-	callback := captureOne(t, `window\.([A-Za-z0-9_$]+)\s*=\s*\w+`, string(source))
+	// The right-hand side is deliberately unconstrained beyond "not ==": what
+	// the template needs is the name, and how turnstile.ts produces the
+	// function is its own business.
+	callback := captureOne(t, `window\.([A-Za-z0-9_$]+)\s*=[^=]`, string(source))
 
 	renderers := map[string]func(*options.Opts) ([]byte, error){
 		"index":           RenderIndex,

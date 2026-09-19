@@ -139,16 +139,33 @@ const applyThemeToWidget = (): void => {
   widgetId = undefined;
   renderedTheme = undefined;
 
-  // An immediate second attempt would fail for the same reason the first did,
-  // so recovery is left to the next theme change.
   renderWidget();
 };
 
 export const getTurnstileToken = (form: HTMLFormElement): string =>
   form.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value ?? "";
 
-export const isTurnstileTokenMissing = (form: HTMLFormElement, token: string): boolean =>
-  form.querySelector(".cf-turnstile") !== null && !token;
+/**
+ * Whether the submit has to be refused because the visitor has no token yet.
+ *
+ * A refusal with no widget on the page is the dead end this guards against:
+ * the marker in the markup blocks every submit while there is nothing to
+ * solve. So a missing widget is rebuilt here, which turns that state into one
+ * refused submit followed by a challenge the visitor can actually answer.
+ */
+export const isTurnstileTokenMissing = (form: HTMLFormElement, token: string): boolean => {
+  if (form.querySelector(".cf-turnstile") === null) {
+    return false;
+  }
+
+  if (token) {
+    return false;
+  }
+
+  renderWidget();
+
+  return true;
+};
 
 /**
  * Called from the submit handlers' catch block, ahead of re-enabling the
