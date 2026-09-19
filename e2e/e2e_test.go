@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
+	"github.com/netresearch/ldap-selfservice-password-changer/internal/csp"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 	webstatic "github.com/netresearch/ldap-selfservice-password-changer/internal/web/static"
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/web/templates"
@@ -58,18 +59,10 @@ func createTestApp(t *testing.T) *fiber.App {
 
 	// Security headers
 	app.Use(helmet.New(helmet.Config{
-		ContentSecurityPolicy: "default-src 'self'; " +
-			"script-src 'self'; " +
-			"style-src 'self' 'unsafe-inline'; " +
-			"img-src 'self' data:; " +
-			"font-src 'self'; " +
-			"connect-src 'self'; " +
-			"frame-ancestors 'none'; " +
-			"base-uri 'self'; " +
-			"form-action 'self'",
-		XFrameOptions:      "DENY",
-		ContentTypeNosniff: "nosniff",
-		ReferrerPolicy:     "strict-origin-when-cross-origin",
+		ContentSecurityPolicy: csp.Build(false),
+		XFrameOptions:         "DENY",
+		ContentTypeNosniff:    "nosniff",
+		ReferrerPolicy:        "strict-origin-when-cross-origin",
 	}))
 
 	// Routes
