@@ -110,19 +110,7 @@ func TestLocalGuardsRunBeforeTurnstile(t *testing.T) {
 			handler.opts.CfTurnstileEnabled = true
 			handler.ipLimiter = &mockHandlerIPLimiter{allowed: false}
 
-			app := fiber.New()
-			app.Post("/api/rpc", handler.Handle)
-
-			got := postRPC(t, app, tt.body)
-			if got.status != tt.wantStatus {
-				t.Errorf("status = %d, want %d (body: %s)", got.status, tt.wantStatus, got.body)
-			}
-			if !strings.Contains(got.body, tt.wantBody) {
-				t.Errorf("body = %s, want %q", got.body, tt.wantBody)
-			}
-			if strings.Contains(got.body, msgTurnstileVerificationFailed) {
-				t.Errorf("Turnstile answered the request although a local guard should have stopped it: %s", got.body)
-			}
+			assertAnsweredByALocalGuard(t, newGuardApp(handler), tt.body, tt.wantStatus, tt.wantBody)
 		})
 	}
 }
@@ -198,19 +186,8 @@ func TestMalformedRequestIsRefusedBeforeTheLimiters(t *testing.T) {
 			identifiers := &countingRateLimiter{allowed: true}
 			handler.rateLimiter = identifiers
 
-			app := fiber.New()
-			app.Post("/api/rpc", handler.Handle)
+			assertAnsweredByALocalGuard(t, newGuardApp(handler), tt.body, tt.wantStatus, tt.wantBody)
 
-			got := postRPC(t, app, tt.body)
-			if got.status != tt.wantStatus {
-				t.Errorf("status = %d, want %d (body: %s)", got.status, tt.wantStatus, got.body)
-			}
-			if !strings.Contains(got.body, tt.wantBody) {
-				t.Errorf("body = %s, want %q", got.body, tt.wantBody)
-			}
-			if strings.Contains(got.body, msgTurnstileVerificationFailed) {
-				t.Errorf("Turnstile answered a malformed request: %s", got.body)
-			}
 			if limiter.calls != 0 {
 				t.Errorf("the per-IP limiter was consulted %d times for a malformed request", limiter.calls)
 			}
@@ -284,6 +261,33 @@ func TestGuardsAreSkippedWhenTurnstileIsDisabled(t *testing.T) {
 	// an assertion through the constant would follow it wherever it went.
 	if !strings.Contains(got.body, "password changed successfully") {
 		t.Errorf("body = %s, want the success message", got.body)
+	}
+}
+
+// newGuardApp mounts the handler on the one route the guards run for.
+func newGuardApp(h *Handler) *fiber.App {
+	app := fiber.New()
+	app.Post("/api/rpc", h.Handle)
+
+	return app
+}
+
+// assertAnsweredByALocalGuard posts the body and checks which guard answered:
+// the expected status and message, and — the point of these tests — that the
+// answer did not come from Turnstile, which would mean a local check ran too
+// late or not at all.
+func assertAnsweredByALocalGuard(t *testing.T, app *fiber.App, body string, wantStatus int, wantBody string) {
+	t.Helper()
+
+	got := postRPC(t, app, body)
+	if got.status != wantStatus {
+		t.Errorf("status = %d, want %d (body: %s)", got.status, wantStatus, got.body)
+	}
+	if !strings.Contains(got.body, wantBody) {
+		t.Errorf("body = %s, want %q", got.body, wantBody)
+	}
+	if strings.Contains(got.body, msgTurnstileVerificationFailed) {
+		t.Errorf("Turnstile answered the request although a local guard should have stopped it: %s", got.body)
 	}
 }
 
