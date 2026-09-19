@@ -15,45 +15,79 @@ type guardInput struct {
 	turnstileToken string
 }
 
-// guard is a cross-cutting check that runs before a method's own logic.
+// guardFunc is a cross-cutting check that runs before a method's own logic.
 //
-// A guard returns stop=true when it has already written the response and the
-// method must not run. The error is whatever writing that response returned,
-// so a caller can treat it as an ordinary handler result.
-type guard func(h *Handler, c fiber.Ctx, in guardInput) (stop bool, err error)
+// It returns stop=true when it has already written the response and the method
+// must not run. The error is whatever writing that response returned, so a
+// caller can treat it as an ordinary handler result. With stop=false the error
+// is meaningless and ignored.
+type guardFunc func(h *Handler, c fiber.Ctx, in guardInput) (stop bool, err error)
+
+// guardStep is a guard under a name. The name is what the ordering test
+// asserts on: comparing function pointers would reject a guard wrapped in a
+// closure and, worse, would report two closures made by one factory as the
+// same guard.
+type guardStep struct {
+	name string
+	run  guardFunc
+}
+
+// Guard names. turnstileGuard is the one the ordering test asserts on; the
+// others are named so a failing policy reads as a sequence rather than as a
+// list of addresses.
+const (
+	paramCountGuard       = "param-count"
+	resetServicesGuard    = "reset-services"
+	identifierLengthGuard = "identifier-length"
+	ipLimitGuard          = "ip-limit"
+	identifierLimitGuard  = "identifier-limit"
+	turnstileGuard        = "turnstile"
+)
+
+// maxIdentifierLength is the RFC 5321 maximum for an email address. Anything
+// longer cannot be one, and refusing it must not cost a rate-limiter slot.
+const maxIdentifierLength = 254
 
 // methodPolicies lists, per RPC method, the guards that run before it and the
 // order they run in.
 //
-// The order is the security property, not a detail: every local check comes
-// before verifyTurnstile, so an unauthenticated flood is rejected from memory
-// instead of being turned into outbound requests to Cloudflare. A method
-// missing from this map reaches no guard at all, which is why Handle rejects
-// an unknown method before consulting it — see
-// TestUnknownMethodIsRejectedBeforeGuards.
-var methodPolicies = map[string][]guard{
+// The order is the security property, not a detail. A malformed or over-long
+// request is refused first, so that rejecting it costs neither a limiter slot
+// nor a verification; the in-memory limiters come next; and Turnstile is always
+// last, so an unauthenticated flood is rejected from memory instead of being
+// turned into outbound requests to Cloudflare.
+//
+// Every dispatchable method has an entry here, which
+// TestEveryDispatchableMethodHasAPolicy pins: a method added to methodHandlers
+// without a policy would otherwise run with no guards at all.
+var methodPolicies = map[string][]guardStep{
 	"change-password": {
-		guardChangePasswordIPLimit,
-		guardTurnstile,
+		{name: paramCountGuard, run: guardChangePasswordParams},
+		{name: ipLimitGuard, run: guardChangePasswordIPLimit},
+		{name: turnstileGuard, run: guardTurnstile},
 	},
 	"request-password-reset": {
-		guardResetServicesEnabled,
-		guardResetRequestIPLimit,
-		guardResetRequestIdentifierLimit,
-		guardTurnstile,
+		{name: resetServicesGuard, run: guardResetServicesEnabled},
+		{name: paramCountGuard, run: guardResetRequestParams},
+		{name: identifierLengthGuard, run: guardResetRequestIdentifierLength},
+		{name: ipLimitGuard, run: guardResetRequestIPLimit},
+		{name: identifierLimitGuard, run: guardResetRequestIdentifierLimit},
+		{name: turnstileGuard, run: guardTurnstile},
 	},
 	"reset-password": {
-		guardResetServicesEnabled,
-		guardResetPasswordIPLimit,
-		guardTurnstile,
+		// The parameter count is checked by resetPassword itself, after these
+		// guards, exactly as it was before the chain existed.
+		{name: resetServicesGuard, run: guardResetServicesEnabled},
+		{name: ipLimitGuard, run: guardResetPasswordIPLimit},
+		{name: turnstileGuard, run: guardTurnstile},
 	},
 }
 
 // runGuards evaluates a method's guards in order, stopping at the first one
 // that answers the request.
 func (h *Handler) runGuards(c fiber.Ctx, method string, in guardInput) (bool, error) {
-	for _, g := range methodPolicies[method] {
-		if stop, err := g(h, c, in); stop {
+	for _, step := range methodPolicies[method] {
+		if stop, err := step.run(h, c, in); stop {
 			return true, err
 		}
 	}
@@ -71,13 +105,48 @@ func guardResetServicesEnabled(h *Handler, c fiber.Ctx, _ guardInput) (bool, err
 	return true, sendErrorResponse(c, http.StatusBadRequest, "password reset feature not enabled")
 }
 
+// guardChangePasswordParams rejects a change-password call with the wrong
+// parameter count. The method checks the count again; this guard exists so the
+// rejection happens before the limiter and the verification, as it did when
+// the check was the first statement of the method.
+func guardChangePasswordParams(_ *Handler, c fiber.Ctx, in guardInput) (bool, error) {
+	if len(in.params) == 3 {
+		return false, nil
+	}
+
+	return true, sendErrorResponse(c, http.StatusInternalServerError, ErrInvalidArgumentCount.Error())
+}
+
+// guardResetRequestParams does the same for a reset request, and additionally
+// lets every guard after it read params[0] without a length check of its own.
+func guardResetRequestParams(_ *Handler, c fiber.Ctx, in guardInput) (bool, error) {
+	if len(in.params) == 1 {
+		return false, nil
+	}
+
+	return true, sendErrorResponse(c, http.StatusInternalServerError, ErrInvalidArgumentCount.Error())
+}
+
+// guardResetRequestIdentifierLength refuses an identifier that cannot be an
+// email address. It answers like a served request, for the same reason the
+// limiters below do.
+func guardResetRequestIdentifierLength(_ *Handler, c fiber.Ctx, in guardInput) (bool, error) {
+	if len(in.params[0]) <= maxIdentifierLength {
+		return false, nil
+	}
+
+	slog.Warn("password_reset_email_too_long", "length", len(in.params[0]))
+
+	return true, sendSuccessResponse(c, []string{msgResetEmailSent})
+}
+
 // guardChangePasswordIPLimit applies the per-IP limiter to password changes.
 func guardChangePasswordIPLimit(h *Handler, c fiber.Ctx, in guardInput) (bool, error) {
 	if h.ipLimiter == nil || h.ipLimiter.AllowRequest(in.clientIP) {
 		return false, nil
 	}
 
-	slog.Warn("password_change_ip_rate_limited", "ip", in.clientIP, "username", firstParam(in.params))
+	slog.Warn("password_change_ip_rate_limited", "ip", in.clientIP, "username", in.params[0])
 
 	return true, sendErrorResponse(
 		c,
@@ -120,14 +189,13 @@ func guardResetRequestIPLimit(h *Handler, c fiber.Ctx, in guardInput) (bool, err
 // directory lookup that would resolve it to an account.
 //
 // The "typed:" prefix keeps these buckets disjoint from the post-resolution
-// "account:" buckets, so no typed input can address an account bucket. A
-// request with the wrong parameter count passes through to the method, which
-// rejects it.
+// "account:" buckets, so no typed input can address an account bucket.
+//
+// h.rateLimiter is not checked for nil: NewWithServices sets it together with
+// tokenStore, and guardResetServicesEnabled runs first in this policy, so a
+// handler without one never reaches here. Moving that guard later would break
+// this assumption as well as the feature check itself.
 func guardResetRequestIdentifierLimit(h *Handler, c fiber.Ctx, in guardInput) (bool, error) {
-	if len(in.params) != 1 {
-		return false, nil
-	}
-
 	if h.rateLimiter.AllowRequest("typed:" + in.params[0]) {
 		return false, nil
 	}
@@ -146,12 +214,4 @@ func guardTurnstile(h *Handler, c fiber.Ctx, in guardInput) (bool, error) {
 	}
 
 	return false, nil
-}
-
-func firstParam(params []string) string {
-	if len(params) == 0 {
-		return ""
-	}
-
-	return params[0]
 }

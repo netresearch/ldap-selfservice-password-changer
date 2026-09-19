@@ -6,7 +6,6 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -19,24 +18,39 @@ import (
 // after it would let an unauthenticated flood turn into outbound requests to
 // Cloudflare.
 func TestTurnstileIsTheLastGuardOfEveryPolicy(t *testing.T) {
-	want := reflect.ValueOf(guardTurnstile).Pointer()
-
-	for method, guards := range methodPolicies {
-		if len(guards) == 0 {
+	for method, steps := range methodPolicies {
+		if len(steps) == 0 {
 			t.Errorf("%s: policy is empty", method)
 
 			continue
 		}
 
-		last := reflect.ValueOf(guards[len(guards)-1]).Pointer()
-		if last != want {
-			t.Errorf("%s: last guard is not guardTurnstile", method)
+		if last := steps[len(steps)-1].name; last != turnstileGuard {
+			t.Errorf("%s: last guard is %q, want %q", method, last, turnstileGuard)
 		}
 
-		for i, g := range guards[:len(guards)-1] {
-			if reflect.ValueOf(g).Pointer() == want {
-				t.Errorf("%s: guardTurnstile also runs at position %d, ahead of a local check", method, i)
+		for i, step := range steps[:len(steps)-1] {
+			if step.name == turnstileGuard {
+				t.Errorf("%s: %q also runs at position %d, ahead of a local check", method, turnstileGuard, i)
 			}
+		}
+	}
+}
+
+// TestEveryDispatchableMethodHasAPolicy is the property the guard chain rests
+// on: a method that can be dispatched but has no policy runs with no
+// cross-cutting checks at all. Comparing the two key sets fails the day
+// somebody adds a method to one map and not the other.
+func TestEveryDispatchableMethodHasAPolicy(t *testing.T) {
+	for method := range methodHandlers {
+		if _, ok := methodPolicies[method]; !ok {
+			t.Errorf("%s is dispatchable but has no guard policy", method)
+		}
+	}
+
+	for method := range methodPolicies {
+		if _, ok := methodHandlers[method]; !ok {
+			t.Errorf("%s has a guard policy but cannot be dispatched", method)
 		}
 	}
 }
@@ -135,6 +149,110 @@ func TestResetRequestIdentifierGuardRunsBeforeTurnstile(t *testing.T) {
 	if strings.Contains(got.body, msgTurnstileVerificationFailed) {
 		t.Errorf("Turnstile answered the request although the identifier bucket should have stopped it: %s", got.body)
 	}
+}
+
+// TestMalformedRequestIsRefusedBeforeTheLimiters keeps the parameter checks
+// ahead of the limiters, where they were before the guard chain: a malformed
+// request must not spend a rate-limit slot or produce an outbound
+// verification, and it must answer with the argument error rather than with
+// whatever the next guard would have said.
+func TestMalformedRequestIsRefusedBeforeTheLimiters(t *testing.T) {
+	tests := []struct {
+		name       string
+		body       string
+		wantStatus int
+		wantBody   string
+	}{
+		{
+			name:       "change-password with two parameters",
+			body:       `{"method":"change-password","params":["testuser","OldPass123!"]}`,
+			wantStatus: http.StatusInternalServerError,
+			wantBody:   ErrInvalidArgumentCount.Error(),
+		},
+		{
+			name:       "request-password-reset with no parameters",
+			body:       `{"method":"request-password-reset","params":[]}`,
+			wantStatus: http.StatusInternalServerError,
+			wantBody:   ErrInvalidArgumentCount.Error(),
+		},
+		{
+			name:       "request-password-reset with an over-long identifier",
+			body:       `{"method":"request-password-reset","params":["` + strings.Repeat("a", 255) + `@example.com"]}`,
+			wantStatus: http.StatusOK,
+			wantBody:   msgResetEmailSent,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			handler := createTestHandlerWithResetEnabled()
+			handler.opts.CfTurnstileEnabled = true
+
+			limiter := &countingIPLimiter{allowed: true}
+			handler.ipLimiter = limiter
+			identifiers := &countingRateLimiter{allowed: true}
+			handler.rateLimiter = identifiers
+
+			app := fiber.New()
+			app.Post("/api/rpc", handler.Handle)
+
+			got := postRPC(t, app, tt.body)
+			if got.status != tt.wantStatus {
+				t.Errorf("status = %d, want %d (body: %s)", got.status, tt.wantStatus, got.body)
+			}
+			if !strings.Contains(got.body, tt.wantBody) {
+				t.Errorf("body = %s, want %q", got.body, tt.wantBody)
+			}
+			if strings.Contains(got.body, msgTurnstileVerificationFailed) {
+				t.Errorf("Turnstile answered a malformed request: %s", got.body)
+			}
+			if limiter.calls != 0 {
+				t.Errorf("the per-IP limiter was consulted %d times for a malformed request", limiter.calls)
+			}
+			if identifiers.calls != 0 {
+				t.Errorf("the per-identifier limiter was consulted %d times for a malformed request", identifiers.calls)
+			}
+		})
+	}
+}
+
+// TestChangePasswordWithoutIPLimiterIsServed covers the nil limiter, which is
+// the state New() leaves the handler in until SetIPLimiter is called.
+func TestChangePasswordWithoutIPLimiterIsServed(t *testing.T) {
+	handler := createTestHandler()
+	handler.ipLimiter = nil
+
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
+
+	got := postRPC(t, app, `{"method":"change-password","params":["testuser","OldPass123!","NewPass456!"]}`)
+	if got.status != http.StatusOK {
+		t.Errorf("status = %d, want %d (body: %s)", got.status, http.StatusOK, got.body)
+	}
+}
+
+// countingIPLimiter answers a fixed verdict and counts how often it was asked.
+type countingIPLimiter struct {
+	allowed bool
+	calls   int
+}
+
+func (m *countingIPLimiter) AllowRequest(_ string) bool {
+	m.calls++
+
+	return m.allowed
+}
+
+// countingRateLimiter does the same for the per-identifier limiter.
+type countingRateLimiter struct {
+	allowed bool
+	calls   int
+}
+
+func (m *countingRateLimiter) AllowRequest(_ string) bool {
+	m.calls++
+
+	return m.allowed
 }
 
 // TestGuardsAreSkippedWhenTurnstileIsDisabled keeps the other direction

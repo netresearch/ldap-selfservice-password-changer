@@ -105,7 +105,8 @@ func (h *Handler) Handle(c fiber.Ctx) error {
 		return fmt.Errorf("failed to parse request body: %w", err)
 	}
 
-	if _, known := methodPolicies[body.Method]; !known {
+	dispatch, known := methodHandlers[body.Method]
+	if !known {
 		return sendErrorResponse(c, http.StatusBadRequest, "method not found")
 	}
 
@@ -121,16 +122,16 @@ func (h *Handler) Handle(c fiber.Ctx) error {
 		return err
 	}
 
-	switch body.Method {
-	case "change-password":
-		return h.handleChangePassword(c, body.Params)
-	case "request-password-reset":
-		return h.handleRequestPasswordReset(c, body.Params)
-	case "reset-password":
-		return h.handleResetPassword(c, body.Params)
-	default:
-		return sendErrorResponse(c, http.StatusBadRequest, "method not found")
-	}
+	return dispatch(h, c, body.Params)
+}
+
+// methodHandlers is the dispatch table. It is a map rather than a switch so
+// that a test can compare its keys with methodPolicies: a method reachable
+// here without a policy there would run with no guards at all.
+var methodHandlers = map[string]func(h *Handler, c fiber.Ctx, params []string) error{
+	"change-password":        (*Handler).handleChangePassword,
+	"request-password-reset": (*Handler).handleRequestPasswordReset,
+	"reset-password":         (*Handler).handleResetPassword,
 }
 
 // handleChangePassword processes change-password requests. The cross-cutting
