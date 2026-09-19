@@ -46,8 +46,8 @@ func TestBuildEnabled(t *testing.T) {
 // TestBuildEnabledKeepsEveryBaseDirective is the guard against the variant
 // drifting away from the base: every base directive must still be there with
 // Turnstile on, unchanged unless it is one of the three Cloudflare needs.
-// On its own it would also pass for a Build that ignores its argument, which
-// is what the origin count below rules out.
+// The origin count at the end is what additionally rules out a Build that
+// returns the base unchanged for both arguments.
 func TestBuildEnabledKeepsEveryBaseDirective(t *testing.T) {
 	extended := map[string]bool{"script-src": true, "connect-src": true, "frame-src": true}
 

@@ -736,7 +736,7 @@ func TestParseArgs_CloudflareTurnstileValidation(t *testing.T) {
 				"--cf-turnstile-enabled",
 				"--cf-turnstile-site-key", "site-key",
 				"--cf-turnstile-secret", "secret",
-				"--cf-turnstile-timeout-seconds", "6",
+				"--cf-turnstile-timeout-seconds", strconv.Itoa(maxCfTurnstileTimeoutSeconds + 1),
 			},
 			want: "cf-turnstile-timeout-seconds",
 		},
@@ -768,8 +768,8 @@ func TestParseArgs_CloudflareTurnstileDisabledIgnoresTimeout(t *testing.T) {
 			assert.False(t, opts.CfTurnstileEnabled)
 
 			// The disabled path is the only one that reaches the clamp in
-			// cfTurnstileSecondsToDuration: with Turnstile enabled, 6 is
-			// rejected before the conversion runs.
+			// cfTurnstileSecondsToDuration: with Turnstile enabled, a value
+			// over the maximum is rejected before the conversion runs.
 			want := time.Duration(0)
 			if seconds == overMaximum {
 				want = maxCfTurnstileTimeoutSeconds * time.Second
