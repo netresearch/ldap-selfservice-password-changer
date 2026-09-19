@@ -323,6 +323,7 @@ func TestRenderTurnstileEnabledState(t *testing.T) {
 
 				assert.NotContains(t, html, `class="cf-turnstile"`)
 				assert.NotContains(t, html, `data-sitekey="test-site-key"`)
+				assert.NotContains(t, html, `id="cf-turnstile-widget"`)
 				assert.NotContains(t, html, "https://challenges.cloudflare.com/turnstile/v0/api.js")
 			})
 
@@ -337,7 +338,16 @@ func TestRenderTurnstileEnabledState(t *testing.T) {
 
 				assert.Contains(t, html, `class="cf-turnstile"`)
 				assert.Contains(t, html, `data-sitekey="test-site-key"`)
+
+				// The widget is rendered explicitly so its theme can follow the
+				// application's own theme toggle: the container needs the id
+				// turnstile.ts renders into, and the script needs both
+				// parameters — render=explicit alone would never render, the
+				// onload callback alone would render with the default theme.
+				assert.Contains(t, html, `id="cf-turnstile-widget"`)
 				assert.Contains(t, html, "https://challenges.cloudflare.com/turnstile/v0/api.js")
+				assert.Contains(t, html, "render=explicit")
+				assert.Contains(t, html, "onload=onloadTurnstileCallback")
 			})
 		})
 	}

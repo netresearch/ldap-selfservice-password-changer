@@ -50,6 +50,11 @@ export const initThemeToggle = () => {
         document.documentElement.classList.toggle("dark", prefersDark);
         localStorage.setItem("theme", "auto");
       }
+
+      // Anything that has to follow the applied theme but cannot read a CSS
+      // class — the Cloudflare Turnstile widget, whose theme is fixed at
+      // render time — listens for this.
+      document.dispatchEvent(new CustomEvent("themechange", { detail: { theme } }));
     };
 
     // Initialize on load

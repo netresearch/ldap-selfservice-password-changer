@@ -253,7 +253,7 @@ export const init = (opts: Opts) => {
       successContainer.classList.remove("hidden");
     } catch (err) {
       setSubmitError(submitErrorContainer, (err as Error).message);
-      resetTurnstile(form);
+      resetTurnstile();
       toggleFields(true);
     }
   };
