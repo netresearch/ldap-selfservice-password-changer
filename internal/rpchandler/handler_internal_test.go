@@ -303,8 +303,11 @@ func TestHandleIPRateLimited(t *testing.T) {
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	if resp.StatusCode != http.StatusInternalServerError {
-		t.Errorf("status = %d, want %d (rate limited)", resp.StatusCode, http.StatusInternalServerError)
+	// 429, not the 500 this used to answer: the limiter is a guard now, so a
+	// rejection is the guard's status rather than a method error mapped by the
+	// generic error path.
+	if resp.StatusCode != http.StatusTooManyRequests {
+		t.Errorf("status = %d, want %d (rate limited)", resp.StatusCode, http.StatusTooManyRequests)
 	}
 
 	bodyBytes, err := io.ReadAll(resp.Body)

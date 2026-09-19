@@ -105,67 +105,62 @@ func (h *Handler) Handle(c fiber.Ctx) error {
 		return fmt.Errorf("failed to parse request body: %w", err)
 	}
 
-	// Extract client IP for rate limiting
-	clientIP := extractClientIP(c)
+	if _, known := methodPolicies[body.Method]; !known {
+		return sendErrorResponse(c, http.StatusBadRequest, "method not found")
+	}
+
+	// The cross-cutting checks run here, in the order methodPolicies gives for
+	// this method, so that every method is guarded by a list rather than by
+	// whatever its own body remembers to do.
+	stop, err := h.runGuards(c, body.Method, guardInput{
+		params:         body.Params,
+		clientIP:       extractClientIP(c),
+		turnstileToken: body.TurnstileToken,
+	})
+	if stop {
+		return err
+	}
 
 	switch body.Method {
 	case "change-password":
-		return h.handleChangePassword(c, body.Params, clientIP, body.TurnstileToken)
+		return h.handleChangePassword(c, body.Params)
 	case "request-password-reset":
-		return h.handleRequestPasswordReset(c, body.Params, clientIP, body.TurnstileToken)
+		return h.handleRequestPasswordReset(c, body.Params)
 	case "reset-password":
-		return h.handleResetPassword(c, body.Params, clientIP, body.TurnstileToken)
+		return h.handleResetPassword(c, body.Params)
 	default:
 		return sendErrorResponse(c, http.StatusBadRequest, "method not found")
 	}
 }
 
-// handleChangePassword processes change-password requests with IP-based rate limiting.
-func (h *Handler) handleChangePassword(c fiber.Ctx, params []string, clientIP, turnstileToken string) error {
-	data, err := h.changePasswordWithIP(params, clientIP, turnstileToken)
-	if errors.Is(err, errTurnstileVerification) {
-		return sendErrorResponse(c, http.StatusForbidden, msgTurnstileVerificationFailed)
-	}
-	if err != nil {
-		return sendErrorResponse(c, http.StatusInternalServerError, err.Error())
-	}
-	return sendSuccessResponse(c, data)
+// handleChangePassword processes change-password requests. The cross-cutting
+// checks already ran; see methodPolicies.
+func (h *Handler) handleChangePassword(c fiber.Ctx, params []string) error {
+	data, err := h.changePassword(params)
+
+	return respond(c, data, err)
 }
 
-// handleRequestPasswordReset processes request-password-reset requests with IP-based rate limiting.
-func (h *Handler) handleRequestPasswordReset(c fiber.Ctx, params []string, clientIP, turnstileToken string) error {
-	if h.tokenStore == nil {
-		return sendErrorResponse(c, http.StatusBadRequest, "password reset feature not enabled")
-	}
-	data, err := h.requestPasswordResetWithIP(params, clientIP, turnstileToken)
-	if errors.Is(err, errTurnstileVerification) {
-		return sendErrorResponse(c, http.StatusForbidden, msgTurnstileVerificationFailed)
-	}
-	if err != nil {
-		return sendErrorResponse(c, http.StatusInternalServerError, err.Error())
-	}
-	return sendSuccessResponse(c, data)
+// handleRequestPasswordReset processes request-password-reset requests.
+func (h *Handler) handleRequestPasswordReset(c fiber.Ctx, params []string) error {
+	data, err := h.requestPasswordReset(params)
+
+	return respond(c, data, err)
 }
 
 // handleResetPassword processes reset-password requests.
-func (h *Handler) handleResetPassword(c fiber.Ctx, params []string, clientIP, turnstileToken string) error {
-	if h.tokenStore == nil {
-		return sendErrorResponse(c, http.StatusBadRequest, "password reset feature not enabled")
-	}
-	if h.ipLimiter != nil && !h.ipLimiter.AllowRequest(clientIP) {
-		return sendErrorResponse(
-			c,
-			http.StatusTooManyRequests,
-			"too many password reset attempts from your IP address, please try again later",
-		)
-	}
-	if err := h.verifyTurnstile(turnstileToken, clientIP); err != nil {
-		return sendErrorResponse(c, http.StatusForbidden, msgTurnstileVerificationFailed)
-	}
+func (h *Handler) handleResetPassword(c fiber.Ctx, params []string) error {
 	data, err := h.resetPassword(params)
+
+	return respond(c, data, err)
+}
+
+// respond turns a method result into the JSON-RPC response.
+func respond(c fiber.Ctx, data []string, err error) error {
 	if err != nil {
 		return sendErrorResponse(c, http.StatusInternalServerError, err.Error())
 	}
+
 	return sendSuccessResponse(c, data)
 }
 

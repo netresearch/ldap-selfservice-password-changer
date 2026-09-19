@@ -3,10 +3,12 @@ package rpchandler
 import (
 	"errors"
 	"fmt"
+	"net/http"
 	"strings"
 	"testing"
 	"time"
 
+	"github.com/gofiber/fiber/v3"
 	ldap "github.com/netresearch/simple-ldap-go"
 	"github.com/stretchr/testify/require"
 
@@ -366,37 +368,32 @@ func TestRequestPasswordResetIPRateLimitingIntegration(t *testing.T) {
 		},
 	}
 
-	clientIP := "203.0.113.42"
+	// The per-IP limiter is a guard, so the requests go through Handle.
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
 
-	// Make 10 requests from same IP with different emails
-	// These should all succeed (within IP rate limit)
+	// Requests within the IP limit are served, one token each.
 	for i := 1; i <= 10; i++ {
-		email := fmt.Sprintf("user%d@example.com", i)
-		result, err := handler.requestPasswordResetWithIP([]string{email}, clientIP, "")
-		require.NoError(t, err, "Request %d failed", i)
-		if len(result) != 1 {
-			t.Errorf("Request %d: expected 1 result, got %d", i, len(result))
+		served := postResetRequest(t, app, fmt.Sprintf("user%d@example.com", i))
+		if served.status != http.StatusOK {
+			t.Fatalf("request %d: status = %d, want %d (body: %s)", i, served.status, http.StatusOK, served.body)
 		}
 	}
 
-	// Verify all 10 tokens were created
 	if tokenStore.Count() != 10 {
 		t.Errorf("Token count = %d, want 10", tokenStore.Count())
 	}
 
-	// 11th request from same IP should be rate limited by IP limiter
-	result, err := handler.requestPasswordResetWithIP([]string{"user11@example.com"}, clientIP, "")
-	if err != nil {
-		t.Errorf("Rate limited request should not error, got: %v", err)
+	// The 11th is stopped by the IP guard, and answers exactly like a served
+	// request so that the caller cannot tell the difference.
+	got := postResetRequest(t, app, "user11@example.com")
+	if got.status != http.StatusOK {
+		t.Errorf("status = %d, want %d (body: %s)", got.status, http.StatusOK, got.body)
+	}
+	if !strings.Contains(got.body, msgResetEmailSent) {
+		t.Errorf("body = %s, want the generic success message", got.body)
 	}
 
-	// Should still return generic success message (don't reveal rate limiting)
-	expectedMsg := "If an account exists, a reset email has been sent"
-	if len(result) != 1 || result[0] != expectedMsg {
-		t.Errorf("Rate limited request: got %v, want [%q]", result, expectedMsg)
-	}
-
-	// Token count should still be 10 (no new token created)
 	if tokenStore.Count() != 10 {
 		t.Errorf("After IP rate limit: token count = %d, want 10", tokenStore.Count())
 	}
@@ -424,38 +421,36 @@ func TestRequestPasswordResetIPRateLimitCheckedBeforeEmail(t *testing.T) {
 		},
 	}
 
-	clientIP := "203.0.113.42"
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
 
-	// Exhaust IP rate limit
+	// Exhaust the per-IP limit.
 	for i := 1; i <= 10; i++ {
 		email := fmt.Sprintf("user%d@example.com", i)
 		mockLDAP.users[email] = &ldap.User{SAMAccountName: fmt.Sprintf("user%d", i)}
-		if _, err := handler.requestPasswordResetWithIP([]string{email}, clientIP, ""); err != nil {
-			t.Fatalf("Failed to request password reset: %v", err)
+
+		if served := postResetRequest(t, app, email); served.status != http.StatusOK {
+			t.Fatalf("request %d: status = %d, want %d (body: %s)", i, served.status, http.StatusOK, served.body)
 		}
 	}
 
-	// Now try with a new email that is NOT in the email rate limiter
-	// IP rate limit should block BEFORE email rate limit is checked
+	// An identifier that has its own untouched bucket: if the guards ran in the
+	// other order, this request would consume it.
 	newEmail := "completely-new-email@example.com"
 	mockLDAP.users[newEmail] = &ldap.User{SAMAccountName: "newuser"}
 
 	initialEmailLimiterCount := emailLimiter.Count()
 
-	result, err := handler.requestPasswordResetWithIP([]string{newEmail}, clientIP, "")
-	if err != nil {
-		t.Errorf("Should not error, got: %v", err)
+	got := postResetRequest(t, app, newEmail)
+	if got.status != http.StatusOK {
+		t.Errorf("status = %d, want %d (body: %s)", got.status, http.StatusOK, got.body)
+	}
+	if !strings.Contains(got.body, msgResetEmailSent) {
+		t.Errorf("body = %s, want the generic success message", got.body)
 	}
 
-	// Should return success
-	if len(result) != 1 {
-		t.Errorf("Expected 1 result, got %d", len(result))
-	}
-
-	// Email limiter should NOT have been called (IP limiter blocked first)
-	// This verifies IP rate limit is checked BEFORE email rate limit
 	if emailLimiter.Count() != initialEmailLimiterCount {
-		t.Errorf("Email limiter was called despite IP rate limit being hit")
+		t.Errorf("the per-identifier limiter was consulted although the per-IP guard had already stopped the request")
 	}
 }
 

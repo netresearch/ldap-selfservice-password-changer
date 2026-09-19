@@ -116,6 +116,8 @@ one of them is configurable.
 | **Per IP**         | 10 requests / 60 minutes, at most 1000 tracked addresses          | `change-password`, `request-password-reset` and `reset-password` | **No** — hardcoded in `internal/ratelimit/ip_limiter.go` |
 | **Per identifier** | `RESET_RATE_LIMIT_REQUESTS` per `RESET_RATE_LIMIT_WINDOW_MINUTES` | `request-password-reset` only                  | Yes                                                      |
 
+A rejected request answers `429 Too Many Requests` — except `request-password-reset`, which answers exactly like a served request, because a distinguishable answer would let a caller probe for accounts. The checks run in a fixed order per method (`internal/rpchandler/guards.go`): the in-memory limiters first, Turnstile verification last, so a flood is rejected without producing outbound requests to Cloudflare.
+
 The per-identifier limiter is keyed twice — once by the identifier as typed and
 again by the account it resolves to — so requesting a reset for the same account
 under different spellings does not multiply the allowance.
