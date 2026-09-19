@@ -55,8 +55,8 @@ const maxIdentifierLength = 254
 //
 // The order is the security property, not a detail. Turnstile is always last,
 // so an unauthenticated flood is rejected from memory instead of being turned
-// into outbound requests to Cloudflare. Ahead of it, the two methods that can
-// be called by anyone refuse a malformed or impossible request before the
+// into outbound requests to Cloudflare. Ahead of it, change-password and
+// request-password-reset refuse a malformed or impossible request before the
 // limiters, so that rejecting one costs no limiter slot; reset-password does
 // not, because its parameter check sits in the method and ran after the
 // limiter before this chain existed too.

@@ -59,7 +59,7 @@ ok      github.com/netresearch/ldap-selfservice-password-changer/internal/valida
 
 **Priority 1: RPC Handler Tests**
 
-**Location**: Create `internal/rpchandler/change_password_test.go`
+**Location**: `internal/rpchandler/change_password_internal_test.go` (it exists; add to it). The repository splits the two packages by filename — `*_internal_test.go` is `package rpchandler` and can reach unexported helpers, `*_test.go` is `package rpchandler_test` and cannot.
 
 **Test Cases**:
 
@@ -113,14 +113,24 @@ func TestChangePassword_LDAPError(t *testing.T) {
 **Implementation Pattern**:
 
 ```go
-package rpc
+// internal/rpchandler/change_password_internal_test.go — package rpchandler,
+// not rpchandler_test: the example drives Handle through the postRPC helper in
+// guards_internal_test.go, which is unexported.
+package rpchandler
 
 import (
+    "net/http"
+    "strings"
     "testing"
+
+    "github.com/gofiber/fiber/v3"
+    ldap "github.com/netresearch/simple-ldap-go"
+
     "github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 )
 
-// Mock LDAP client
+// Mock LDAP client. All four LDAPClient methods are needed, even when a test
+// exercises one of them.
 type mockLDAP struct {
     changePasswordFunc func(user, old, new string) error
 }
@@ -129,6 +139,18 @@ func (m *mockLDAP) ChangePasswordForSAMAccountName(user, old, new string) error 
     if m.changePasswordFunc != nil {
         return m.changePasswordFunc(user, old, new)
     }
+    return nil
+}
+
+func (m *mockLDAP) FindUserByMail(string) (*ldap.User, error) {
+    return &ldap.User{SAMAccountName: "testuser"}, nil
+}
+
+func (m *mockLDAP) FindUserBySAMAccountName(string) (*ldap.User, error) {
+    return &ldap.User{SAMAccountName: "testuser"}, nil
+}
+
+func (m *mockLDAP) ResetPasswordForSAMAccountName(string, string) error {
     return nil
 }
 

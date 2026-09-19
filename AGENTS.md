@@ -59,7 +59,7 @@ Source: `package.json` scripts + `go test`. Run from repo root.
 - **LDAPS required** in production (`ldaps://` URLs).
 - **No PII logging** — passwords, tokens, session IDs never reach logs.
 - **Rate limiting** — two separate in-memory limiters, don't conflate them:
-  - **Per-IP**: 10 requests / 60 minutes, max 1000 tracked IPs. **Hardcoded** in `internal/ratelimit/ip_limiter.go` (`NewLimiterWithCapacity(10, 60*time.Minute, 1000)`); no environment variable configures it. Applies to `change-password` and `request-password-reset`.
+  - **Per-IP**: 10 requests / 60 minutes, max 1000 tracked IPs. **Hardcoded** in `internal/ratelimit/ip_limiter.go` (`NewLimiterWithCapacity(10, 60*time.Minute, 1000)`); no environment variable configures it. Applies to `change-password`, `request-password-reset` and `reset-password`.
   - **Per-identifier (reset only)**: `RESET_RATE_LIMIT_REQUESTS` (default 3) per `RESET_RATE_LIMIT_WINDOW_MINUTES` (default 60), keyed by the typed identifier and again by the resolved account — not by IP.
   - There is no `RATE_LIMIT_*` variable prefix.
 - **Cryptographic random tokens** with configurable expiry; single-use, server-side.

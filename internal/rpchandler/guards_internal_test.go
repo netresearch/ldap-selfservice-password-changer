@@ -151,11 +151,16 @@ func TestResetRequestIdentifierGuardRunsBeforeTurnstile(t *testing.T) {
 	}
 }
 
-// TestMalformedRequestIsRefusedBeforeTheLimiters keeps the parameter checks
-// ahead of the limiters, where they were before the guard chain: a malformed
-// request must not spend a rate-limit slot or produce an outbound
-// verification, and it must answer with the argument error rather than with
-// whatever the next guard would have said.
+// TestMalformedRequestIsRefusedBeforeTheLimiters keeps the parameter checks of
+// change-password and request-password-reset ahead of the limiters, where they
+// were before the guard chain: a malformed request must not spend a rate-limit
+// slot or produce an outbound verification, and it must answer with the
+// argument error rather than with whatever the next guard would have said.
+//
+// reset-password is deliberately absent: its parameter check sits in the
+// method and ran after the limiter before this chain existed too, so a
+// wrong-count request there does spend a slot. Adding a guard would change a
+// 429 into a 500.
 func TestMalformedRequestIsRefusedBeforeTheLimiters(t *testing.T) {
 	tests := []struct {
 		name       string
