@@ -493,7 +493,7 @@ func TestRequestPasswordResetEmailTooLong(t *testing.T) {
 		t.Errorf("Email should not be sent for too-long email address")
 	}
 	if limiter.Count() != 0 {
-		t.Errorf("the per-identifier limiter was consulted %d times for an impossible identifier", limiter.Count())
+		t.Errorf("the per-identifier limiter tracks %d identifiers after an impossible one was refused", limiter.Count())
 	}
 
 	// The boundary itself is allowed through the guard: it reaches the method,

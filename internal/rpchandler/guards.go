@@ -53,11 +53,13 @@ const maxIdentifierLength = 254
 // methodPolicies lists, per RPC method, the guards that run before it and the
 // order they run in.
 //
-// The order is the security property, not a detail. A malformed or over-long
-// request is refused first, so that rejecting it costs neither a limiter slot
-// nor a verification; the in-memory limiters come next; and Turnstile is always
-// last, so an unauthenticated flood is rejected from memory instead of being
-// turned into outbound requests to Cloudflare.
+// The order is the security property, not a detail. Turnstile is always last,
+// so an unauthenticated flood is rejected from memory instead of being turned
+// into outbound requests to Cloudflare. Ahead of it, the two methods that can
+// be called by anyone refuse a malformed or impossible request before the
+// limiters, so that rejecting one costs no limiter slot; reset-password does
+// not, because its parameter check sits in the method and ran after the
+// limiter before this chain existed too.
 //
 // Every dispatchable method has an entry here, which
 // TestEveryDispatchableMethodHasAPolicy pins: a method added to methodHandlers
@@ -207,9 +209,9 @@ func guardResetRequestIdentifierLimit(h *Handler, c fiber.Ctx, in guardInput) (b
 	return true, sendSuccessResponse(c, []string{msgResetEmailSent})
 }
 
-// firstParam is the bounds-safe read the guards that log or key on the first
-// parameter use. A policy always places its param-count guard first, so an
-// empty slice cannot reach them today; this keeps a reordering a wrong answer
+// firstParam is the bounds-safe read for a guard that logs the first parameter.
+// change-password's policy places its param-count guard first, so an empty
+// slice cannot reach the caller today; this keeps a reordering a wrong answer
 // rather than a panic, since main.go installs no recover middleware.
 func firstParam(params []string) string {
 	if len(params) == 0 {

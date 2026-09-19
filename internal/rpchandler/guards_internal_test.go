@@ -274,6 +274,12 @@ func TestGuardsAreSkippedWhenTurnstileIsDisabled(t *testing.T) {
 	if got.status != http.StatusOK {
 		t.Errorf("status = %d, want %d (body: %s)", got.status, http.StatusOK, got.body)
 	}
+
+	// The literal, not msgPasswordChanged: this is the text a user reads, and
+	// an assertion through the constant would follow it wherever it went.
+	if !strings.Contains(got.body, "password changed successfully") {
+		t.Errorf("body = %s, want the success message", got.body)
+	}
 }
 
 // rpcResponse is what an RPC call answered: a status and a body, named so that

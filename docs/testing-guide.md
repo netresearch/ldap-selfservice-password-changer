@@ -146,21 +146,29 @@ func TestChangePassword_Success(t *testing.T) {
         opts: opts,
     }
 
-    result, err := handler.changePassword([]string{
-        "testuser",
-        "OldPass123!",
-        "NewPass456!",
-    })
+    // Through Handle, not through changePassword: the rate limiter and the
+    // Turnstile check are guards that run before the method (see
+    // internal/rpchandler/guards.go), so a test that calls the method
+    // directly exercises none of them.
+    app := fiber.New()
+    app.Post("/api/rpc", handler.Handle)
 
-    if err != nil {
-        t.Fatalf("Expected success, got error: %v", err)
+    got := postRPC(t, app, `{"method":"change-password","params":["testuser","OldPass123!","NewPass456!"]}`)
+
+    if got.status != http.StatusOK {
+        t.Fatalf("status = %d, want %d (body: %s)", got.status, http.StatusOK, got.body)
     }
 
-    if len(result) != 1 || result[0] != "password changed successfully" {
-        t.Errorf("Expected success message, got: %v", result)
+    if !strings.Contains(got.body, "password changed successfully") {
+        t.Errorf("body = %s, want the success message", got.body)
     }
 }
 ```
+
+`postRPC` is the helper in `internal/rpchandler/guards_internal_test.go`; a test
+that needs to exercise only the method body — parameter validation, LDAP error
+mapping — can still call it directly, but anything about limiting or
+verification has to go through `Handle`.
 
 **Priority 2: Configuration Parsing Tests**
 
