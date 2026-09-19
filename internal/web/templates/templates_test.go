@@ -3,6 +3,9 @@ package templates
 
 import (
 	"html/template"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -345,12 +348,48 @@ func TestRenderTurnstileEnabledState(t *testing.T) {
 				// parameters — render=explicit alone would never render, the
 				// onload callback alone would render with the default theme.
 				assert.Contains(t, html, `id="cf-turnstile-widget"`)
-				assert.Contains(t, html, "https://challenges.cloudflare.com/turnstile/v0/api.js")
-				assert.Contains(t, html, "render=explicit")
-				assert.Contains(t, html, "onload=onloadTurnstileCallback")
+				assert.Contains(
+					t,
+					html,
+					"https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCallback",
+				)
 			})
 		})
 	}
+}
+
+// TestTurnstileMarkupMatchesClientContract ties the rendered markup to the
+// client that consumes it. The two halves of both contracts — the container id
+// turnstile.ts renders into, and the name of the callback it registers on
+// window — live in different languages, so renaming one of them would
+// otherwise leave every assertion above green while the widget never renders.
+func TestTurnstileMarkupMatchesClientContract(t *testing.T) {
+	source, err := os.ReadFile(filepath.Join("..", "static", "js", "turnstile.ts"))
+	require.NoError(t, err)
+
+	widgetID := captureOne(t, `const widgetSelector = "#([A-Za-z0-9_-]+)"`, string(source))
+	callback := captureOne(t, `window\.([A-Za-z0-9_$]+) = renderWidget`, string(source))
+
+	html, err := RenderIndex(&options.Opts{
+		CfTurnstileEnabled: true,
+		CfTurnstileSiteKey: "test-site-key",
+	})
+	require.NoError(t, err)
+
+	assert.Contains(t, string(html), `id="`+widgetID+`"`)
+	assert.Contains(t, string(html), "onload="+callback)
+}
+
+// captureOne returns the single capture group of pattern in source, failing
+// the test when the pattern no longer matches — which is itself the signal
+// that the client-side contract moved.
+func captureOne(t *testing.T, pattern, source string) string {
+	t.Helper()
+
+	match := regexp.MustCompile(pattern).FindStringSubmatch(source)
+	require.Len(t, match, 2, "pattern %q no longer matches turnstile.ts", pattern)
+
+	return match[1]
 }
 
 // TestRenderIndexIdempotent tests that RenderIndex produces consistent output.
