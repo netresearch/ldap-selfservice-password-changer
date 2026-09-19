@@ -44,24 +44,37 @@ func TestBuildEnabled(t *testing.T) {
 }
 
 // TestBuildEnabledKeepsEveryBaseDirective is the guard against the variant
-// drifting away from the base: every directive of the disabled policy must
-// still be present with Turnstile on, either unchanged or extended by the
-// Cloudflare origin.
+// drifting away from the base: every base directive must still be there with
+// Turnstile on, unchanged unless it is one of the three Cloudflare needs.
+// On its own it would also pass for a Build that ignores its argument, which
+// is what the origin count below rules out.
 func TestBuildEnabledKeepsEveryBaseDirective(t *testing.T) {
+	extended := map[string]bool{"script-src": true, "connect-src": true, "frame-src": true}
+
 	enabled := strings.Split(csp.Build(true), "; ")
+	byName := make(map[string]string, len(enabled))
+	for _, directive := range enabled {
+		name, _, _ := strings.Cut(directive, " ")
+		byName[name] = directive
+	}
 
 	for _, directive := range strings.Split(csp.Build(false), "; ") {
 		name, _, found := strings.Cut(directive, " ")
 		assert.True(t, found, "directive %q has no value", directive)
 
-		var match string
-		for _, candidate := range enabled {
-			if candidate == directive || candidate == directive+" "+csp.TurnstileOrigin {
-				match = candidate
-				break
-			}
+		want := directive
+		if extended[name] {
+			want = directive + " " + csp.TurnstileOrigin
 		}
 
-		assert.NotEmpty(t, match, "directive %q (%s) is missing or rewritten in the Turnstile policy", directive, name)
+		assert.Equal(t, want, byName[name], "directive %s differs between the two policies", name)
 	}
+
+	// frame-src is the one directive the variant adds, and the origin must
+	// appear in exactly the three directives Cloudflare needs — no more, so a
+	// source can never land beside frame-ancestors 'none', and no fewer, so a
+	// Build that returned the base unchanged fails here.
+	assert.Equal(t, "frame-src "+csp.TurnstileOrigin, byName["frame-src"])
+	assert.Equal(t, 3, strings.Count(csp.Build(true), csp.TurnstileOrigin))
+	assert.NotContains(t, byName["frame-ancestors"], csp.TurnstileOrigin)
 }

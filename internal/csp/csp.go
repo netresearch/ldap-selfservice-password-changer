@@ -22,29 +22,66 @@ const base = "default-src 'self'; " +
 
 const directiveSeparator = "; "
 
+// turnstileExtends names the directives the Cloudflare origin is appended to.
+// frame-src is handled separately because base does not carry one.
+var turnstileExtends = []string{"script-src", "connect-src", "frame-src"}
+
+// isDirective reports whether the directive is the named one. The name is
+// matched in full so that script-src-elem is not taken for script-src.
+func isDirective(directive, name string) bool {
+	return directive == name || strings.HasPrefix(directive, name+" ")
+}
+
+func matchesAny(directive string, names []string) bool {
+	for _, name := range names {
+		if isDirective(directive, name) {
+			return true
+		}
+	}
+
+	return false
+}
+
 // Build returns the policy for the given configuration. With Turnstile enabled
 // the widget's origin is added to the directives Cloudflare requires
-// (script-src, connect-src and frame-src); everything else stays as in base.
+// (script-src, connect-src and frame-src); every other directive, frame-ancestors
+// included, is carried over unchanged.
 func Build(turnstileEnabled bool) string {
 	if !turnstileEnabled {
 		return base
 	}
 
 	directives := strings.Split(base, directiveSeparator)
-	out := make([]string, 0, len(directives)+1)
+	frameSrc := "frame-src " + TurnstileOrigin
 
+	// A base that carries its own frame-src is extended in place; otherwise the
+	// directive is added. It cannot be left out: frame-src has no fallback
+	// beyond default-src 'self', which would block the challenge iframe.
+	hasFrameSrc := false
 	for _, directive := range directives {
-		switch {
-		case strings.HasPrefix(directive, "script-src "), strings.HasPrefix(directive, "connect-src "):
+		if isDirective(directive, "frame-src") {
+			hasFrameSrc = true
+
+			break
+		}
+	}
+
+	out := make([]string, 0, len(directives)+1)
+	for _, directive := range directives {
+		if !hasFrameSrc && isDirective(directive, "frame-ancestors") {
+			out = append(out, frameSrc)
+			hasFrameSrc = true
+		}
+
+		if matchesAny(directive, turnstileExtends) {
 			directive += " " + TurnstileOrigin
-		case strings.HasPrefix(directive, "frame-ancestors "):
-			// Turnstile renders its challenge in an iframe. frame-src has no
-			// fallback of its own here beyond default-src 'self', so it has to
-			// be added rather than extended.
-			out = append(out, "frame-src "+TurnstileOrigin)
 		}
 
 		out = append(out, directive)
+	}
+
+	if !hasFrameSrc {
+		out = append(out, frameSrc)
 	}
 
 	return strings.Join(out, directiveSeparator)

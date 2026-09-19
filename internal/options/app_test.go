@@ -764,12 +764,22 @@ func TestParseArgs_CloudflareTurnstileDisabledIgnoresTimeout(t *testing.T) {
 			opts, err := ParseArgs(append(requiredArgs(), "--cf-turnstile-timeout-seconds", seconds))
 			require.NoError(t, err)
 			assert.False(t, opts.CfTurnstileEnabled)
+
+			// The disabled path is the only one that reaches the clamp in
+			// cfTurnstileSecondsToDuration: with Turnstile enabled, 6 is
+			// rejected before the conversion runs.
+			want := time.Duration(0)
+			if seconds == "6" {
+				want = maxCfTurnstileTimeoutSeconds * time.Second
+			}
+			assert.Equal(t, want, opts.CfTurnstileTimeout)
 		})
 	}
 }
 
 // TestParseArgs_CloudflareTurnstileTimeoutDuration pins the second-to-duration
-// conversion, including the clamp at the maximum.
+// conversion for an accepted value. The clamp is covered by the disabled cases
+// above, which are the only ones that can reach it.
 func TestParseArgs_CloudflareTurnstileTimeoutDuration(t *testing.T) {
 	t.Chdir(t.TempDir())
 

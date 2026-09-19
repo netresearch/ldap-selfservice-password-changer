@@ -610,10 +610,10 @@ func MustParse() *Opts {
 }
 
 // cfTurnstileSecondsToDuration converts the verification timeout into a
-// duration. checkUintMax has already rejected anything above
-// maxCfTurnstileTimeoutSeconds and ParseArgs returns on errs before this runs,
-// so the clamp below is a belt on the conversion rather than a reachable
-// branch — it keeps the function total for any caller.
+// duration. With Turnstile enabled, validateCfTurnstileConfig has rejected
+// anything above maxCfTurnstileTimeoutSeconds and ParseArgs returns on errs
+// before this runs, so the clamp is reachable only on the disabled path, where
+// the resulting value is never read. It keeps the conversion total either way.
 func cfTurnstileSecondsToDuration(seconds uint) time.Duration {
 	if seconds > maxCfTurnstileTimeoutSeconds {
 		return maxCfTurnstileTimeoutSeconds * time.Second
