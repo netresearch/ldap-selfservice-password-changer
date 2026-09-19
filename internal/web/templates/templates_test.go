@@ -370,7 +370,9 @@ func TestTurnstileMarkupMatchesClientContract(t *testing.T) {
 	widgetID := captureOne(t, `const widgetSelector = "#([A-Za-z0-9_-]+)"`, string(source))
 	// The right-hand side is deliberately unconstrained beyond "not ==": what
 	// the template needs is the name, and how turnstile.ts produces the
-	// function is its own business.
+	// function is its own business. captureOne takes the first match, so an
+	// unrelated window assignment placed earlier in the file fails this test
+	// rather than passing it with the wrong name — the safe direction.
 	callback := captureOne(t, `window\.([A-Za-z0-9_$]+)\s*=[^=]`, string(source))
 
 	renderers := map[string]func(*options.Opts) ([]byte, error){

@@ -72,7 +72,8 @@ export const initThemeToggle = () => {
     // In "auto" the applied theme is the operating system's, so it has to be
     // re-applied when that changes — otherwise "auto" only follows the system
     // as of page load. initDensityToggle monitors its own queries the same way.
-    window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", () => {
+    const colorSchemeQuery = window.matchMedia("(prefers-color-scheme: dark)");
+    colorSchemeQuery.addEventListener("change", () => {
       if ((themeToggle.dataset["theme"] ?? "auto") === "auto") {
         applyTheme("auto");
       }

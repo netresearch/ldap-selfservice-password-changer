@@ -118,9 +118,9 @@ const applyThemeToWidget = (): void => {
 
   if (widgetId === undefined) {
     // An earlier render failed and the page carries the marker without a
-    // widget, which blocks every submit. A theme change is the one recurring
-    // event that can rebuild it, so it is used as the recovery point rather
-    // than being skipped.
+    // widget, which blocks every submit. Rebuild it here rather than skipping
+    // the event; a refused submit does the same through
+    // ensureTurnstileWidget, for a visitor who never touches the toggle.
     renderWidget();
 
     return;
@@ -145,26 +145,18 @@ const applyThemeToWidget = (): void => {
 export const getTurnstileToken = (form: HTMLFormElement): string =>
   form.querySelector<HTMLInputElement>('input[name="cf-turnstile-response"]')?.value ?? "";
 
+export const isTurnstileTokenMissing = (form: HTMLFormElement, token: string): boolean =>
+  form.querySelector(".cf-turnstile") !== null && !token;
+
 /**
- * Whether the submit has to be refused because the visitor has no token yet.
- *
- * A refusal with no widget on the page is the dead end this guards against:
- * the marker in the markup blocks every submit while there is nothing to
- * solve. So a missing widget is rebuilt here, which turns that state into one
- * refused submit followed by a challenge the visitor can actually answer.
+ * Renders the widget if an earlier attempt failed and the page is left with
+ * the marker but no challenge, which blocks every submit. Called from the
+ * refusal branch, it turns that state into one refused submit followed by a
+ * challenge the visitor can answer — otherwise only a theme change rebuilds
+ * it, and a visitor need never trigger one. A no-op while a widget is present.
  */
-export const isTurnstileTokenMissing = (form: HTMLFormElement, token: string): boolean => {
-  if (form.querySelector(".cf-turnstile") === null) {
-    return false;
-  }
-
-  if (token) {
-    return false;
-  }
-
+export const ensureTurnstileWidget = (): void => {
   renderWidget();
-
-  return true;
 };
 
 /**
