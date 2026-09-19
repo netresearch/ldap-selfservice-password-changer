@@ -85,6 +85,19 @@ Changes a user's password in the LDAP/ActiveDirectory server.
 - `"the new password must contain at least {N} lowercase letter(s)"`
 - `"the new password must not include the username"`
 
+##### Rate Limit Error
+
+The per-IP limiter answers before the request is processed.
+
+```json
+{
+  "success": false,
+  "data": ["too many password change attempts from your IP address, please try again later"]
+}
+```
+
+**HTTP Status**: 429 Too Many Requests
+
 ##### Turnstile Verification Error
 
 When Cloudflare Turnstile protection is enabled, a missing or invalid `turnstileToken`, or a failure to verify the token with Cloudflare, causes the request to fail closed.

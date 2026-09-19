@@ -387,10 +387,10 @@ func (l *Limiter) AllowRequest(identifier string) bool {
 `Limiter` is key-agnostic — the caller decides what `identifier` means. Two
 instances are created, with different keys and different configurability:
 
-| Limiter                             | Key                                               | Limit                     | Endpoints                                   | Configurable                                                         |
-| ----------------------------------- | ------------------------------------------------- | ------------------------- | ------------------------------------------- | -------------------------------------------------------------------- |
-| `ratelimit.NewIPLimiter()`          | client IP from `extractClientIP`                  | 10 / 60 min, max 1000 IPs | `change-password`, `request-password-reset` | **No** — hardcoded in `internal/ratelimit/ip_limiter.go`             |
-| `ratelimit.NewLimiter(...)` (reset) | `typed:<input>` and `account:<resolved username>` | 3 / 60 min (defaults)     | `request-password-reset`                    | Yes — `RESET_RATE_LIMIT_REQUESTS`, `RESET_RATE_LIMIT_WINDOW_MINUTES` |
+| Limiter                             | Key                                               | Limit                     | Endpoints                                                     | Configurable                                                         |
+| ----------------------------------- | ------------------------------------------------- | ------------------------- | ------------------------------------------------------------- | -------------------------------------------------------------------- |
+| `ratelimit.NewIPLimiter()`          | client IP from `extractClientIP`                  | 10 / 60 min, max 1000 IPs | `change-password`, `request-password-reset`, `reset-password` | **No** — hardcoded in `internal/ratelimit/ip_limiter.go`             |
+| `ratelimit.NewLimiter(...)` (reset) | `typed:<input>` and `account:<resolved username>` | 3 / 60 min (defaults)     | `request-password-reset`                                      | Yes — `RESET_RATE_LIMIT_REQUESTS`, `RESET_RATE_LIMIT_WINDOW_MINUTES` |
 
 **Configuration** (per-identifier reset limiter only — there is no
 `RATE_LIMIT_*` prefix and no variable for the per-IP limiter):

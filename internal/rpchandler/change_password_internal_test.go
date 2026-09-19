@@ -2,15 +2,15 @@ package rpchandler
 
 import (
 	"errors"
+	"net/http"
 	"strings"
 	"testing"
 
+	"github.com/gofiber/fiber/v3"
 	ldap "github.com/netresearch/simple-ldap-go"
 
 	"github.com/netresearch/ldap-selfservice-password-changer/internal/options"
 )
-
-const testClientIP = "203.0.113.42"
 
 // TestPasswordCanIncludeUsername tests the username inclusion validation logic.
 // with various case combinations to ensure case-insensitive checking works correctly.
@@ -210,7 +210,10 @@ func TestPasswordValidationEdgeCases(t *testing.T) {
 	}
 }
 
-// TestChangePasswordIPRateLimiting tests IP-based rate limiting on change-password endpoint.
+// TestChangePasswordIPRateLimiting tests IP-based rate limiting on the
+// change-password method. The limiter is a guard now, so the request has to go
+// through Handle rather than through changePassword, and a rejected request
+// answers 429 rather than the 500 the inline check used to produce.
 func TestChangePasswordIPRateLimiting(t *testing.T) {
 	mockLDAP := &mockChangePasswordLDAP{
 		changePasswordError: nil,
@@ -225,7 +228,6 @@ func TestChangePasswordIPRateLimiting(t *testing.T) {
 		PasswordCanIncludeUsername: false,
 	}
 
-	// Create IP limiter with very low limit for testing
 	ipLimiter := &mockIPLimiter{
 		allowed: true,
 		count:   0,
@@ -237,39 +239,32 @@ func TestChangePasswordIPRateLimiting(t *testing.T) {
 		ipLimiter: ipLimiter,
 	}
 
-	clientIP := testClientIP
+	app := fiber.New()
+	app.Post("/api/rpc", handler.Handle)
 
-	// First 5 requests should succeed
+	body := `{"method":"change-password","params":["testuser","OldPass123!","NewPass456!"]}`
+
+	// Requests within the limit are served.
 	for i := 1; i <= 5; i++ {
-		result, err := handler.changePasswordWithIP(
-			[]string{"testuser", "OldPass123!", "NewPass456!"},
-			clientIP,
-			"",
-		)
-		if err != nil {
-			t.Fatalf("Request %d failed: %v", i, err)
+		got := postRPC(t, app, body)
+		if got.status != http.StatusOK {
+			t.Fatalf("request %d: status = %d, want %d (body: %s)", i, got.status, http.StatusOK, got.body)
 		}
-		if len(result) != 1 || result[0] != "password changed successfully" {
-			t.Errorf("Request %d: unexpected result: %v", i, result)
+		if !strings.Contains(got.body, msgPasswordChanged) {
+			t.Errorf("request %d: body = %s, want the success message", i, got.body)
 		}
 		ipLimiter.count++
 	}
 
-	// 6th request should be rate limited
+	// The first rejected request answers 429 and never reaches the method.
 	ipLimiter.allowed = false
-	result, err := handler.changePasswordWithIP(
-		[]string{"testuser", "OldPass123!", "NewPass456!"},
-		clientIP,
-		"",
-	)
 
-	if err == nil {
-		t.Error("Expected rate limit error, got nil")
-	} else if !strings.Contains(err.Error(), "too many") {
-		t.Errorf("Expected rate limit error with 'too many', got: %v", err)
+	got := postRPC(t, app, body)
+	if got.status != http.StatusTooManyRequests {
+		t.Errorf("status = %d, want %d (body: %s)", got.status, http.StatusTooManyRequests, got.body)
 	}
-	if result != nil {
-		t.Errorf("Expected nil result when rate limited, got: %v", result)
+	if !strings.Contains(got.body, "too many password change attempts") {
+		t.Errorf("body = %s, want the rate-limit message", got.body)
 	}
 }
 
@@ -346,7 +341,7 @@ func TestChangePasswordEmptyInputs(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := handler.changePasswordWithIP(tt.params, testClientIP, "")
+			result, err := handler.changePassword(tt.params)
 			if err == nil {
 				t.Errorf("Expected error containing %q, got nil", tt.wantError)
 				return
@@ -379,11 +374,7 @@ func TestChangePasswordSamePassword(t *testing.T) {
 		ipLimiter: ipLimiter,
 	}
 
-	result, err := handler.changePasswordWithIP(
-		[]string{"testuser", "SamePass123!", "SamePass123!"},
-		testClientIP,
-		"",
-	)
+	result, err := handler.changePassword([]string{"testuser", "SamePass123!", "SamePass123!"})
 
 	if err == nil {
 		t.Error("Expected error when old and new passwords are the same")
@@ -417,11 +408,7 @@ func TestChangePasswordLDAPError(t *testing.T) {
 		ipLimiter: ipLimiter,
 	}
 
-	result, err := handler.changePasswordWithIP(
-		[]string{"testuser", "OldPass123!", "NewPass456!"},
-		testClientIP,
-		"",
-	)
+	result, err := handler.changePassword([]string{"testuser", "OldPass123!", "NewPass456!"})
 
 	if err == nil {
 		t.Error("Expected error on LDAP failure")
@@ -459,42 +446,11 @@ func TestChangePasswordInvalidArgumentCount(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			_, err := handler.changePasswordWithIP(tt.params, testClientIP, "")
+			_, err := handler.changePassword(tt.params)
 			if !errors.Is(err, ErrInvalidArgumentCount) {
 				t.Errorf("Expected ErrInvalidArgumentCount, got: %v", err)
 			}
 		})
-	}
-}
-
-// TestChangePasswordNoIPLimiter tests when IP limiter is nil.
-func TestChangePasswordNoIPLimiter(t *testing.T) {
-	mockLDAP := &mockChangePasswordLDAP{}
-	opts := &options.Opts{
-		MinLength:    8,
-		MinNumbers:   1,
-		MinSymbols:   1,
-		MinUppercase: 1,
-		MinLowercase: 1,
-	}
-
-	handler := &Handler{
-		ldap:      mockLDAP,
-		opts:      opts,
-		ipLimiter: nil, // No IP limiter
-	}
-
-	result, err := handler.changePasswordWithIP(
-		[]string{"testuser", "OldPass123!", "NewPass456!"},
-		testClientIP,
-		"",
-	)
-	if err != nil {
-		t.Errorf("Unexpected error: %v", err)
-		return
-	}
-	if len(result) != 1 || result[0] != "password changed successfully" {
-		t.Errorf("Expected success message, got %v", result)
 	}
 }
 
@@ -545,11 +501,7 @@ func TestChangePasswordValidationFailure(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			result, err := handler.changePasswordWithIP(
-				[]string{tt.username, "OldPass123!", tt.newPassword},
-				testClientIP,
-				"",
-			)
+			result, err := handler.changePassword([]string{tt.username, "OldPass123!", tt.newPassword})
 			if err == nil {
 				t.Errorf("Expected error containing %q, got nil", tt.wantError)
 				return

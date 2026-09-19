@@ -9,8 +9,9 @@ import (
 // msgPasswordChanged is the success message returned after a password change.
 const msgPasswordChanged = "password changed successfully"
 
-// changePasswordWithIP handles password change requests with IP-based rate limiting.
-func (c *Handler) changePasswordWithIP(params []string, clientIP, turnstileToken string) ([]string, error) {
+// changePassword handles password change requests. The per-IP limiter and the
+// Turnstile verification run ahead of it as guards; see methodPolicies.
+func (c *Handler) changePassword(params []string) ([]string, error) {
 	if len(params) != 3 {
 		return nil, ErrInvalidArgumentCount
 	}
@@ -18,16 +19,6 @@ func (c *Handler) changePasswordWithIP(params []string, clientIP, turnstileToken
 	sAMAccountName := params[0]
 	currentPassword := params[1]
 	newPassword := params[2]
-
-	// Check IP-based rate limit to prevent brute force attacks
-	if c.ipLimiter != nil && !c.ipLimiter.AllowRequest(clientIP) {
-		slog.Warn("password_change_ip_rate_limited", "ip", clientIP, "username", sAMAccountName)
-		return nil, errors.New("too many password change attempts from your IP address, please try again later")
-	}
-
-	if err := c.verifyTurnstile(turnstileToken, clientIP); err != nil {
-		return nil, err
-	}
 
 	if sAMAccountName == "" {
 		return nil, errors.New("the username can't be empty")
