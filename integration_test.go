@@ -144,7 +144,7 @@ func TestIntegration_IPRateLimiting(t *testing.T) {
 	ip2 := "192.168.1.2"
 
 	// First 10 requests from ip1 should succeed
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		assert.True(t, limiter.AllowRequest(ip1), "Request %d should succeed", i+1)
 	}
 
