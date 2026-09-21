@@ -58,7 +58,7 @@ func TestBuildEnabledKeepsEveryBaseDirective(t *testing.T) {
 		byName[name] = directive
 	}
 
-	for _, directive := range strings.Split(csp.Build(false), "; ") {
+	for directive := range strings.SplitSeq(csp.Build(false), "; ") {
 		name, _, _ := strings.Cut(directive, " ")
 
 		want := directive
