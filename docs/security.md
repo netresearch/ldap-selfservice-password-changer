@@ -642,7 +642,7 @@ add_header Content-Security-Policy "default-src 'self'; script-src 'self'; style
 - ✅ Minimal dependencies (only 3 direct Go deps)
 - ✅ Pinned Docker base images with SHA256
 - ✅ Regular dependency updates
-- ✅ Automated security scanning (Dependabot)
+- ✅ Automated security scanning (Renovate, CodeQL, gosec, govulncheck)
 
 **Dependencies**:
 
