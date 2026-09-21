@@ -625,7 +625,7 @@ jobs:
 
       - uses: actions/setup-go@v6
         with:
-          go-version: "1.26"
+          go-version: "1.27"
 
       - uses: oven-sh/setup-bun@v2
 

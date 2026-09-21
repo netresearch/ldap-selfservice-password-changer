@@ -85,7 +85,7 @@ BRANDING_DIR=
 PORT=3000
 ```
 
-**Go toolchain**: Requires Go 1.26+ (specified in `go.mod`)
+**Go toolchain**: Requires Go 1.27+ (specified in `go.mod`)
 
 **Key dependencies**:
 

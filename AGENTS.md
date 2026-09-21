@@ -15,7 +15,7 @@
 
 LDAP self-service password changer (hybrid Go + TypeScript web app). Email-based reset, rate limiting, WCAG 2.2 AAA compliance. Single binary deployment with embedded assets.
 
-**Stack**: Go 1.26 + Fiber v3, TypeScript (ultra-strict), Tailwind CSS 4, Docker multi-stage, **Bun** (migrated from pnpm in [`8f69f47`](https://github.com/netresearch/ldap-selfservice-password-changer/commit/8f69f47)).
+**Stack**: Go 1.27 + Fiber v3, TypeScript (ultra-strict), Tailwind CSS 4, Docker multi-stage, **Bun** (migrated from pnpm in [`8f69f47`](https://github.com/netresearch/ldap-selfservice-password-changer/commit/8f69f47)).
 
 ## Commands
 
