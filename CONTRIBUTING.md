@@ -49,7 +49,7 @@ Instances of abusive, harassing, or otherwise unacceptable behavior may be repor
 
 ### Prerequisites
 
-- **Go** 1.26 or higher
+- **Go** 1.27 or higher
 - **Bun** (no version pinned; CI installs the latest — see [installation guide](https://bun.sh/docs/installation))
 - **Git** for version control
 - **Docker** (optional, for testing with LDAP)

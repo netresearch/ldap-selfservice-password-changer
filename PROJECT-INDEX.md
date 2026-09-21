@@ -92,7 +92,7 @@ LDAP Selfservice Password Changer provides:
 
 | Layer         | Technology   | Version                                |
 | ------------- | ------------ | -------------------------------------- |
-| Backend       | Go           | 1.26 (`go.mod`)                        |
+| Backend       | Go           | 1.27 (`go.mod`)                        |
 | Web Framework | Fiber        | v3.4.0 (`github.com/gofiber/fiber/v3`) |
 | Frontend      | TypeScript   | ~6.0.3 (`package.json`)                |
 | CSS           | Tailwind CSS | ^4.3.2 (`package.json`)                |
