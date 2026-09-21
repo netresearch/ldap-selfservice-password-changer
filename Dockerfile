@@ -3,7 +3,7 @@
 # via go:embed, uploads to the release, and the container job downloads
 # them back into bin/. This stage picks the right pre-built binary per
 # TARGETARCH/TARGETVARIANT — no `go build` or `bun install` in Docker.
-FROM alpine:3.24.1 AS binary-selector
+FROM alpine:3.24.1@sha256:28bd5fe8b56d1bd048e5babf5b10710ebe0bae67db86916198a6eec434943f8b AS binary-selector
 
 ARG TARGETARCH
 ARG TARGETVARIANT
