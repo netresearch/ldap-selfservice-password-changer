@@ -5,5 +5,5 @@ import "embed"
 
 // Static embeds all static web assets including CSS, JavaScript, images, and manifest files.
 //
-//go:embed *.css js/*.js *.png *.ico *.svg *.webp site.webmanifest browserconfig.xml
+//go:embed *.css js/*.js *.png *.ico *.svg *.webp site.webmanifest browserconfig.xml companion
 var Static embed.FS

@@ -13,6 +13,7 @@ export default defineConfig(
       "node_modules/**",
       "internal/web/static/js/*.js", // Generated/minified JS
       "internal/web/static/styles.css", // Generated CSS
+      "internal/web/static/companion/vendor/**", // Pinned upstream Three.js
       "vendor/**",
       "dist/**",
       "coverage/**",
@@ -26,6 +27,35 @@ export default defineConfig(
     ...js.configs.recommended,
     rules: {
       "no-console": "off" // Config files can use console
+    }
+  },
+
+  // The portable companion is a standalone JS module; lint it with browser globals.
+  {
+    files: ["internal/web/static/companion/*.js", "tests/companion/*.js"],
+    languageOptions: {
+      globals: Object.fromEntries(
+        [
+          "URL",
+          "HTMLElement",
+          "customElements",
+          "document",
+          "window",
+          "matchMedia",
+          "devicePixelRatio",
+          "AbortController",
+          "ResizeObserver",
+          "IntersectionObserver",
+          "performance",
+          "requestAnimationFrame",
+          "cancelAnimationFrame",
+          "CustomEvent",
+          "queueMicrotask",
+          "setTimeout",
+          "Event",
+          "MouseEvent"
+        ].map((name) => [name, "readonly"])
+      )
     }
   },
 

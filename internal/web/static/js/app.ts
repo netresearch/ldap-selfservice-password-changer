@@ -238,6 +238,7 @@ export const init = (opts: Opts) => {
         return;
       }
 
+      form.dispatchEvent(new Event("password-change-start"));
       const res = await fetch("/api/rpc", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
