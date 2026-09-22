@@ -24,7 +24,7 @@ func TestKeyholderProgressiveEnhancement(t *testing.T) {
 		}
 	}
 	for _, asset := range []string{
-		"avatar.css", "keyholder-login.js", "scormiq-avatar.js", "gopher-rigs.js",
+		"avatar.css", "keyholder-login.js", "scormiq-avatar.js", "gopher-rigs.js", "animation-random.js",
 		"vendor/three.module.js", "assets/logos/netresearch-symbol-only.svg",
 	} {
 		if data, readErr := static.Static.ReadFile("companion/" + asset); readErr != nil || len(data) == 0 {
