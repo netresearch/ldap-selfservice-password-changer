@@ -1,3 +1,4 @@
+import { animationRandom } from "./animation-random.js";
 import * as THREE from "./vendor/three.module.js";
 import { buildGopher, animateGopher, gopherFallback, applyCelStyle } from "./gopher-rigs.js";
 
@@ -667,7 +668,7 @@ export class ScormiqAvatar extends HTMLElement {
     this._look.y += ((attentive ? this._pointer.y : 0) - this._look.y) * smoothing;
     if (this._time > this._nextBlink && !this._rig?.quirk?.type) {
       this._blinkStart = this._time;
-      this._nextBlink = this._time + (2.7 + Math.random() * 3.1) * (this._character === "keyholder" ? 2 : 1);
+      this._nextBlink = this._time + (2.7 + animationRandom() * 3.1) * (this._character === "keyholder" ? 2 : 1);
     }
     this._render(delta);
     this._frame = requestAnimationFrame(this._tick);

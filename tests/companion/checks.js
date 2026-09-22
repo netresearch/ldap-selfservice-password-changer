@@ -17,6 +17,23 @@ let actions = 0;
 avatar.addEventListener("avatar-action", () => actions++);
 let submissions = 0;
 try {
+  const { animationRandom } = await import(ASSETS + "/animation-random.js");
+  const originalGetRandomValues = globalThis.crypto.getRandomValues;
+  try {
+    for (const [sample, expected] of [
+      [0, 0],
+      [0x80000000, 0.5],
+      [0xffffffff, 1 - 2 ** -32]
+    ]) {
+      globalThis.crypto.getRandomValues = (values) => {
+        values[0] = sample;
+        return values;
+      };
+      check(animationRandom() === expected, `Animation randomness preserves the [0, 1) range for ${sample}`);
+    }
+  } finally {
+    globalThis.crypto.getRandomValues = originalGetRandomValues;
+  }
   await import(
     ASSETS +
       (kind === "wizard" ? "/wizard-login.js" : kind === "keyholder" ? "/keyholder-login.js" : "/scormiq-avatar.js")

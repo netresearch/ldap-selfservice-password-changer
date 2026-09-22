@@ -1,3 +1,4 @@
+import { animationRandom } from "./animation-random.js";
 import * as THREE from "./vendor/three.module.js";
 
 // Both gophers are original, procedural meshes interpreted from the supplied images.
@@ -762,7 +763,7 @@ export function buildGopher(avatar, character) {
   };
   if (!wizard) {
     avatar._rig.quirk = {
-      nextAt: avatar._time + 8 + Math.random() * 6,
+      nextAt: avatar._time + 8 + animationRandom() * 6,
       start: -100,
       type: null,
       eye: 0,
@@ -795,17 +796,17 @@ function updateEyeQuirk(avatar, blend, staticPose, quietIdle, blink) {
     const finished = quirk.type && now - quirk.start >= (quirk.type === "drift" ? quirk.returnAt + 0.36 : 0.48);
     if (quirk.type && (!quietIdle || finished)) {
       quirk.type = null;
-      quirk.nextAt = now + 18 + Math.random() * 16;
+      quirk.nextAt = now + 18 + animationRandom() * 16;
       avatar._nextBlink = Math.max(avatar._nextBlink, now + 0.5);
     }
     if (!quietIdle) quirk.nextAt = Math.max(quirk.nextAt, now + 4);
     if (quietIdle && !quirk.type && now >= quirk.nextAt && blink === 1) {
-      quirk.type = Math.random() < 0.65 ? "drift" : "wink";
-      quirk.eye = Math.random() < 0.5 ? 0 : 1;
+      quirk.type = animationRandom() < 0.65 ? "drift" : "wink";
+      quirk.eye = animationRandom() < 0.5 ? 0 : 1;
       quirk.start = now;
-      quirk.dx = (quirk.eye === 0 ? -1 : 1) * (0.035 + Math.random() * 0.025);
-      quirk.dy = (Math.random() - 0.5) * 0.024;
-      quirk.driftDuration = 0.72 + Math.pow(Math.random(), 2) * 3.2;
+      quirk.dx = (quirk.eye === 0 ? -1 : 1) * (0.035 + animationRandom() * 0.025);
+      quirk.dy = (animationRandom() - 0.5) * 0.024;
+      quirk.driftDuration = 0.72 + Math.pow(animationRandom(), 2) * 3.2;
       quirk.returnAt = quirk.driftDuration + 0.24;
     }
   }
