@@ -7,7 +7,7 @@ toolchain go1.27.1
 require (
 	github.com/gofiber/fiber/v3 v3.5.0
 	github.com/joho/godotenv v1.5.1
-	github.com/netresearch/simple-ldap-go v1.18.0
+	github.com/netresearch/simple-ldap-go v1.18.1
 	github.com/stretchr/testify v1.12.1
 	github.com/valyala/fasthttp v1.74.0
 )
