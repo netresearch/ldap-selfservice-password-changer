@@ -108,6 +108,8 @@ github.com/netresearch/simple-ldap-go v1.17.0 h1:bymV1cK6Qs1ENE3sFC7STJCJcGBVb5e
 github.com/netresearch/simple-ldap-go v1.17.0/go.mod h1:7icW5H1UIl7Fg/JyMG3FEjGBQTdTPFAKZ38ugEVeE8s=
 github.com/netresearch/simple-ldap-go v1.18.0 h1:5LNUB/0HSKi7IFf8BUgKD8rcSatw4ZeOp/8H+lgPee4=
 github.com/netresearch/simple-ldap-go v1.18.0/go.mod h1:7icW5H1UIl7Fg/JyMG3FEjGBQTdTPFAKZ38ugEVeE8s=
+github.com/netresearch/simple-ldap-go v1.18.1 h1:+7nEKEvy9N8NzquDIhAp0/zGUmdzfyQAOPGWzK1Fhf4=
+github.com/netresearch/simple-ldap-go v1.18.1/go.mod h1:7icW5H1UIl7Fg/JyMG3FEjGBQTdTPFAKZ38ugEVeE8s=
 github.com/opencontainers/go-digest v1.0.0 h1:apOUWs51W5PlhuyGyz9FCeeBIOUDA/6nW8Oi/yOhh5U=
 github.com/opencontainers/go-digest v1.0.0/go.mod h1:0JzlMkj0TRzQZfJkVvzbP0HBR3IKzErnv2BNG4W4MAM=
 github.com/opencontainers/image-spec v1.1.1 h1:y0fUlFfIZhPF1W537XOLg0/fcx6zcHCJwooC2xJA040=
