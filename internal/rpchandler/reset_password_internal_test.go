@@ -617,136 +617,80 @@ func TestResetPasswordMarkUsedError(t *testing.T) {
 	}
 }
 
-func TestResetPasswordUnlockAccountEnabled(t *testing.T) {
+func setupResetPasswordUnlockTest(
+	t *testing.T,
+	unlockEnabled bool,
+	unlockError error,
+	tokenString string,
+) (*Handler, *mockResetLDAPClient, *resettoken.Store) {
+	t.Helper()
+
 	tokenStore := resettoken.NewStore()
-	opts := &options.Opts{
-		MinLength:                    8,
-		MinNumbers:                   1,
-		MinSymbols:                   1,
-		MinUppercase:                 1,
-		MinLowercase:                 1,
-		UnlockAccountOnPasswordReset: true,
-	}
-	mockLDAP := &mockResetLDAPClient{}
+	mockLDAP := &mockResetLDAPClient{unlockError: unlockError}
 
 	handler := &Handler{
 		ldap:       mockLDAP,
 		resetLDAP:  mockLDAP,
 		tokenStore: tokenStore,
-		opts:       opts,
+		opts: &options.Opts{
+			MinLength:                    8,
+			MinNumbers:                   1,
+			MinSymbols:                   1,
+			MinUppercase:                 1,
+			MinLowercase:                 1,
+			UnlockAccountOnPasswordReset: unlockEnabled,
+		},
 	}
 
-	token := &resettoken.ResetToken{
-		Token:     "unlock-account-token",
+	err := tokenStore.Store(&resettoken.ResetToken{
+		Token:     tokenString,
 		Username:  "testuser",
 		Email:     "test@example.com",
 		CreatedAt: time.Now(),
 		ExpiresAt: time.Now().Add(15 * time.Minute),
-		Used:      false,
-	}
-	err := tokenStore.Store(token)
+	})
 	require.NoError(t, err)
 
-	params := []string{"unlock-account-token", "NewPass123!"}
-	_, err = handler.resetPassword(params)
+	return handler, mockLDAP, tokenStore
+}
+
+func TestResetPasswordUnlockAccountEnabled(t *testing.T) {
+	handler, mockLDAP, _ := setupResetPasswordUnlockTest(
+		t, true, nil, "unlock-account-token",
+	)
+
+	_, err := handler.resetPassword([]string{"unlock-account-token", "NewPass123!"})
 	require.NoError(t, err)
 
-	if !mockLDAP.unlockCalled {
-		t.Error("Expected account unlock to be called")
-	}
-
-	if mockLDAP.unlockUsername != "testuser" {
-		t.Errorf("Unlock username = %q, want %q", mockLDAP.unlockUsername, "testuser")
-	}
+	require.True(t, mockLDAP.unlockCalled, "Expected account unlock to be called")
+	require.Equal(t, "testuser", mockLDAP.unlockUsername)
 }
 
 func TestResetPasswordUnlockAccountFails(t *testing.T) {
-	tokenStore := resettoken.NewStore()
-	opts := &options.Opts{
-		MinLength:                    8,
-		MinNumbers:                   1,
-		MinSymbols:                   1,
-		MinUppercase:                 1,
-		MinLowercase:                 1,
-		UnlockAccountOnPasswordReset: true,
-	}
-	mockLDAP := &mockResetLDAPClient{
-		unlockError: errors.New("insufficient access rights"),
-	}
+	handler, mockLDAP, tokenStore := setupResetPasswordUnlockTest(
+		t, true, errors.New("insufficient access rights"), "unlock-fail-token",
+	)
 
-	handler := &Handler{
-		ldap:       mockLDAP,
-		resetLDAP:  mockLDAP,
-		tokenStore: tokenStore,
-		opts:       opts,
-	}
-
-	token := &resettoken.ResetToken{
-		Token:     "unlock-fail-token",
-		Username:  "testuser",
-		Email:     "test@example.com",
-		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(15 * time.Minute),
-		Used:      false,
-	}
-	err := tokenStore.Store(token)
-	require.NoError(t, err)
-
-	params := []string{"unlock-fail-token", "NewPass123!"}
-	_, err = handler.resetPassword(params)
+	_, err := handler.resetPassword([]string{"unlock-fail-token", "NewPass123!"})
 
 	require.Error(t, err)
 	require.Contains(t, err.Error(), "password was reset successfully")
-
-	if !mockLDAP.unlockCalled {
-		t.Error("Expected account unlock to be called")
-	}
+	require.True(t, mockLDAP.unlockCalled, "Expected account unlock to be called")
 
 	storedToken, err := tokenStore.Get("unlock-fail-token")
 	require.NoError(t, err)
-
-	if !storedToken.Used {
-		t.Error("Expected token to be marked as used before account unlock")
-	}
+	require.True(t, storedToken.Used, "Expected token to be marked as used before account unlock")
 }
 
 func TestResetPasswordUnlockAccountDisabled(t *testing.T) {
-	tokenStore := resettoken.NewStore()
-	opts := &options.Opts{
-		MinLength:                    8,
-		MinNumbers:                   1,
-		MinSymbols:                   1,
-		MinUppercase:                 1,
-		MinLowercase:                 1,
-		UnlockAccountOnPasswordReset: false,
-	}
-	mockLDAP := &mockResetLDAPClient{}
+	handler, mockLDAP, _ := setupResetPasswordUnlockTest(
+		t, false, nil, "unlock-disabled-token",
+	)
 
-	handler := &Handler{
-		ldap:       mockLDAP,
-		resetLDAP:  mockLDAP,
-		tokenStore: tokenStore,
-		opts:       opts,
-	}
-
-	token := &resettoken.ResetToken{
-		Token:     "unlock-disabled-token",
-		Username:  "testuser",
-		Email:     "test@example.com",
-		CreatedAt: time.Now(),
-		ExpiresAt: time.Now().Add(15 * time.Minute),
-		Used:      false,
-	}
-	err := tokenStore.Store(token)
+	_, err := handler.resetPassword([]string{"unlock-disabled-token", "NewPass123!"})
 	require.NoError(t, err)
 
-	params := []string{"unlock-disabled-token", "NewPass123!"}
-	_, err = handler.resetPassword(params)
-	require.NoError(t, err)
-
-	if mockLDAP.unlockCalled {
-		t.Error("Expected account unlock not to be called when disabled")
-	}
+	require.False(t, mockLDAP.unlockCalled, "Expected account unlock not to be called when disabled")
 }
 
 // mockTokenStoreMarkUsedFails is a mock token store that fails on MarkUsed.
