@@ -1,4 +1,5 @@
 internal/web/static/styles.css
+internal/web/static/companion/vendor/
 internal/web/static/js/*.js
 bun.lock
 renovate.json
