@@ -57,17 +57,18 @@ type Opts struct {
 	PasswordCanIncludeUsername bool
 
 	// Password Reset Configuration
-	PasswordResetEnabled        bool
-	ResetIdentifierMode         ResetIdentifierMode
-	ResetTokenExpiryMinutes     uint
-	ResetRateLimitRequests      uint
-	ResetRateLimitWindowMinutes uint
-	SMTPHost                    string
-	SMTPPort                    uint
-	SMTPUsername                string
-	SMTPPassword                string
-	SMTPFromAddress             string
-	AppBaseURL                  string
+	PasswordResetEnabled         bool
+	UnlockAccountOnPasswordReset bool
+	ResetIdentifierMode          ResetIdentifierMode
+	ResetTokenExpiryMinutes      uint
+	ResetRateLimitRequests       uint
+	ResetRateLimitWindowMinutes  uint
+	SMTPHost                     string
+	SMTPPort                     uint
+	SMTPUsername                 string
+	SMTPPassword                 string
+	SMTPFromAddress              string
+	AppBaseURL                   string
 
 	SMTPFromName         string
 	EmailReplyTo         string
@@ -323,6 +324,11 @@ func ParseArgs(args []string) (*Opts, error) {
 			envBoolOrDefault("PASSWORD_RESET_ENABLED", false, errs),
 			"Enable password reset feature.",
 		)
+		fUnlockAccountOnPasswordReset = fs.Bool(
+			"unlock-account-on-password-reset",
+			envBoolOrDefault("UNLOCK_ACCOUNT_ON_PASSWORD_RESET", false, errs),
+			"Unlock Active Directory account after a successful password reset.",
+		)
 		fResetIdentifierMode = fs.String(
 			"reset-identifier-mode",
 			envStringOrDefault("RESET_IDENTIFIER_MODE", string(ResetIdentifierEmail)),
@@ -520,6 +526,10 @@ func ParseArgs(args []string) (*Opts, error) {
 		}
 	}
 
+	if *fPasswordResetEnabled && *fUnlockAccountOnPasswordReset && !*fIsActiveDirectory {
+		errs.Add("unlock-account-on-password-reset requires Active Directory")
+	}
+
 	headerOverrides := parseHeaderOverrides(os.Environ(), errs)
 
 	branding := buildBranding(
@@ -565,18 +575,19 @@ func ParseArgs(args []string) (*Opts, error) {
 		MinLowercase:               *fMinLowercase,
 		PasswordCanIncludeUsername: *fPasswordCanIncludeUsername,
 
-		PasswordResetEnabled:        *fPasswordResetEnabled,
-		ResetIdentifierMode:         resetIdentifierMode,
-		ResetTokenExpiryMinutes:     *fResetTokenExpiryMinutes,
-		ResetRateLimitRequests:      *fResetRateLimitRequests,
-		ResetRateLimitWindowMinutes: *fResetRateLimitWindowMinutes,
-		Branding:                    branding,
-		SMTPHost:                    *fSMTPHost,
-		SMTPPort:                    *fSMTPPort,
-		SMTPUsername:                *fSMTPUsername,
-		SMTPPassword:                *fSMTPPassword,
-		SMTPFromAddress:             *fSMTPFromAddress,
-		AppBaseURL:                  *fAppBaseURL,
+		PasswordResetEnabled:         *fPasswordResetEnabled,
+		UnlockAccountOnPasswordReset: *fUnlockAccountOnPasswordReset,
+		ResetIdentifierMode:          resetIdentifierMode,
+		ResetTokenExpiryMinutes:      *fResetTokenExpiryMinutes,
+		ResetRateLimitRequests:       *fResetRateLimitRequests,
+		ResetRateLimitWindowMinutes:  *fResetRateLimitWindowMinutes,
+		Branding:                     branding,
+		SMTPHost:                     *fSMTPHost,
+		SMTPPort:                     *fSMTPPort,
+		SMTPUsername:                 *fSMTPUsername,
+		SMTPPassword:                 *fSMTPPassword,
+		SMTPFromAddress:              *fSMTPFromAddress,
+		AppBaseURL:                   *fAppBaseURL,
 
 		SMTPFromName:         *fSMTPFromName,
 		EmailReplyTo:         *fEmailReplyTo,
