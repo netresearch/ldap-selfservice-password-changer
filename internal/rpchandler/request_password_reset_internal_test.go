@@ -66,6 +66,10 @@ func (m *mockLDAPClient) ResetPasswordForSAMAccountName(_, _ string) error {
 	return nil
 }
 
+func (m *mockLDAPClient) UnlockUserForSAMAccountName(_ string) error {
+	return nil
+}
+
 func TestRequestPasswordResetValidEmail(t *testing.T) {
 	// Setup
 	tokenStore := resettoken.NewStore()

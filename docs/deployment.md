@@ -165,6 +165,11 @@ PASSWORD_CAN_INCLUDE_USERNAME=false
 # Enable password reset functionality (default: true)
 PASSWORD_RESET_ENABLED=true
 
+# Unlock Active Directory accounts after a successful password reset (default: false)
+# Requires LDAP_IS_AD=true and write permission on the lockoutTime attribute
+# for the account used to perform password resets.
+UNLOCK_ACCOUNT_ON_PASSWORD_RESET=false
+
 # Identifier accepted by the reset form: email, username, or both (default: email)
 # Use username/both when several accounts share one email address (AD does not
 # enforce a unique mail attribute). The reset link always goes to the account's
