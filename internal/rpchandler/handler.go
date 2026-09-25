@@ -22,6 +22,7 @@ type LDAPClient interface {
 	FindUserBySAMAccountName(sAMAccountName string) (*ldap.User, error)
 	ChangePasswordForSAMAccountName(sAMAccountName, oldPassword, newPassword string) error
 	ResetPasswordForSAMAccountName(sAMAccountName, newPassword string) error
+	UnlockUserForSAMAccountName(sAMAccountName string) error
 }
 
 // Handler processes JSON-RPC 2.0 requests for password management operations.

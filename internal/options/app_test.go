@@ -689,6 +689,45 @@ func TestParseArgsResetIdentifierMode(t *testing.T) {
 	})
 }
 
+func TestParseArgsUnlockAccountOnPasswordReset(t *testing.T) {
+	setRequired := func(t *testing.T) {
+		t.Helper()
+		t.Setenv("LDAP_SERVER", "ldap://example.com")
+		t.Setenv("LDAP_BASE_DN", "dc=example,dc=com")
+		t.Setenv("LDAP_READONLY_USER", "cn=readonly")
+		t.Setenv("LDAP_READONLY_PASSWORD", "secret")
+		t.Chdir(t.TempDir())
+	}
+
+	t.Run("default is disabled", func(t *testing.T) {
+		setRequired(t)
+
+		opts, err := ParseArgs(nil)
+		require.NoError(t, err)
+		assert.False(t, opts.UnlockAccountOnPasswordReset)
+	})
+
+	t.Run("enabled by environment variable", func(t *testing.T) {
+		setRequired(t)
+		t.Setenv("UNLOCK_ACCOUNT_ON_PASSWORD_RESET", "true")
+
+		opts, err := ParseArgs(nil)
+		require.NoError(t, err)
+		assert.True(t, opts.UnlockAccountOnPasswordReset)
+	})
+
+	t.Run("requires Active Directory when password reset is enabled", func(t *testing.T) {
+		setRequired(t)
+		t.Setenv("PASSWORD_RESET_ENABLED", "true")
+		t.Setenv("UNLOCK_ACCOUNT_ON_PASSWORD_RESET", "true")
+		t.Setenv("LDAP_IS_AD", "false")
+
+		_, err := ParseArgs(nil)
+		require.Error(t, err)
+		assert.Contains(t, err.Error(), "unlock-account-on-password-reset requires Active Directory")
+	})
+}
+
 func requiredArgs() []string {
 	return []string{
 		"--ldap-server", "ldaps://ldap.example.com",

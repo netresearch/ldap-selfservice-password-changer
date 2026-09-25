@@ -289,6 +289,10 @@ func (m *mockChangePasswordLDAP) ResetPasswordForSAMAccountName(_, _ string) err
 	return nil
 }
 
+func (m *mockChangePasswordLDAP) UnlockUserForSAMAccountName(_ string) error {
+	return nil
+}
+
 // mockIPLimiter mocks IP rate limiter for testing.
 type mockIPLimiter struct {
 	allowed bool

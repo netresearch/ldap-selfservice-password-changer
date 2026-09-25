@@ -384,6 +384,10 @@ func (m *mockHandlerLDAP) ResetPasswordForSAMAccountName(_, _ string) error {
 	return nil
 }
 
+func (m *mockHandlerLDAP) UnlockUserForSAMAccountName(_ string) error {
+	return nil
+}
+
 type mockHandlerIPLimiter struct {
 	allowed bool
 }

@@ -129,6 +129,7 @@ services:
       PASSWORD_CAN_INCLUDE_USERNAME: "false"
       # Reset feature
       PASSWORD_RESET_ENABLED: "true"
+      UNLOCK_ACCOUNT_ON_PASSWORD_RESET: "false"
       RESET_TOKEN_EXPIRY_MINUTES: "15"
       # Reset limiter only: 3/hour per typed identifier and per resolved
       # account. The per-IP limiter (10/hour) is hardcoded and unaffected.
