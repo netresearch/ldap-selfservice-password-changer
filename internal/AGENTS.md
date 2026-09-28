@@ -36,6 +36,7 @@ LDAP_RESET_PASSWORD=secret
 
 # Email for password reset
 PASSWORD_RESET_ENABLED=true
+UNLOCK_ACCOUNT_ON_PASSWORD_RESET=false   # optional; Active Directory only
 SMTP_HOST=smtp.example.com
 SMTP_PORT=587
 SMTP_USERNAME=noreply@example.com

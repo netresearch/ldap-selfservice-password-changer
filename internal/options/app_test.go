@@ -726,6 +726,18 @@ func TestParseArgsUnlockAccountOnPasswordReset(t *testing.T) {
 		require.Error(t, err)
 		assert.Contains(t, err.Error(), "unlock-account-on-password-reset requires Active Directory")
 	})
+
+	t.Run("allows unlock with Active Directory when password reset is enabled", func(t *testing.T) {
+		setRequired(t)
+		t.Setenv("LDAP_SERVER", "ldaps://example.com")
+		t.Setenv("PASSWORD_RESET_ENABLED", "true")
+		t.Setenv("UNLOCK_ACCOUNT_ON_PASSWORD_RESET", "true")
+		t.Setenv("LDAP_IS_AD", "true")
+
+		opts, err := ParseArgs(nil)
+		require.NoError(t, err)
+		assert.True(t, opts.UnlockAccountOnPasswordReset)
+	})
 }
 
 func requiredArgs() []string {

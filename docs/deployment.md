@@ -170,6 +170,10 @@ PASSWORD_RESET_ENABLED=true
 # for the account used to perform password resets.
 UNLOCK_ACCOUNT_ON_PASSWORD_RESET=false
 
+> **Note:** After enabling account unlock, perform a test password reset to verify
+> that the reset account has permission to write the `lockoutTime` attribute.
+> Missing permissions are detected when an unlock is attempted, not at startup.
+
 # Identifier accepted by the reset form: email, username, or both (default: email)
 # Use username/both when several accounts share one email address (AD does not
 # enforce a unique mail attribute). The reset link always goes to the account's
