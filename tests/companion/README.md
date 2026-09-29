@@ -10,3 +10,8 @@ canvas proportions, absence of pause buttons,
 keyring hit testing or native login replay (where applicable), replay guards,
 WebGL failure, original-image fallback, disposal and reduced motion.
 The fixture uses no real account, never sends a form request and reads no credentials.
+
+This repository tests only the keyholder adapter; the other application's adapter
+is intentionally not bundled. Waits use animation progress or observable form
+results with explicit failure deadlines. Gesture settlement allows up to two
+minutes for software-rendered browsers; an unmet condition fails the fixture.

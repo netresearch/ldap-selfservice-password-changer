@@ -1,12 +1,12 @@
 /* Shared host sizing and CSP-safe shadow styles. */
-scormiq-avatar {
+login-companion {
   display: block;
   width: 220px;
   height: 260px;
   max-width: 100%;
   margin-inline: auto;
 }
-scormiq-avatar > img {
+login-companion > img {
   display: block;
   width: 100%;
   height: 100%;
@@ -69,7 +69,7 @@ scormiq-avatar > img {
   outline-offset: 2px;
 }
 @media (max-width: 600px) {
-  scormiq-avatar {
+  login-companion {
     width: 180px;
     height: 220px;
   }

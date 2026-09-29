@@ -3,7 +3,6 @@ import * as THREE from "./vendor/three.module.js";
 import { buildGopher, animateGopher, gopherFallback, applyCelStyle } from "./gopher-rigs.js";
 
 const STYLES = new URL("./avatar.css", import.meta.url).href;
-const LOGO = new URL("./assets/logos/netresearch-symbol-only.svg", import.meta.url).href;
 const clamp = (n, min, max) => Math.min(max, Math.max(min, n));
 const WAVE_DURATION = 2.4;
 const WAVE_SETTLE = 0.3;
@@ -11,58 +10,8 @@ const CELEBRATION_DURATION = 3.6;
 const ACTION_DURATION = 3.2;
 const mix = (current, target, amount) => current + (target - current) * amount;
 
-// A rounded box with genuine depth and smooth, analytic corner normals.
-function roundedBox(width, height, depth, radius) {
-  const geometry = new THREE.BoxGeometry(width, height, depth, 10, 10, 8);
-  const positions = geometry.attributes.position;
-  const normals = geometry.attributes.normal;
-  const point = new THREE.Vector3();
-  const core = new THREE.Vector3();
-  for (let i = 0; i < positions.count; i++) {
-    point.fromBufferAttribute(positions, i);
-    core.set(
-      clamp(point.x, -width / 2 + radius, width / 2 - radius),
-      clamp(point.y, -height / 2 + radius, height / 2 - radius),
-      clamp(point.z, -depth / 2 + radius, depth / 2 - radius)
-    );
-    point.sub(core).normalize();
-    normals.setXYZ(i, point.x, point.y, point.z);
-    point.multiplyScalar(radius).add(core);
-    positions.setXYZ(i, point.x, point.y, point.z);
-  }
-  return geometry;
-}
-
-function roundedPlate(w, h, depth, radius) {
-  const x = -w / 2,
-    y = -h / 2,
-    r = Math.min(radius, w / 2, h / 2);
-  const shape = new THREE.Shape();
-  shape.moveTo(x + r, y);
-  shape.lineTo(x + w - r, y);
-  shape.quadraticCurveTo(x + w, y, x + w, y + r);
-  shape.lineTo(x + w, y + h - r);
-  shape.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
-  shape.lineTo(x + r, y + h);
-  shape.quadraticCurveTo(x, y + h, x, y + h - r);
-  shape.lineTo(x, y + r);
-  shape.quadraticCurveTo(x, y, x + r, y);
-  const bevel = Math.min(depth / 4, 0.012);
-  const geometry = new THREE.ExtrudeGeometry(shape, {
-    depth: depth - bevel * 2,
-    bevelEnabled: true,
-    bevelSize: bevel,
-    bevelThickness: bevel,
-    bevelSegments: 3,
-    steps: 1,
-    curveSegments: 12
-  });
-  geometry.translate(0, 0, -depth / 2 + bevel);
-  return geometry;
-}
-
-/** Embeddable ScormIQ mascot. All asset URLs resolve relative to this module. */
-export class ScormiqAvatar extends HTMLElement {
+/** Animated login companion. All asset URLs resolve relative to this module. */
+export class LoginCompanion extends HTMLElement {
   constructor() {
     super();
     this.attachShadow({ mode: "open" });
@@ -88,44 +37,22 @@ export class ScormiqAvatar extends HTMLElement {
 
   connectedCallback() {
     if (this._renderer) return;
-    this._character = ["keyholder", "wizard"].includes(this.getAttribute("character"))
-      ? this.getAttribute("character")
-      : "robot";
+    this._character = this.getAttribute("character") === "wizard" ? "wizard" : "keyholder";
     this._nextBlink = this._time + (this._character === "keyholder" ? 5.6 : 2.8);
     this._rig = null;
     this.shadowRoot.innerHTML = `
       <link rel="stylesheet" href="${STYLES}">
       <button class="avatar" type="button"><slot class="original-image" hidden></slot>
-        <svg class="fallback" viewBox="0 0 400 440" role="img" aria-label="Friendly turquoise ScormIQ robot with the Netresearch symbol on its chest">
-          <ellipse cx="200" cy="385" rx="75" ry="12" fill="#2f99a4" opacity=".12"/>
-          <path d="M200 75V51" stroke="#585961" stroke-width="8"/><circle cx="200" cy="47" r="10" fill="#ff4d00"/>
-          <rect x="137" y="249" width="126" height="101" rx="40" fill="#2f99a4"/>
-          <rect x="88" y="261" width="35" height="70" rx="17" fill="#d6e5e5" transform="rotate(12 105 296)"/>
-          <rect x="277" y="261" width="35" height="70" rx="17" fill="#d6e5e5" transform="rotate(-12 295 296)"/>
-          <rect x="137" y="342" width="50" height="30" rx="14" fill="#d6e5e5"/><rect x="213" y="342" width="50" height="30" rx="14" fill="#d6e5e5"/>
-          <rect x="88" y="81" width="224" height="163" rx="58" fill="#fff" stroke="#d6e5e5" stroke-width="5"/>
-          <rect x="106" y="105" width="188" height="116" rx="41" fill="#173c43"/>
-          <rect x="144" y="140" width="18" height="35" rx="9" fill="#c0f9ef"/><rect x="238" y="140" width="18" height="35" rx="9" fill="#c0f9ef"/>
-          <path d="M182 186Q200 203 218 186" stroke="#c0f9ef" stroke-width="6" fill="none" stroke-linecap="round"/>
-          <rect x="168" y="267" width="64" height="64" rx="18" fill="white"/>
-          <image href="${LOGO}" x="170" y="269" width="60" height="60"/>
-        </svg>
+        ${gopherFallback(this._character)}
       </button><button class="motion-toggle" type="button" aria-pressed="false" hidden></button>`;
     this._button = this.shadowRoot.querySelector("button");
-    if (this._character !== "robot")
-      this.shadowRoot.querySelector(".fallback").outerHTML = gopherFallback(this._character);
     const german = (this.getAttribute("lang") || document.documentElement.lang).startsWith("de");
-    const name =
-      this._character === "robot"
-        ? "ScormIQ robot"
-        : this._character === "wizard"
-          ? "wizard gopher"
-          : "keyholder gopher";
+    const name = this._character === "wizard" ? "wizard gopher" : "keyholder gopher";
     this._button.setAttribute(
       "aria-label",
       this.getAttribute("label") ||
         (german
-          ? "Begleiter begrüßen. Pfeiltasten steuern den Blick."
+          ? "Begleiter begrÃ¼ÃŸen. Pfeiltasten steuern den Blick."
           : "Greet the " + name + ". Arrow keys change its gaze.")
     );
     this._pauseButton = this.shadowRoot.querySelector(".motion-toggle");
@@ -220,139 +147,15 @@ export class ScormiqAvatar extends HTMLElement {
     const fill = new THREE.DirectionalLight(0xffffff, 0.65);
     fill.position.set(4, -1, 4);
     this._scene.add(fill);
-    const material = (color, roughness = 0.36, metalness = 0.08) =>
-      new THREE.MeshStandardMaterial({ color, roughness, metalness });
-    const white = material("#edf3f3", 0.3);
-    const teal = material("#2F99A4", 0.34);
-    const dark = material("#173c43", 0.22, 0.25);
-    const joint = material("#585961", 0.45, 0.28);
-    const lightTeal = material("#b0d6d8", 0.35);
-    const orange = material("#FF4D00", 0.35);
-    const glow = new THREE.MeshBasicMaterial({ color: "#bbfff0", transparent: true, depthWrite: false });
-    const happyGlow = new THREE.MeshBasicMaterial({
-      color: "#bbfff0",
-      transparent: true,
-      depthWrite: false,
-      opacity: 0
-    });
-    const cheekGlow = new THREE.MeshBasicMaterial({
-      color: "#2F99A4",
-      transparent: true,
-      depthWrite: false,
-      opacity: 0
-    });
-    this._faceMaterials = { normal: glow, happy: happyGlow, cheeks: cheekGlow };
     this._robot = new THREE.Group();
     this._scene.add(this._robot);
-    const mesh = (geometry, mat, parent, x = 0, y = 0, z = 0) => {
-      const object = new THREE.Mesh(geometry, mat);
+    const mesh = (geometry, material, parent, x = 0, y = 0, z = 0) => {
+      const object = new THREE.Mesh(geometry, material);
       object.position.set(x, y, z);
       parent.add(object);
       return object;
     };
-    const box = (w, h, d, r, mat, parent, x = 0, y = 0, z = 0) => mesh(roundedBox(w, h, d, r), mat, parent, x, y, z);
-    const plate = (w, h, d, r, mat, parent, x = 0, y = 0, z = 0) =>
-      mesh(roundedPlate(w, h, d, r), mat, parent, x, y, z);
-    const sphere = (radius, mat, parent, x, y, z) =>
-      mesh(new THREE.SphereGeometry(radius, 28, 20), mat, parent, x, y, z);
-    if (this._character !== "robot") {
-      // Robot-only materials have no scene owner in the gopher rigs.
-      [white, teal, dark, joint, lightTeal, orange, glow, happyGlow, cheekGlow].forEach((mat) => mat.dispose());
-      buildGopher(this, this._character);
-    } else {
-      this.dataset.character = "robot";
-      this._torso = new THREE.Group();
-      this._robot.add(this._torso);
-      box(1.32, 1.2, 0.94, 0.31, teal, this._torso, 0, -0.5);
-      box(0.86, 0.92, 0.1, 0.045, lightTeal, this._torso, 0, -0.55, -0.475);
-      mesh(new THREE.CylinderGeometry(0.24, 0.29, 0.25, 32), joint, this._torso, 0, 0.17);
-      plate(0.69, 0.66, 0.12, 0.19, white, this._torso, 0, -0.48, 0.493);
-      this._logoTexture = new THREE.TextureLoader().load(LOGO, () => {
-        if (this.isConnected && this._scene && this.dataset.renderer === "webgl") this._render();
-      });
-      this._logoTexture.colorSpace = THREE.SRGBColorSpace;
-      mesh(
-        new THREE.PlaneGeometry(0.68, 0.68),
-        new THREE.MeshBasicMaterial({ map: this._logoTexture, transparent: true, depthWrite: false }),
-        this._torso,
-        0,
-        -0.48,
-        0.561
-      );
-      for (let i = 0; i < 3; i++)
-        box(0.065, 0.027, 0.016, 0.008, i === 0 ? orange : dark, this._torso, -0.1 + i * 0.1, -0.93, 0.441);
-      this._head = new THREE.Group();
-      this._head.position.y = 0.91;
-      this._robot.add(this._head);
-      box(2.08, 1.48, 1.3, 0.4, white, this._head);
-      plate(1.81, 1.15, 0.14, 0.4, teal, this._head, 0, -0.015, 0.609);
-      plate(1.73, 1.07, 0.16, 0.36, dark, this._head, 0, -0.015, 0.671);
-      // A slim reflection gives the dark display a curved-glass feel.
-      box(
-        0.62,
-        0.026,
-        0.008,
-        0.003,
-        new THREE.MeshBasicMaterial({ color: "#48676c" }),
-        this._head,
-        -0.28,
-        0.414,
-        0.756
-      );
-      this._face = new THREE.Group();
-      this._face.position.z = 0.763;
-      this._head.add(this._face);
-      this._eyes = [-0.4, 0.4].map((x) => plate(0.18, 0.34, 0.037, 0.09, glow, this._face, x, 0.06));
-      const smileCurve = new THREE.QuadraticBezierCurve3(
-        new THREE.Vector3(-0.16, -0.22, 0.018),
-        new THREE.Vector3(0, -0.39, 0.018),
-        new THREE.Vector3(0.16, -0.22, 0.018)
-      );
-      this._smile = mesh(new THREE.TubeGeometry(smileCurve, 20, 0.023, 8, false), glow, this._face);
-      this._cheeks = [-0.6, 0.6].map((x) => box(0.14, 0.038, 0.02, 0.009, cheekGlow, this._face, x, -0.19));
-      this._happyEyes = [-0.4, 0.4].map((x) => {
-        const curve = new THREE.QuadraticBezierCurve3(
-          new THREE.Vector3(-0.12, 0, 0.025),
-          new THREE.Vector3(0, 0.25, 0.025),
-          new THREE.Vector3(0.12, 0, 0.025)
-        );
-        return mesh(new THREE.TubeGeometry(curve, 18, 0.028, 8, false), happyGlow, this._face, x, 0.025);
-      });
-      const grin = new THREE.Shape();
-      grin.moveTo(-0.27, -0.18);
-      grin.quadraticCurveTo(0, -0.24, 0.27, -0.18);
-      grin.quadraticCurveTo(0.23, -0.46, 0, -0.46);
-      grin.quadraticCurveTo(-0.23, -0.46, -0.27, -0.18);
-      this._grin = mesh(new THREE.ShapeGeometry(grin, 24), happyGlow, this._face, 0, 0.045, 0.025);
-      for (const side of [-1, 1]) {
-        const ear = mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.19, 40), teal, this._head, side * 1.015, -0.03, -0.035);
-        ear.rotation.z = Math.PI / 2;
-        const earCap = sphere(0.17, lightTeal, this._head, side * 1.126, -0.03, -0.035);
-        earCap.scale.x = 0.33;
-      }
-      mesh(new THREE.CylinderGeometry(0.06, 0.07, 0.25, 20), joint, this._head, 0.05, 0.842, -0.1);
-      this._antenna = sphere(0.118, orange, this._head, 0.05, 1.02, -0.1);
-      sphere(0.029, white, this._head, 0.02, 1.07, -0.005);
-      this._arms = [-1, 1].map((side) => {
-        const pivot = new THREE.Group();
-        pivot.position.set(side * 0.78, -0.15, 0);
-        this._torso.add(pivot);
-        sphere(0.19, joint, pivot, 0, 0, 0);
-        box(0.34, 0.67, 0.39, 0.15, white, pivot, side * 0.02, -0.33, 0.04);
-        box(0.29, 0.09, 0.34, 0.043, teal, pivot, side * 0.02, -0.57, 0.04);
-        sphere(0.168, white, pivot, side * 0.02, -0.7, 0.04);
-        return pivot;
-      });
-      this._feet = [-1, 1].map((side) => {
-        const foot = new THREE.Group();
-        foot.position.set(side * 0.39, -1.19, 0.03);
-        this._torso.add(foot);
-        mesh(new THREE.CylinderGeometry(0.12, 0.13, 0.22, 20), joint, foot, 0, 0, 0);
-        box(0.48, 0.32, 0.67, 0.14, white, foot, 0, -0.13, 0.105);
-        box(0.45, 0.09, 0.62, 0.035, teal, foot, 0, -0.27, 0.105);
-        return foot;
-      });
-    }
+    buildGopher(this, this._character);
     const celRamp = applyCelStyle(this._robot, this._scene);
     const shadowCanvas = document.createElement("canvas");
     shadowCanvas.width = shadowCanvas.height = 128;
@@ -569,61 +372,27 @@ export class ScormiqAvatar extends HTMLElement {
     const blinkAge = this._time - this._blinkStart;
     const blink =
       !staticPose && blinkAge >= 0 && blinkAge < 0.19 ? 1 - Math.sin((blinkAge / 0.19) * Math.PI) * 0.94 : 1;
-    if (this._rig) {
-      const quietIdle =
-        !staticPose &&
-        !happy &&
-        !thinking &&
-        waveAge >= WAVE_DURATION + WAVE_SETTLE &&
-        actionAge >= ACTION_DURATION + WAVE_SETTLE;
-      animateGopher(this, {
-        blend,
-        t,
-        blink,
-        happy,
-        thinking,
-        wave,
-        joy,
-        action,
-        staticPose,
-        windup,
-        brace,
-        actionAge,
-        quietIdle
-      });
-    } else {
-      const delight = Math.max(happy ? 1 : 0, wave);
-      this._faceMaterials.normal.opacity = mix(this._faceMaterials.normal.opacity, happy ? 0 : 1, blend);
-      this._faceMaterials.happy.opacity = mix(this._faceMaterials.happy.opacity, happy ? 1 : 0, blend);
-      this._faceMaterials.cheeks.opacity = mix(this._faceMaterials.cheeks.opacity, delight, blend);
-      this._eyes.forEach((eye, i) => {
-        eye.visible = this._faceMaterials.normal.opacity > 0.001;
-        eye.userData.baseHeight = mix(
-          eye.userData.baseHeight ?? 1,
-          1 - delight * 0.55 - (thinking && i === 1 ? 0.35 * (1 - delight) : 0),
-          blend
-        );
-        eye.scale.y = eye.userData.baseHeight * blink;
-        eye.rotation.z = mix(eye.rotation.z, delight * (i === 0 ? -0.22 : 0.22), blend);
-        eye.position.y = mix(eye.position.y, 0.06 + (thinking ? Math.sin(t * 2 + i) * 0.035 : 0), blend);
-      });
-      this._happyEyes.forEach((eye) => {
-        eye.visible = this._faceMaterials.happy.opacity > 0.001;
-      });
-      this._grin.visible = this._faceMaterials.happy.opacity > 0.001;
-      this._smile.visible = this._faceMaterials.normal.opacity > 0.001;
-      this._smile.scale.set(
-        mix(this._smile.scale.x, 1 + delight * 0.2 - (thinking ? 0.45 * (1 - delight) : 0), blend),
-        mix(this._smile.scale.y, thinking ? 0.6 : 1, blend),
-        1
-      );
-      this._cheeks.forEach((cheek) => {
-        cheek.visible = this._faceMaterials.cheeks.opacity > 0.001;
-      });
-      this._antenna.scale.setScalar(
-        mix(this._antenna.scale.x, 1 + (thinking ? Math.sin(t * 3) * 0.075 : happy ? Math.sin(t * 7) * 0.07 : 0), blend)
-      );
-    }
+    const quietIdle =
+      !staticPose &&
+      !happy &&
+      !thinking &&
+      waveAge >= WAVE_DURATION + WAVE_SETTLE &&
+      actionAge >= ACTION_DURATION + WAVE_SETTLE;
+    animateGopher(this, {
+      blend,
+      t,
+      blink,
+      happy,
+      thinking,
+      wave,
+      joy,
+      action,
+      staticPose,
+      windup,
+      brace,
+      actionAge,
+      quietIdle
+    });
     this._shadow.scale.setScalar(mix(this._shadow.scale.x, 1 - bob * 0.45 - hop * 0.35, blend));
     this._shadow.material.opacity = mix(this._shadow.material.opacity, keyholder ? 0.28 : 1 - hop * 0.6, blend);
     this._fxOpacity = mix(this._fxOpacity, celebrating ? 1 : 0, blend);
@@ -734,8 +503,7 @@ export class ScormiqAvatar extends HTMLElement {
     return true;
   }
   performAction() {
-    if (this._character === "robot" || !this.isConnected || this.dataset.renderer !== "webgl" || this._paused)
-      return false;
+    if (!this.isConnected || this.dataset.renderer !== "webgl" || this._paused) return false;
     const now = performance.now();
     if (this._motion.matches) {
       if (now < this._quietUntil) return false;
@@ -821,4 +589,4 @@ export class ScormiqAvatar extends HTMLElement {
   }
 }
 
-if (!customElements.get("scormiq-avatar")) customElements.define("scormiq-avatar", ScormiqAvatar);
+if (!customElements.get("login-companion")) customElements.define("login-companion", LoginCompanion);

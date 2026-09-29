@@ -24,8 +24,8 @@ func TestKeyholderProgressiveEnhancement(t *testing.T) {
 		}
 	}
 	for _, asset := range []string{
-		"avatar.css", "keyholder-login.js", "scormiq-avatar.js", "gopher-rigs.js", "animation-random.js",
-		"vendor/three.module.js", "assets/logos/netresearch-symbol-only.svg",
+		"avatar.css", "keyholder-login.js", "login-companion.js", "gopher-rigs.js", "animation-random.js",
+		"vendor/three.module.js", "vendor/three.core.js",
 	} {
 		if data, readErr := static.Static.ReadFile("companion/" + asset); readErr != nil || len(data) == 0 {
 			t.Errorf("companion asset %s is not embedded: %v", asset, readErr)
@@ -42,7 +42,7 @@ func TestKeyholderPreservesOperatorBranding(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if strings.Contains(string(page), "scormiq-avatar") || !strings.Contains(string(page), `src="/static/logo.webp"`) {
+	if strings.Contains(string(page), "login-companion") || !strings.Contains(string(page), `src="/static/logo.webp"`) {
 		t.Fatal("operator branding must keep its logo without loading the companion")
 	}
 }

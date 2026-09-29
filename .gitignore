@@ -20,3 +20,7 @@ tmp/
 
 # Playwright MCP snapshot artifacts
 .playwright-mcp/
+
+# Browser renderer is shipped as static assets, not Go vendoring.
+!internal/web/static/companion/vendor/
+!internal/web/static/companion/vendor/*
