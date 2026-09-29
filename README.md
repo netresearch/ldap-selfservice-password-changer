@@ -97,6 +97,7 @@ GopherPass is configured via environment variables or command-line flags. Key se
 ### Password Reset Feature
 
 - `PASSWORD_RESET_ENABLED` - Enable email-based password reset
+- `UNLOCK_ACCOUNT_ON_PASSWORD_RESET` - Unlock Active Directory accounts after a successful password reset (default: false; requires `LDAP_IS_AD=true` and permission to write `lockoutTime`)
 - `SMTP_HOST` / `SMTP_PORT` - Mail server configuration
 - `SMTP_USERNAME` / `SMTP_PASSWORD` - SMTP authentication
 - `SMTP_FROM_ADDRESS` - Sender email address

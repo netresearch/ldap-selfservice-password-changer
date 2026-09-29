@@ -98,8 +98,30 @@ func (h *Handler) resetPassword(params []string) ([]string, error) {
 		slog.Warn("password_reset_token_mark_used_failed", "username", token.Username, "error", err)
 	}
 
+	if err := h.unlockAccountAfterPasswordReset(token.Username); err != nil {
+		return nil, err
+	}
+
 	slog.Info("password_reset_completed", "username", token.Username, "email", token.Email)
 
 	// Return success message
 	return []string{"Password reset successfully. You can now login."}, nil
+}
+
+func (h *Handler) unlockAccountAfterPasswordReset(username string) error {
+	if !h.opts.UnlockAccountOnPasswordReset {
+		return nil
+	}
+
+	if err := h.resetLDAP.UnlockUserForSAMAccountName(username); err != nil {
+		slog.Error("password_reset_account_unlock_failed", "username", username, "error", err)
+		return errors.New(
+			"password was reset successfully, but the account could not be unlocked; " +
+				"please contact your administrator",
+		)
+	}
+
+	slog.Info("password_reset_account_unlocked", "username", username)
+
+	return nil
 }

@@ -165,6 +165,11 @@ PASSWORD_CAN_INCLUDE_USERNAME=false
 # Enable password reset functionality (default: true)
 PASSWORD_RESET_ENABLED=true
 
+# Unlock Active Directory accounts after a successful password reset (default: false)
+# Requires LDAP_IS_AD=true and write permission on the lockoutTime attribute
+# for the account used to perform password resets.
+UNLOCK_ACCOUNT_ON_PASSWORD_RESET=false
+
 # Identifier accepted by the reset form: email, username, or both (default: email)
 # Use username/both when several accounts share one email address (AD does not
 # enforce a unique mail attribute). The reset link always goes to the account's
@@ -181,6 +186,10 @@ RESET_RATE_LIMIT_REQUESTS=3
 # Reset rate limit: time window in minutes (default: 60)
 RESET_RATE_LIMIT_WINDOW_MINUTES=60
 ```
+
+> **Note:** After enabling account unlock, perform a test password reset to verify
+> that the reset account has permission to write the `lockoutTime` attribute.
+> Missing permissions are detected when an unlock is attempted, not at startup.
 
 The separate **per-IP** limiter — 10 requests per 60 minutes, at most 1000
 tracked IPs, applied to both `change-password` and `request-password-reset` —
