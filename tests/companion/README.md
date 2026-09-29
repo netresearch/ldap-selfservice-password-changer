@@ -1,8 +1,10 @@
 # Companion browser checks
 
-From the repository root, run `python3 -m http.server 8080 --bind 127.0.0.1`
+From the repository root, run `npm install --no-save --no-package-lock playwright@1.57.0 && npx playwright install chromium && node tests/companion/run.mjs`.
+The runner serves the repository, opens the fixture in headless Chromium with software WebGL and exits non-zero unless the page ends with `PASS`.
+The `Companion checks` workflow runs the same command on every pull request. To debug by hand,
+serve the repository root with `python3 -m http.server 8080 --bind 127.0.0.1`
 and open `http://127.0.0.1:8080/tests/companion/` in a WebGL-capable browser.
-The page must finish with `PASS` and no failed assertions.
 
 These checks exercise the real bundled component and login adapter under a strict
 Content Security Policy. They cover the animation random source's boundary values,

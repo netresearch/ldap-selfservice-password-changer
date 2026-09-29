@@ -1,7 +1,7 @@
 # Local animated companions
 
 Procedural keyholder and wizard gophers, copied from the
-ScormIQ companion prototype at commit 6faf9f602c24eef67f5d1502ac72ab84e9f24fe6
+internal companion prototype at commit 6faf9f602c24eef67f5d1502ac72ab84e9f24fe6
 (2026-09-22). Adaptations include an external shadow stylesheet for strict CSP,
 English/German labels, keyring hit testing and correct canvas viewport sizing.
 The component does not read form fields or call any network service.
@@ -31,5 +31,3 @@ The package archive was verified against its registry SHA-512 integrity value.
 When upgrading, copy both modules and the license from the same release, then run
 Go asset tests and `tests/companion/` browser checks. Three.js now requires WebGL 2;
 unsupported browsers retain the host application's original image and form behaviour.
-
-ScormIQ is recorded above only as source provenance, not as this component's API.

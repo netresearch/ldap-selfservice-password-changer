@@ -52,7 +52,7 @@ export class LoginCompanion extends HTMLElement {
       "aria-label",
       this.getAttribute("label") ||
         (german
-          ? "Begleiter begrÃ¼ÃŸen. Pfeiltasten steuern den Blick."
+          ? "Begleiter begr\u00fc\u00dfen. Pfeiltasten steuern den Blick."
           : "Greet the " + name + ". Arrow keys change its gaze.")
     );
     this._pauseButton = this.shadowRoot.querySelector(".motion-toggle");

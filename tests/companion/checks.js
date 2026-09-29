@@ -56,8 +56,14 @@ try {
   check(THREE.REVISION === "186", "Pinned Three.js release is loaded");
   check(avatar.dataset.renderer === "webgl", "WebGL renders under strict CSP");
   check(avatar.shadowRoot.querySelector(".motion-toggle").hidden, "No visible pause button");
-  const box = avatar._button.getBoundingClientRect();
   const canvas = avatar._renderer.domElement;
+  const boxRatio = () => {
+    const { width, height } = avatar._button.getBoundingClientRect();
+    return width / height;
+  };
+  // Layout settles after the fallback image loads, so wait for the camera to follow it.
+  await waitFor(() => Math.abs(avatar._camera.aspect - boxRatio()) < 0.001, "camera follows the settled layout");
+  const box = avatar._button.getBoundingClientRect();
   check(
     Math.abs(avatar._camera.aspect - box.width / box.height) < 0.001,
     "Camera uses actual canvas viewport proportions"
