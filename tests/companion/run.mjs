@@ -1,8 +1,8 @@
 // Runs tests/companion/index.html in headless Chromium and fails unless the page reports PASS.
 // Usage: node tests/companion/run.mjs   (needs `playwright` resolvable, see the companion-checks workflow)
 import { createServer } from "node:http";
-import { readFile } from "node:fs/promises";
-import { extname, join, normalize, resolve, sep } from "node:path";
+import { readFile, readdir } from "node:fs/promises";
+import { extname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright";
 
@@ -16,19 +16,27 @@ const types = {
   ".svg": "image/svg+xml"
 };
 
+// Only files the fixture needs are served, looked up by URL path in a table built from the
+// directory listing, so a request can never name a path outside it.
+const served = new Map();
+for (const dir of ["tests/companion", "internal/web/static/companion"]) {
+  for (const entry of await readdir(join(root, dir), { recursive: true, withFileTypes: true })) {
+    if (!entry.isFile() || entry.parentPath.includes("node_modules")) continue;
+    const file = join(entry.parentPath, entry.name);
+    served.set("/" + relative(root, file).split(sep).join("/"), file);
+  }
+}
+served.set("/internal/web/static/logo.webp", join(root, "internal/web/static/logo.webp"));
+served.set("/tests/companion/", served.get("/tests/companion/index.html"));
+
 const server = createServer(async (req, res) => {
-  const path = normalize(join(root, decodeURIComponent(req.url.split("?")[0])));
-  if (path !== root && !path.startsWith(root + sep)) {
-    res.writeHead(403).end();
+  const file = served.get(decodeURIComponent(req.url.split("?")[0]));
+  if (!file) {
+    res.writeHead(404).end();
     return;
   }
-  try {
-    const file = path.endsWith(sep) ? join(path, "index.html") : path;
-    res.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream" });
-    res.end(await readFile(file));
-  } catch {
-    res.writeHead(404).end();
-  }
+  res.writeHead(200, { "Content-Type": types[extname(file)] ?? "application/octet-stream" });
+  res.end(await readFile(file));
 });
 await new Promise((done) => server.listen(0, "127.0.0.1", done));
 
