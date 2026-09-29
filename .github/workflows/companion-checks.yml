@@ -35,7 +35,7 @@ jobs:
         working-directory: tests/companion
         run: |
           npm ci --ignore-scripts
-          npx playwright install --with-deps chromium
+          ./node_modules/.bin/playwright install --with-deps chromium
       - name: Run companion checks
         working-directory: tests/companion
         run: npm test
