@@ -17,7 +17,7 @@ const types = {
 };
 
 const server = createServer(async (req, res) => {
-  const path = normalize(join(root, decodeURIComponent(new URL(req.url, "http://x").pathname)));
+  const path = normalize(join(root, decodeURIComponent(req.url.split("?")[0])));
   if (path !== root && !path.startsWith(root + sep)) {
     res.writeHead(403).end();
     return;

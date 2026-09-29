@@ -32,8 +32,10 @@ jobs:
         with:
           node-version: "24"
       - name: Install Playwright
+        working-directory: tests/companion
         run: |
-          npm install --no-save --no-package-lock playwright@1.57.0
+          npm ci --ignore-scripts
           npx playwright install --with-deps chromium
       - name: Run companion checks
-        run: node tests/companion/run.mjs
+        working-directory: tests/companion
+        run: npm test

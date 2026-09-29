@@ -24,3 +24,6 @@ tmp/
 # Browser renderer is shipped as static assets, not Go vendoring.
 !internal/web/static/companion/vendor/
 !internal/web/static/companion/vendor/*
+
+# The companion browser checks are a separate npm project with a committed lockfile.
+!tests/companion/package-lock.json

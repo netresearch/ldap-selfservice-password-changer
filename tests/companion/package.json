@@ -1,0 +1,12 @@
+{
+  "name": "companion-browser-checks",
+  "private": true,
+  "type": "module",
+  "description": "Headless-browser regression checks for the login companion; not part of the application.",
+  "scripts": {
+    "test": "node run.mjs"
+  },
+  "devDependencies": {
+    "playwright": "1.57.0"
+  }
+}
