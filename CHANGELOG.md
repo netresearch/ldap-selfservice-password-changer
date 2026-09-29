@@ -9,6 +9,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.7.0] - 2026-09-29
+
+### Added
+
+- **Cloudflare Turnstile protection** for the password change and reset forms
+  ([#662](https://github.com/netresearch/ldap-selfservice-password-changer/pull/662) by
+  [@NuLL3rr0r](https://github.com/NuLL3rr0r)). It is off by default; `CF_TURNSTILE_ENABLED`, `CF_TURNSTILE_SITE_KEY`
+  and `CF_TURNSTILE_SECRET` turn it on, and `CF_TURNSTILE_TIMEOUT_SECONDS` bounds the verification call (default and
+  maximum 5). The widget follows the application's theme toggle
+  ([#685](https://github.com/netresearch/ldap-selfservice-password-changer/pull/685)) and rebuilds itself when a
+  render failed before the form is submitted.
+- **An animated keyholder gopher on the default password change page**
+  ([#695](https://github.com/netresearch/ldap-selfservice-password-changer/pull/695) by
+  [@jonasgwozdz](https://github.com/jonasgwozdz)). It follows the pointer and jingles its keys on a click or when a
+  validated password change starts; the request itself is never delayed. Operator branding keeps its existing header,
+  the original image stays as the fallback without JavaScript or WebGL 2, and system reduced motion renders a still
+  pose. Three.js 0.186.1 is vendored under the existing CSP, and the avatar reads no form field.
+- **`UNLOCK_ACCOUNT_ON_PASSWORD_RESET`** unlocks an Active Directory account after a successful password reset
+  ([#701](https://github.com/netresearch/ldap-selfservice-password-changer/pull/701) by
+  [@MarcoUgolini-RM](https://github.com/MarcoUgolini-RM)). The default is `false`, so existing deployments keep
+  their behavior and permissions. Enabling it requires `LDAP_IS_AD=true` and write permission on `lockoutTime` for
+  the reset account; a missing permission shows up at the first reset, where the user is told the password was
+  changed but the account could not be unlocked.
+
+### Changed
+
+- The RPC handler runs its cross-cutting checks from an ordered guard chain, and malformed requests are refused
+  before the rate limiters again
+  ([#687](https://github.com/netresearch/ldap-selfservice-password-changer/pull/687)).
+- The `go` directive is 1.27.0 and the remaining `go fix` modernizers are applied
+  ([#690](https://github.com/netresearch/ldap-selfservice-password-changer/pull/690),
+  [#692](https://github.com/netresearch/ldap-selfservice-password-changer/pull/692)).
+
+### Fixed
+
+- **`build:assets` fails when `tsc` or `postcss` fails** instead of continuing with stale output
+  ([#686](https://github.com/netresearch/ldap-selfservice-password-changer/pull/686)).
+- The Alpine base image in the Dockerfile is pinned by digest
+  ([#691](https://github.com/netresearch/ldap-selfservice-password-changer/pull/691)).
+- TypeScript is back on 6.x, so the linter runs again
+  ([#688](https://github.com/netresearch/ldap-selfservice-password-changer/pull/688)).
+- The README lists `reset-password` under the per-IP rate limiter
+  ([#683](https://github.com/netresearch/ldap-selfservice-password-changer/pull/683)).
+
+---
+
 ## [v1.6.2] - 2026-08-26
 
 ### Changed
