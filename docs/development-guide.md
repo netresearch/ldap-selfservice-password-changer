@@ -795,8 +795,9 @@ curl -s http://localhost:8125/api/v1/messages | \
 docker compose --profile dev down -v      # or: docker rm -f gopherpass-{app,mailpit,openldap}
 ```
 
-`make docker-up` / `make docker-down` wrap the plain up/down for the `dev`
-profile; `make docker-logs` tails them.
+`make docker-up` runs Route A for you: it builds the binary for the host
+architecture (`make build-linux`) and then starts the `dev` profile with `--build`.
+`make docker-down` stops it; `make docker-logs` tails the logs.
 
 ## Docker Development
 
