@@ -132,6 +132,9 @@ GOARCH ?= $(shell go env GOARCH)
 
 .PHONY: build-linux
 build-linux: ## Build the Linux binary the Dockerfile copies from bin/
+	@case "$(GOARCH)" in amd64|arm64) ;; \
+		*) echo "❌ GOARCH=$(GOARCH) is not supported: the release builds only amd64 and arm64 (gofiber/fiber/v3 overflows int on 32-bit targets)." >&2; exit 1 ;; \
+	esac
 	@echo "🔨 Building bin/ldap-selfservice-password-changer-linux-$(GOARCH)..."
 	bun install --frozen-lockfile
 	bun run build:assets
