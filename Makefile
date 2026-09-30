@@ -124,10 +124,28 @@ clean: ## Clean build artifacts
 	rm -rf node_modules/.cache tmp/
 	@echo "✅ Cleaned"
 
+# The Dockerfile only selects pre-built binaries out of bin/ (see the development
+# guide, "The Dockerfile Is a Binary-Selector"), so the Compose stack needs the
+# Linux binary for the host architecture built first. Assets go before the Go
+# build because they are embedded via go:embed.
+GOARCH ?= $(shell go env GOARCH)
+
+.PHONY: build-linux
+build-linux: ## Build the Linux binary the Dockerfile copies from bin/
+	@case "$(GOARCH)" in amd64|arm64) ;; \
+		*) echo "❌ GOARCH=$(GOARCH) is not supported: the release builds only amd64 and arm64 (gofiber/fiber/v3 overflows int on 32-bit targets)." >&2; exit 1 ;; \
+	esac
+	@echo "🔨 Building bin/ldap-selfservice-password-changer-linux-$(GOARCH)..."
+	bun install --frozen-lockfile
+	bun run build:assets
+	CGO_ENABLED=0 GOOS=linux GOARCH=$(GOARCH) go build -trimpath \
+		-ldflags="-w -s -X main.version=dev -X main.build=$$(git rev-parse --short HEAD)" \
+		-o bin/ldap-selfservice-password-changer-linux-$(GOARCH) .
+
 .PHONY: docker-up
-docker-up: ## Start Docker Compose services (dev profile)
+docker-up: build-linux ## Build the binary, then start Docker Compose services (dev profile)
 	@echo "🐳 Starting Docker Compose services..."
-	docker compose --profile dev up
+	docker compose --profile dev up --build
 
 .PHONY: docker-down
 docker-down: ## Stop Docker Compose services

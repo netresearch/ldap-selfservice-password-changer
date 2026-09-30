@@ -12,6 +12,9 @@ claudedocs/
 vendor/
 /ldap-selfservice-password-changer
 
+# Linux binaries the Dockerfile copies (make build-linux)
+/bin/
+
 # Test coverage
 coverage.out
 coverage.html
