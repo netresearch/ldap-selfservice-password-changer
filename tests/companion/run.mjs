@@ -30,7 +30,15 @@ served.set("/internal/web/static/logo.webp", join(root, "internal/web/static/log
 served.set("/tests/companion/", served.get("/tests/companion/index.html"));
 
 const server = createServer(async (req, res) => {
-  const file = served.get(decodeURIComponent(req.url.split("?")[0]));
+  let path;
+  try {
+    path = decodeURIComponent(req.url.split("?")[0]);
+  } catch {
+    // A malformed escape such as "/%" throws URIError, which would reject inside the async handler.
+    res.writeHead(400).end();
+    return;
+  }
+  const file = served.get(path);
   if (!file) {
     res.writeHead(404).end();
     return;
