@@ -48,6 +48,13 @@ const server = createServer(async (req, res) => {
 });
 await new Promise((done) => server.listen(0, "127.0.0.1", done));
 
+// A malformed escape must be answered with 400 instead of rejecting inside the handler.
+const probe = await fetch(`http://127.0.0.1:${server.address().port}/%`);
+if (probe.status !== 400) {
+  console.error(`FAIL: GET /% answered ${probe.status}, expected 400`);
+  process.exit(1);
+}
+
 // Software WebGL keeps the check runnable on GPU-less CI runners.
 const browser = await chromium.launch({
   args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"]
