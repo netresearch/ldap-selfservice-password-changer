@@ -81,7 +81,7 @@ Before commit:
 - [ ] Docs updated if behavior changed
 - [ ] WCAG 2.2 AAA maintained (if UI changed — see [docs/accessibility.md](docs/accessibility.md))
 
-Commit format: [Conventional Commits](https://www.conventionalcommits.org/). Examples: `feat(auth): add reset via email`, `fix(validators): correct regex`, `chore(deps): bump bun`. **No AI attribution** in messages.
+Commit format: [Conventional Commits](https://www.conventionalcommits.org/). Examples: `feat(auth): add reset via email`, `fix(validators): correct regex`, `chore(deps): bump bun`.
 
 PR:
 
