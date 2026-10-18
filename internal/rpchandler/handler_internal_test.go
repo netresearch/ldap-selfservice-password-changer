@@ -375,6 +375,7 @@ func (m *mockHandlerLDAP) FindUserBySAMAccountName(sAMAccountName string) (*ldap
 
 func (m *mockHandlerLDAP) ChangePasswordForSAMAccountName(_, _, _ string) error {
 	if m.changePasswordError != "" {
+		//nolint:wrapcheck // the mock stands in for simple-ldap-go and returns its error type unwrapped, as the library does
 		return ldap.NewLDAPError("ChangePassword", "ldap://localhost", errors.New(m.changePasswordError))
 	}
 	return nil
