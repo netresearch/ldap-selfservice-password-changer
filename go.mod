@@ -9,7 +9,7 @@ require (
 	github.com/joho/godotenv v1.5.1
 	github.com/netresearch/simple-ldap-go v1.18.1
 	github.com/stretchr/testify v1.12.1
-	github.com/valyala/fasthttp v1.75.0
+	github.com/valyala/fasthttp v1.76.0
 )
 
 require (
