@@ -21,6 +21,11 @@ jobs:
     uses: netresearch/.github/.github/workflows/go-mutation-testing.yml@main
     with:
       diff-only: ${{ github.event_name == 'pull_request' }}
+      # The Go packages embed CSS that bun builds; without it gremlins cannot
+      # gather coverage. Same pre-build as ci.yml, including the go.mod that
+      # keeps node_modules out of `go test ./...`.
+      setup-bun: true
+      pre-build-cmd: "bun install --frozen-lockfile && bun run build:assets && printf 'module nodemodules\\n\\ngo 1.26\\n' > node_modules/go.mod"
     permissions:
       contents: read
       pull-requests: write
