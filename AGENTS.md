@@ -108,20 +108,11 @@ git tag -s vX.Y.Z -m "vX.Y.Z"    # annotated + signed tag (required)
 git push origin vX.Y.Z            # triggers release.yml
 ```
 
-Pipeline (see [.github/workflows/release.yml](.github/workflows/release.yml)):
+Pipeline: [.github/workflows/release.yml](.github/workflows/release.yml) delegates everything to one reusable, `netresearch/.github/.github/workflows/release-go-app.yml@main`, whose jobs are **`preflight`** (annotated-tag check, `make_latest` from semver vs existing releases) → **`binaries`** (matrix build, SBOMs, cosign signatures, build provenance) → **`container`** (multi-arch ghcr.io image, cosign keyless + provenance) → **`release`** (creates a draft release with all assets, then publishes the draft). The binary version comes from the tag; only `CHANGELOG.md` is bumped in the release PR. GoReleaser is not used; [`.goreleaser.yml`](.goreleaser.yml) is a leftover of the former pipeline.
 
-1. **`create-release`** — creates GitHub Release; computes `make_latest` from semver vs existing releases (backfills and older-major bugfixes don't steal the Latest badge).
-2. **`goreleaser`** — builds binaries, archives, per-archive Syft SBOMs, cosign-signed `checksums.txt`; attests archives+SBOMs via `actions/attest-build-provenance`.
-3. **`container`** — multi-arch ghcr.io image, cosign keyless-signed + SLSA provenance.
-4. **`verify-notes`** — appends standardized "Verify your download" block.
-
-**Backfill**: `gh workflow run release.yml --ref main -f tag=vX.Y.Z`.
-
-**GoReleaser config notes** ([`.goreleaser.yml`](.goreleaser.yml)):
-
-- `mode: keep-existing` (preserves create-release's notes; don't change to `replace`)
-- `changelog.use: git` (not `github` — `github` ignores filters)
-- No 32-bit ARM: Fiber v3 `math.MaxUint32` overflows `int` on 32-bit → `linux/arm` excluded
+- **Intentional drift**: 32-bit targets (linux 386, arm/v6, arm/v7) are excluded from `goos-goarch-matrix` and `container-platforms`, because Fiber v3's `math.MaxUint32` overflows `int` on 32-bit. Recorded in [`.github/template.yaml`](.github/template.yaml) `intentional-drift`.
+- **The reusable is called at `@main`**, so upstream template changes reach this repo without a commit here. A tag-push run that fails at startup with 0 jobs and no annotations usually means a referenced reusable no longer exists on `main` (`gh api repos/netresearch/.github/contents/.github/workflows/<name>.yml?ref=main`); sync `release.yml` with the go-app template and keep the 32-bit exclusions above.
+- **A failed tag is not burned** when no Release object was created (`gh release view vX.Y.Z` → "release not found"). Fix the workflow on `main`, then backfill without re-tagging: `gh workflow run release.yml --ref main -f tag=vX.Y.Z` (it builds the tag's commit). Rewrite the notes afterwards with `gh release edit vX.Y.Z --notes-file <file>` and do not re-run the workflow after that.
 
 ## When Stuck
 
