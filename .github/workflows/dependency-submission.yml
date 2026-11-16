@@ -1,0 +1,16 @@
+name: Dependency submission
+
+# GitHub's dependency graph does not parse bun.lock; this submits the
+# resolved bun packages so Dependabot alerts cover them.
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  bun-dependency-submission:
+    uses: netresearch/.github/.github/workflows/bun-dependency-submission.yml@main
+    permissions:
+      contents: write # POST /repos/{owner}/{repo}/dependency-graph/snapshots
