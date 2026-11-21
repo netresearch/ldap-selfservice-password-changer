@@ -9,6 +9,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [v1.7.2] - 2026-11-21
+
+### Security
+
+- **The binaries and the container image are built with Go 1.27.4** ([#729](https://github.com/netresearch/ldap-selfservice-password-changer/pull/729)). Go 1.27.4 contains security fixes to
+  cgo, the go command, the compiler, the linker and the `net/http` package
+  ([Go release history](https://go.dev/doc/devel/release#go1.27.4)). v1.7.1 was built with Go 1.27.3.
+- The CA certificate bundle in the container image comes from Alpine 3.24.4 instead of 3.24.2 ([#720](https://github.com/netresearch/ldap-selfservice-password-changer/pull/720)).
+- Transitive npm packages of the asset build (`brace-expansion`, `postcss`, `nanoid`, `@humanfs/node`,
+  `source-map-js`, `minimatch`) are moved to patched versions ([#732](https://github.com/netresearch/ldap-selfservice-password-changer/pull/732)). All of them are development
+  dependencies; the shipped CSS and JavaScript do not include them.
+
+### Changed
+
+- Go module dependencies are updated: `gofiber/fiber/v3` 3.7.0 ([#728](https://github.com/netresearch/ldap-selfservice-password-changer/pull/728)) and `valyala/fasthttp` 1.79.0
+  ([#716](https://github.com/netresearch/ldap-selfservice-password-changer/pull/716), [#723](https://github.com/netresearch/ldap-selfservice-password-changer/pull/723), [#727](https://github.com/netresearch/ldap-selfservice-password-changer/pull/727)).
+
+---
+
 ## [v1.7.1] - 2026-10-23
 
 ### Security
