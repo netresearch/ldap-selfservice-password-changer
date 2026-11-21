@@ -3,6 +3,17 @@
   "extends": [
     "github>netresearch/renovate-config"
   ],
+  "ignorePaths": [
+    "**/node_modules/**",
+    "**/bower_components/**",
+    "**/vendor/**",
+    "**/examples/**",
+    "**/__tests__/**",
+    "**/test/**",
+    "**/__fixtures__/**",
+    "**/.mise/locks/**",
+    "**/.config/mise/locks/**"
+  ],
   "automergeType": "pr",
   "platformAutomerge": true,
   "packageRules": [
