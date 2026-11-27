@@ -416,6 +416,7 @@ ldap-selfservice-password-changer/
 │       └── tailwind.css             # CSS entry point
 │
 ├── dev/                             # Local Compose dev stack fixtures
+│   ├── dev-certs.sh                 # Self-signed CA + LDAPS server cert
 │   ├── seed.ldif                    # Seeded OpenLDAP users
 │   └── setup-acl.sh                 # Self-service + reset ACLs
 │
@@ -693,8 +694,9 @@ CGO_ENABLED=0 GOOS=linux GOARCH=$ARCH go build -trimpath \
 APP_PORT=3140 MAILPIT_WEB_PORT=8125 docker compose --profile dev up --build -d
 ```
 
-The `dev` profile brings up `openldap` → `openldap-init` (seeds users, exits 0) →
-`mailpit` → `app`.
+The `dev` profile brings up `openldap-certs` (creates the LDAPS certificates,
+exits 0) → `openldap` (seeds users from `dev/seed.ldif`) → `openldap-init`
+(applies the ACLs, exits 0) → `mailpit` → `app`.
 
 - App: `http://localhost:3140` (change password) and `/forgot-password`
 - Mailpit (catches reset emails): `http://localhost:8125`
@@ -755,6 +757,39 @@ bun run build:assets
 go run . -ldap-server ldap://127.0.0.1:389 -base-dn dc=netresearch,dc=local \
   -readonly-user cn=admin,dc=netresearch,dc=local -readonly-password admin -port 39443
 ```
+
+### The OpenLDAP Container
+
+The stack runs `osixia/openldap` 2.x. Its bind accounts:
+
+| DN                                    | password   |
+| ------------------------------------- | ---------- |
+| `cn=admin,dc=netresearch,dc=local`    | `admin`    |
+| `cn=readonly,dc=netresearch,dc=local` | `readonly` |
+| `cn=admin,cn=config`                  | `config`   |
+
+**LDAPS.** `openldap-certs` creates a self-signed CA and a server certificate
+for `openldap`, `localhost` and `127.0.0.1` in the `openldap_certs` volume on
+the first start (`dev/dev-certs.sh`). slapd serves LDAPS on 636 and StartTLS on
+389 and requests no client certificate. Clients have to trust that CA:
+
+```bash
+docker cp gopherpass-openldap:/container/services/openldap/assets/certs/ca.crt ./dev-ca.crt
+LDAPTLS_CACERT=./dev-ca.crt ldapsearch -x -H ldaps://127.0.0.1:636 \
+  -D cn=readonly,dc=netresearch,dc=local -w readonly -b dc=netresearch,dc=local -s base
+# The app (Go) reads extra roots from SSL_CERT_FILE:
+SSL_CERT_FILE=./dev-ca.crt go run . -ldap-server ldaps://127.0.0.1:636 ...
+```
+
+OpenLDAP's own client tools (`ldapsearch`, `ldapwhoami`) reject
+`ldaps://localhost` with `hostname does not match name in peer certificate`,
+although the certificate names `localhost`; use `127.0.0.1` with them.
+
+**Upgrading from the 1.x stack.** The data and config volumes are now
+`openldap_data` and `openldap_config`, because the 2.x image only bootstraps into
+empty directories. The old `ldap_data` and `ldap_config` volumes are no longer
+used; remove them with `docker volume ls -q | grep -E '_ldap_(data|config)$'`
+and `docker volume rm <name>`.
 
 ### Seeded Users (`dev/seed.ldif`)
 

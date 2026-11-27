@@ -11,6 +11,7 @@ set -euo pipefail
 
 LDAP_HOST="${1:-ldap://openldap:389}"
 LDAP_CONFIG_PASSWORD="${LDAP_CONFIG_PASSWORD:-config}"
+LDAP_BASE_DN="${LDAP_BASE_DN:-dc=netresearch,dc=local}"
 RESET_USER_DN="${RESET_USER_DN:-uid=password-reset,ou=People,dc=netresearch,dc=local}"
 MAX_RETRIES=30
 
@@ -27,13 +28,22 @@ for i in $(seq 1 $MAX_RETRIES); do
     sleep 1
 done
 
-echo "Applying ACLs..."
+# Look up the database entry that holds the suffix instead of assuming its
+# index ({1}mdb), which depends on how the image bootstraps cn=config.
+DB_DN="$(ldapsearch -x -LLL -o ldif-wrap=no -H "$LDAP_HOST" -D "cn=admin,cn=config" -w "$LDAP_CONFIG_PASSWORD" \
+    -b "cn=config" "(olcSuffix=$LDAP_BASE_DN)" dn | sed -n 's/^dn: //p')"
+if [ -z "$DB_DN" ]; then
+    echo "No database with suffix $LDAP_BASE_DN found in cn=config."
+    exit 1
+fi
+
+echo "Applying ACLs to $DB_DN..."
 # Heredoc is unquoted so $RESET_USER_DN is interpolated. The rule order is
 # preserved: {0} userPassword rule, then {1} general read. Using `replace:`
 # (vs `add:`) guarantees a deterministic ACL regardless of whatever default
 # rules the openldap image ships — matching ldap-manager's pattern.
 ldapmodify -H "$LDAP_HOST" -D "cn=admin,cn=config" -w "$LDAP_CONFIG_PASSWORD" <<EOF
-dn: olcDatabase={1}mdb,cn=config
+dn: $DB_DN
 changetype: modify
 replace: olcAccess
 olcAccess: {0}to attrs=userPassword by self write by dn.exact="$RESET_USER_DN" write by anonymous auth by * none
