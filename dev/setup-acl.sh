@@ -29,9 +29,11 @@ for i in $(seq 1 $MAX_RETRIES); do
 done
 
 # Look up the database entry that holds the suffix instead of assuming its
-# index ({1}mdb), which depends on how the image bootstraps cn=config.
+# index ({1}mdb), which depends on how the image bootstraps cn=config. The
+# suffix is escaped as an RFC 4515 filter value.
+SUFFIX_FILTER="$(printf '%s' "$LDAP_BASE_DN" | sed -e 's/\\/\\5c/g' -e 's/\*/\\2a/g' -e 's/(/\\28/g' -e 's/)/\\29/g')"
 DB_DN="$(ldapsearch -x -LLL -o ldif-wrap=no -H "$LDAP_HOST" -D "cn=admin,cn=config" -w "$LDAP_CONFIG_PASSWORD" \
-    -b "cn=config" "(olcSuffix=$LDAP_BASE_DN)" dn | sed -n 's/^dn: //p')"
+    -b "cn=config" "(olcSuffix=$SUFFIX_FILTER)" dn | sed -n 's/^dn: //p')"
 if [[ -z "$DB_DN" ]]; then
     echo "No database with suffix $LDAP_BASE_DN found in cn=config."
     exit 1

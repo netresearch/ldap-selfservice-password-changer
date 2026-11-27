@@ -777,7 +777,8 @@ the first start (`dev/dev-certs.sh`). slapd serves LDAPS on 636 and StartTLS on
 docker cp gopherpass-openldap:/container/services/openldap/assets/certs/ca.crt ./dev-ca.crt
 LDAPTLS_CACERT=./dev-ca.crt ldapsearch -x -H ldaps://127.0.0.1:636 \
   -D cn=readonly,dc=netresearch,dc=local -w readonly -b dc=netresearch,dc=local -s base
-# The app (Go) then trusts the roots in SSL_CERT_FILE instead of the system pool:
+# The app (Go) reads SSL_CERT_FILE in place of its default CA bundle file;
+# certificates in /etc/ssl/certs still count unless SSL_CERT_DIR is set:
 SSL_CERT_FILE=./dev-ca.crt go run . -ldap-server ldaps://127.0.0.1:636 ...
 ```
 
