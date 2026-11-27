@@ -32,7 +32,7 @@ done
 # index ({1}mdb), which depends on how the image bootstraps cn=config.
 DB_DN="$(ldapsearch -x -LLL -o ldif-wrap=no -H "$LDAP_HOST" -D "cn=admin,cn=config" -w "$LDAP_CONFIG_PASSWORD" \
     -b "cn=config" "(olcSuffix=$LDAP_BASE_DN)" dn | sed -n 's/^dn: //p')"
-if [ -z "$DB_DN" ]; then
+if [[ -z "$DB_DN" ]]; then
     echo "No database with suffix $LDAP_BASE_DN found in cn=config."
     exit 1
 fi
