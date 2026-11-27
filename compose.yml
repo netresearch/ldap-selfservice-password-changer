@@ -2,7 +2,7 @@ services:
   # OpenLDAP server with seeded dev users.
   # Pattern borrowed from netresearch/ldap-manager dev stack.
   openldap:
-    image: osixia/openldap:1.5.0
+    image: osixia/openldap:2.6.15
     container_name: gopherpass-openldap
     hostname: openldap
     ports:
@@ -59,7 +59,7 @@ services:
   # grants the password-reset service account write access to reset others'
   # passwords (mirrors Active Directory's admin-reset capability). Runs once.
   openldap-init:
-    image: osixia/openldap:1.5.0
+    image: osixia/openldap:2.6.15
     entrypoint: /bin/bash
     command: /setup-acl.sh ldap://openldap:389
     environment:
