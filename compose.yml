@@ -1,43 +1,56 @@
 services:
+  # Creates a self-signed CA and an LDAPS server certificate on the first
+  # start. osixia/openldap v2 does not generate certificates itself.
+  openldap-certs:
+    image: alpine:3.24.4@sha256:f59abe656b692d901e184be3445e084786602108599d2a51d229c0f5a48c71bf
+    entrypoint: /bin/sh
+    command: /dev-certs.sh /certs
+    volumes:
+      - ./dev/dev-certs.sh:/dev-certs.sh:ro
+      - openldap_certs:/certs
+    profiles:
+      - dev
+      - test
+
   # OpenLDAP server with seeded dev users.
   # Pattern borrowed from netresearch/ldap-manager dev stack.
   openldap:
-    image: osixia/openldap:1.5.0
+    image: osixia/openldap:2.6.15
     container_name: gopherpass-openldap
     hostname: openldap
     ports:
       - "389:389"
       - "636:636"
     environment:
-      LDAP_LOG_LEVEL: "256"
-      LDAP_ORGANISATION: "Netresearch"
-      LDAP_DOMAIN: "netresearch.local"
-      LDAP_BASE_DN: "dc=netresearch,dc=local"
-      LDAP_ADMIN_PASSWORD: "admin"
-      LDAP_CONFIG_PASSWORD: "config"
-      LDAP_READONLY_USER: "true"
-      LDAP_READONLY_USER_USERNAME: "readonly"
-      LDAP_READONLY_USER_PASSWORD: "readonly"
-      LDAP_RFC2307BIS_SCHEMA: "false"
-      LDAP_BACKEND: "mdb"
-      LDAP_TLS: "true"
-      LDAP_TLS_CRT_FILENAME: "ldap.crt"
-      LDAP_TLS_KEY_FILENAME: "ldap.key"
-      LDAP_TLS_DH_PARAM_FILENAME: "dhparam.pem"
-      LDAP_TLS_CA_CRT_FILENAME: "ca.crt"
-      LDAP_TLS_ENFORCE: "false"
-      LDAP_TLS_CIPHER_SUITE: "SECURE256:-VERS-SSL3.0"
-      LDAP_TLS_PROTOCOL_MIN: "3.1"
-      LDAP_TLS_VERIFY_CLIENT: "demand"
-      LDAP_REPLICATION: "false"
-      KEEP_EXISTING_CONFIG: "false"
-      LDAP_REMOVE_CONFIG_AFTER_SETUP: "true"
-      LDAP_SSL_HELPER_PREFIX: "ldap"
+      # slapd listens on the standard ports instead of the image's default
+      # 3890/6360, so URLs inside and outside the container stay the same.
+      OPENLDAP_URLS: "ldap://:389 ldaps://:636 ldapi:///"
+      OPENLDAP_BOOTSTRAP_ORGANIZATION: "Netresearch"
+      OPENLDAP_BOOTSTRAP_SUFFIX: "dc=netresearch,dc=local"
+      # Despite the _HASHED suffix these take any userPassword value: a
+      # {SSHA} hash or, as here for the dev stack, a cleartext value.
+      # cn=admin,dc=netresearch,dc=local
+      OPENLDAP_BOOTSTRAP_DATA_ROOT_PASSWORD_HASHED: "admin" # pragma: allowlist secret
+      # cn=admin,cn=config — must match LDAP_CONFIG_PASSWORD on openldap-init.
+      OPENLDAP_BOOTSTRAP_CONFIG_ROOT_PASSWORD_HASHED: "config" # pragma: allowlist secret
+      # cn=readonly,dc=netresearch,dc=local
+      OPENLDAP_BOOTSTRAP_DATA_READONLY: "true"
+      OPENLDAP_BOOTSTRAP_DATA_READONLY_PASSWORD_HASHED: "readonly" # pragma: allowlist secret
+      OPENLDAP_BOOTSTRAP_TLS: "true"
+      # No client certificate is requested: neither the app nor any test or
+      # script presents one, so "demand" would refuse every LDAPS client.
+      OPENLDAP_BOOTSTRAP_TLS_VERIFY_CLIENT: "never"
+      OPENLDAP_BOOTSTRAP_TLS_PROTOCOL_MIN: "3.3"
     volumes:
-      - ldap_data:/var/lib/ldap
-      - ldap_config:/etc/ldap/slapd.d
-      - ./dev/seed.ldif:/container/service/slapd/assets/config/bootstrap/ldif/custom/seed.ldif:ro
-    command: --copy-service
+      # v2 bootstraps only into empty config and data directories, so these
+      # volumes are not shared with the v1 ones (ldap_data, ldap_config).
+      - openldap_data:/var/lib/openldap/openldap-data
+      - openldap_config:/etc/openldap/slapd.d
+      - openldap_certs:/container/services/openldap/assets/certs:ro
+      - ./dev/seed.ldif:/container/services/openldap-bootstrap/assets/ldif/data/custom/seed.ldif:ro
+    depends_on:
+      openldap-certs:
+        condition: service_completed_successfully
     networks:
       - ldap-network
     restart: unless-stopped
@@ -45,7 +58,7 @@ services:
       test:
         [
           "CMD-SHELL",
-          'ldapsearch -x -H ldap://localhost -b "$$LDAP_BASE_DN" -D "cn=admin,$$LDAP_BASE_DN" -w "$$LDAP_ADMIN_PASSWORD" -LLL'
+          'ldapsearch -x -H ldap://localhost -b "dc=netresearch,dc=local" -D "cn=admin,dc=netresearch,dc=local" -w admin -LLL -s base dn'
         ]
       interval: 10s
       timeout: 5s
@@ -59,11 +72,11 @@ services:
   # grants the password-reset service account write access to reset others'
   # passwords (mirrors Active Directory's admin-reset capability). Runs once.
   openldap-init:
-    image: osixia/openldap:1.5.0
+    image: osixia/openldap:2.6.15
     entrypoint: /bin/bash
     command: /setup-acl.sh ldap://openldap:389
     environment:
-      # Must match LDAP_CONFIG_PASSWORD on the openldap service.
+      # Must match OPENLDAP_BOOTSTRAP_CONFIG_ROOT_PASSWORD_HASHED on openldap.
       LDAP_CONFIG_PASSWORD: "config"
       LDAP_BASE_DN: "dc=netresearch,dc=local"
       RESET_USER_DN: "uid=password-reset,ou=People,dc=netresearch,dc=local"
@@ -159,9 +172,11 @@ services:
       - test
 
 volumes:
-  ldap_data:
+  openldap_data:
     driver: local
-  ldap_config:
+  openldap_config:
+    driver: local
+  openldap_certs:
     driver: local
 
 networks:
